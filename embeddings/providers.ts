@@ -5,7 +5,7 @@ import {
   parseOpenAIEmbeddingResponse,
   requestEmbeddingJson,
 } from "./shared";
-import type { EmbeddingProviderId } from "./types";
+import type { EmbeddingProviderId, EmbeddingRequestOptions } from "./types";
 
 export interface OpenAICompatibleEmbeddingConfig {
   provider: "openrouter" | "openai-compatible";
@@ -26,7 +26,7 @@ export class OpenAICompatibleEmbeddingProvider extends BaseEmbeddingProvider {
     this.apiKey = config.apiKey;
   }
 
-  protected async embedBatch(texts: string[]): Promise<unknown> {
+  protected async embedBatch(texts: string[], options?: EmbeddingRequestOptions): Promise<unknown> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -44,6 +44,7 @@ export class OpenAICompatibleEmbeddingProvider extends BaseEmbeddingProvider {
         input: texts,
         encoding_format: "float",
       },
+      options?.timeoutMs,
     );
     return parseOpenAIEmbeddingResponse(payload, texts.length);
   }
@@ -63,11 +64,12 @@ export class OllamaEmbeddingProvider extends BaseEmbeddingProvider {
     this.endpoint = buildEmbeddingEndpoint(config.baseUrl, "api/embed");
   }
 
-  protected async embedBatch(texts: string[]): Promise<unknown> {
+  protected async embedBatch(texts: string[], options?: EmbeddingRequestOptions): Promise<unknown> {
     const payload = await requestEmbeddingJson(
       this.endpoint,
       { "Content-Type": "application/json" },
       { model: this.model, input: texts },
+      options?.timeoutMs,
     );
     return parseOllamaEmbeddingResponse(payload);
   }

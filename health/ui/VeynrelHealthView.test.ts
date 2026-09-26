@@ -1,3 +1,7 @@
+import { renderDiscover } from "./renderDiscover";
+import { discoverViewModel } from "./discoverViewModel";
+import { renderSemanticIntelligence } from "./renderSemanticIntelligence";
+import type { SemanticIntelligenceSnapshot } from "../semanticIntelligencePort";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => {
   class Element {
@@ -1453,5 +1457,66 @@ describe("Semantic Neighborhood Discover child surface", () => {
     await f.view.onClose(); await f.view.onOpen(); f.content.action("nav-discover").click(); f.content.action("neighborhood-open").click(); await f.neighborhood.prepare();
     expect(f.engine.listIndexedPaths).toHaveBeenCalledTimes(2);
     await f.view.onClose(); f.neighborhood.dispose(); f.controller.dispose();
+  });
+});
+
+describe("Semantic Intelligence indexing diagnostics", () => {
+  const base: SemanticIntelligenceSnapshot = { enabled: true, state: "busy", provider: "openrouter", providerLabel: "OpenRouter",
+    model: "synthetic", vectorCount: 0, indexRequired: true, busy: true, operation: "build" };
+  const actions = { action: vi.fn(), choose: vi.fn(), edit: vi.fn(), connect: vi.fn(), back: vi.fn() };
+  const failures = [
+    ["provider-timeout", "timed out", "Истекло время"], ["provider-network", "Could not reach", "Не удалось связаться"],
+    ["provider-auth", "rejected the credentials", "данные авторизации"], ["provider-rate-limit", "rate limit", "лимит запросов"],
+    ["provider-server", "temporarily unavailable", "временно недоступен"], ["provider-request", "rejected the request", "отклонил запрос"],
+    ["provider-response", "invalid response", "некорректный ответ"], ["source", "could not read", "не смог прочитать"],
+    ["storage", "safely update", "безопасно обновить"], ["compatibility", "different embedding configuration", "другой конфигурацией"],
+    ["unknown", "build failed", "Не удалось построить"],
+  ] as const;
+  it.each(["en", "ru"] as const)("renders every safe failure in %s without exceptions or stale progress", (language) => {
+    setLanguage(language);
+    for (const [failure, en, ru] of failures) {
+      const parent = new mocks.Element();
+      renderSemanticIntelligence(parent as never, { ...base, state: failure === "compatibility" ? "incompatible" : "error", busy: false,
+        failure, progress: { phase: "embedding", chunksCompleted: 96, chunksTotal: 347 } }, undefined, actions);
+      expect(parent.texts()).toContain(language === "en" ? en : ru);
+      expect(parent.texts()).not.toMatch(/@semantic|Error:|private-|Authorization|stack|response body/u);
+      expect(parent.all().some((element) => element.tag === "progress")).toBe(false);
+      expect(parent.action(failure === "compatibility" ? "semantic-rebuild" : "semantic-check")).toBeDefined();
+    }
+  });
+  it.each(["en", "ru"] as const)("shows real counts and native accessible progress in %s", (language) => {
+    setLanguage(language); const parent = new mocks.Element();
+    renderSemanticIntelligence(parent as never, { ...base, progress: { phase: "embedding", documentsTotal: 159,
+      chunksTotal: 347, chunksCompleted: 96, batchCurrent: 3, batchTotal: 11 } }, undefined, actions);
+    const bar = parent.all().find((element) => element.tag === "progress")!;
+    expect(bar.value).toBe(96); expect((bar as unknown as { max: number }).max).toBe(347);
+    expect(bar.attrs["aria-label"]).toContain("96 / 347");
+    for (const text of ["159", "96 / 347", "3 / 11"]) expect(parent.texts()).toContain(text);
+    expect(parent.texts()).not.toContain("%");
+  });
+  it.each(["en", "ru"] as const)("shows retry attempt 2 of 3 in %s", (language) => {
+    setLanguage(language); const parent = new mocks.Element();
+    renderSemanticIntelligence(parent as never, { ...base, progress: { phase: "retrying", chunksTotal: 347, chunksCompleted: 96,
+      batchCurrent: 3, batchTotal: 11, retryAttempt: 1, retryMaximum: 2, retryReason: "rate-limit" } }, undefined, actions);
+    expect(parent.texts()).toContain(language === "en" ? "Attempt 2 of 3" : "Попытка 2 из 3");
+    expect(parent.texts()).toContain(language === "en" ? "Rate limit reached" : "Достигнут лимит запросов");
+  });
+  it("uses the same progress and failure surface on Discover", () => {
+    setLanguage("en"); const parent = new mocks.Element();
+    renderDiscover(parent as never, discoverViewModel({ ...base, progress: { phase: "embedding", documentsTotal: 159,
+      chunksTotal: 347, chunksCompleted: 96, batchCurrent: 3, batchTotal: 11 } }), vi.fn());
+    expect(parent.texts()).toContain("96 / 347"); expect(parent.texts()).toContain("3 / 11");
+    expect(parent.all().find((e) => e.tag === "progress")?.value).toBe(96);
+    parent.empty();
+    renderDiscover(parent as never, discoverViewModel({ ...base, state: "error", busy: false, failure: "provider-timeout" }), vi.fn());
+    expect(parent.texts()).toContain("Embedding request timed out");
+    expect(parent.all().some((e) => e.tag === "progress")).toBe(false);
+  });
+  it("starts indeterminate without invented counts", () => {
+    const parent = new mocks.Element();
+    renderSemanticIntelligence(parent as never, { ...base, progress: { phase: "reading" } }, undefined, actions);
+    const bar = parent.all().find((element) => element.tag === "progress")!;
+    expect(bar.attrs.value).toBeUndefined(); expect(bar.attrs.max).toBeUndefined();
+    expect(parent.texts()).not.toMatch(/\d|%/u);
   });
 });

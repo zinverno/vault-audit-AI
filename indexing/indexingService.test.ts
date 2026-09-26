@@ -1,3 +1,7 @@
+import { EmbeddingError } from "../embeddings/errors";
+import { IndexingObsoleteError } from "./errors";
+import { classifyIndexingFailure } from "../semantic/indexingFailure";
+import type { SemanticIndexProgress } from "../utils/semanticIndexDiagnostics";
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
@@ -158,7 +162,7 @@ class FakeProvider implements EmbeddingProvider {
     return this.dimensionsImpl();
   }
 
-  async embed(texts: string[]): Promise<Float32Array[]> {
+  async embed(texts: string[], _options?: { timeoutMs?: number }): Promise<Float32Array[]> {
     this.embedCalls.push([...texts]);
     return this.embedImpl(texts);
   }
@@ -463,7 +467,7 @@ describe("IndexingService initialization", () => {
       const harness = createHarness();
       harness.provider.dimensionsImpl = async () => dimensions;
       await expect(harness.service.initialize()).rejects.toBeInstanceOf(
-        IndexingValidationError,
+        IndexingProviderContractError,
       );
       expect(harness.factoryCalls).toHaveLength(0);
     },
@@ -1374,7 +1378,7 @@ describe("adversarial regression contracts", () => {
     } catch (caught) {
       error = caught;
     }
-    expect(error).toBeInstanceOf(IndexingValidationError);
+    expect(error).toBeInstanceOf(IndexingProviderContractError);
     expect((error as Error).message).not.toContain("secret");
     expect(harness.factoryCalls).toHaveLength(0);
     expect(harness.provider.embedCalls).toHaveLength(0);
@@ -1399,7 +1403,7 @@ describe("adversarial regression contracts", () => {
     harness.provider.dimensionsImpl = async () =>
       attempt++ === 0 ? 0x1_0000_0000 : 3;
     await expect(harness.service.initialize()).rejects.toBeInstanceOf(
-      IndexingValidationError,
+      IndexingProviderContractError,
     );
     expect(harness.factoryCalls).toHaveLength(0);
     await harness.service.initialize();
@@ -2024,5 +2028,105 @@ describe("adversarial regression contracts", () => {
     expect((error as Error).message).toBe(
       'Failed to read Markdown document "Safe.md".',
     );
+  });
+});
+
+// Full builds opt in; single-note and automatic sync callers keep their existing policy.
+const fullBuild = { embeddingTimeoutMs: 90_000, retryTransient: true };
+
+describe("bounded full-build reliability", () => {
+  const documents = Array.from({ length: 5 }, (_, index) => ({ path: `${index}.md`, content: `note ${index}` }));
+  function reliabilityHarness() {
+    const sleep = vi.fn(async (_ms: number) => {});
+    const h = createHarness({ embeddingBatchSize: 2, sleep });
+    h.chunker.resolver = (input) => [noteChunk(input.path, input.path, 0, input.content, input.content)];
+    return { ...h, sleep };
+  }
+  it.each([
+    [[429], [1000]], [[500, 503], [1000, 3000]],
+  ])("retries the same batch after %j and commits once", async (statuses, delays) => {
+    const h = reliabilityHarness(); await h.service.initialize();
+    const embed = vi.spyOn(h.provider, "embed");
+    for (const status of statuses) embed.mockRejectedValueOnce(new EmbeddingError(status === 429 ? "rate-limit" : "server", status));
+    const result = await h.service.reconcileAll(documents.slice(0, 2), fullBuild);
+    expect(embed).toHaveBeenCalledTimes(statuses.length + 1);
+    expect(embed.mock.calls.every(([texts, options]) => JSON.stringify(texts) === '["note 0","note 1"]'
+      && options?.timeoutMs === 90_000)).toBe(true);
+    expect(h.sleep.mock.calls.map(([ms]) => ms)).toEqual(delays);
+    expect(result.chunksEmbedded).toBe(2); expect(h.store().mutations).toHaveLength(1);
+  });
+  it.each(["timeout", "auth", "invalid-response", "request", "network"] as const)("never retries %s", async (code) => {
+    const h = reliabilityHarness(); await h.service.initialize();
+    const cause = new EmbeddingError(code);
+    const embed = vi.spyOn(h.provider, "embed").mockRejectedValue(cause);
+    const error = await h.service.reconcileAll(documents, fullBuild).catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(IndexingProviderError); expect((error as IndexingProviderError).cause).toBe(cause);
+    expect(classifyIndexingFailure(error)).toBe(code === "invalid-response" ? "provider-response" : `provider-${code}`);
+    expect(embed).toHaveBeenCalledTimes(1); expect(h.sleep).not.toHaveBeenCalled(); expect(h.store().mutations).toHaveLength(0);
+  });
+  it("exhausts a single batch in exactly three calls", async () => {
+    const h = reliabilityHarness(); await h.service.initialize();
+    const embed = vi.spyOn(h.provider, "embed").mockRejectedValue(new EmbeddingError("server", 500));
+    const error = await h.service.reconcileAll(documents.slice(0, 2), fullBuild).catch((error: unknown) => error);
+    expect(classifyIndexingFailure(error)).toBe("provider-server"); expect(embed).toHaveBeenCalledTimes(3);
+    expect(h.sleep.mock.calls).toEqual([[1000], [3000]]); expect(h.store().mutations).toHaveLength(0);
+  });
+  it("never retries invalid vectors, or opts automatic sync into full-build policy", async () => {
+    const h = reliabilityHarness(); await h.service.initialize();
+    const embed = vi.spyOn(h.provider, "embed").mockResolvedValueOnce([new Float32Array([0, 0, 0])]);
+    const error = await h.service.reconcileAll(documents.slice(0, 1), fullBuild).catch((error: unknown) => error);
+    expect(classifyIndexingFailure(error)).toBe("provider-response"); expect(embed).toHaveBeenCalledTimes(1);
+    embed.mockClear().mockRejectedValue(new EmbeddingError("rate-limit", 429));
+    await expect(h.service.syncDocuments({ upsertDocuments: documents, deletePaths: [] })).rejects.toBeInstanceOf(IndexingProviderError);
+    expect(embed).toHaveBeenCalledTimes(1); expect(embed.mock.calls[0][1]?.timeoutMs).toBeUndefined();
+    expect(h.sleep).not.toHaveBeenCalled(); expect(h.store().mutations).toHaveLength(0);
+  });
+  it.each([false, true])("late exhaustion preserves store and durable files (seeded=%s)", async (seeded) => {
+    const h = reliabilityHarness(); await h.service.initialize();
+    if (seeded) await h.service.reconcileAll([{ path: "old.md", content: "committed" }], fullBuild);
+    const before = h.store().readSnapshot(); const files = new Map(h.persistence.files); const mutations = h.store().mutations.length;
+    const embed = vi.spyOn(h.provider, "embed");
+    embed.mockResolvedValueOnce([vectorForText("a"), vectorForText("b")])
+      .mockResolvedValueOnce([vectorForText("c"), vectorForText("d")])
+      .mockRejectedValue(new EmbeddingError("server", 500));
+    const error = await h.service.reconcileAll(documents, fullBuild).catch((error: unknown) => error);
+    expect(classifyIndexingFailure(error)).toBe("provider-server");
+    expect(embed).toHaveBeenCalledTimes(5); expect(h.sleep.mock.calls).toEqual([[1000], [3000]]);
+    expect(h.store().readSnapshot()).toEqual(before); expect(h.persistence.files).toEqual(files);
+    expect(h.store().mutations).toHaveLength(mutations);
+    if (!seeded) expect(h.store().getStats()).toMatchObject({ generation: 0, count: 0 });
+  });
+  it("publishes bounded monotonic progress and retries batch two", async () => {
+    const h = reliabilityHarness(); await h.service.initialize();
+    const progress: SemanticIndexProgress[] = [];
+    const embed = vi.spyOn(h.provider, "embed");
+    embed.mockResolvedValueOnce([vectorForText("a"), vectorForText("b")]).mockRejectedValueOnce(new EmbeddingError("rate-limit", 429));
+    await h.service.reconcileAll(documents, { ...fullBuild, onProgress: (p) => { progress.push({ ...p }); p.chunksCompleted = 999; } });
+    expect(progress[0]).toMatchObject({ phase: "preparing", documentsTotal: 5 });
+    expect(progress[progress.length - 1]).toMatchObject({ phase: "committing", chunksCompleted: 5 });
+    expect(progress).toContainEqual(expect.objectContaining({ phase: "retrying", batchCurrent: 2, retryAttempt: 1, retryMaximum: 2, retryReason: "rate-limit" }));
+    let completed = 0;
+    for (const p of progress) {
+      if (p.chunksCompleted !== undefined) { expect(p.chunksCompleted).toBeGreaterThanOrEqual(completed); expect(p.chunksCompleted).toBeLessThanOrEqual(p.chunksTotal!); completed = p.chunksCompleted; }
+      if (p.batchCurrent !== undefined) expect(p.batchCurrent).toBeLessThanOrEqual(p.batchTotal!);
+    }
+    expect(progress.some((p) => p.phase === "embedding" && p.chunksCompleted === 4)).toBe(true);
+  });
+  it("ignores throwing listeners and stops obsolete delayed retries", async () => {
+    const h = reliabilityHarness(); await h.service.initialize();
+    await h.service.reconcileAll(documents, { ...fullBuild, onProgress: () => { throw Error("detached view"); } });
+    let current = true;
+    h.sleep.mockImplementation(async () => { current = false; });
+    const embed = vi.spyOn(h.provider, "embed").mockRejectedValue(new EmbeddingError("server", 503));
+    await expect(h.service.reconcileAll([{ path: "new.md", content: "new" }], { ...fullBuild, shouldCommit: () => current, isCurrent: () => current })).rejects.toBeInstanceOf(IndexingObsoleteError);
+    expect(embed).toHaveBeenCalledTimes(1); expect(h.store().mutations).toHaveLength(1);
+  });
+  it("preserves only typed dimensions causes", async () => {
+    const h = reliabilityHarness(); const cause = new EmbeddingError("auth", 403);
+    h.provider.dimensionsImpl = async () => { throw cause; };
+    await expect(h.service.initialize()).rejects.toMatchObject({ cause });
+    h.provider.dimensionsImpl = async () => { throw Error("private-note private-key"); };
+    const error = await h.service.initialize().catch((error: unknown) => error);
+    expect((error as IndexingProviderError).cause).toBeUndefined(); expect(String(error)).not.toContain("private-");
   });
 });

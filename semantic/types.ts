@@ -6,6 +6,7 @@ import type {
   IndexingRunResult,
 } from "../indexing/types";
 import type { CompanionSnapshot } from "../companionSync/types";
+import type { SemanticIndexFailureReason, SemanticIndexProgress } from "../utils/semanticIndexDiagnostics";
 
 export interface SemanticSearchOptions {
   limit?: number;
@@ -114,6 +115,8 @@ export type SemanticStatusKind =
   | "error";
 
 export interface SemanticStatus {
+  failure?: SemanticIndexFailureReason;
+  progress?: SemanticIndexProgress;
   kind: SemanticStatusKind;
   vectorCount: number;
   vectorGeneration: number;

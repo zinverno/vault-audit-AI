@@ -1,4 +1,6 @@
 import { t } from "../../i18n";
+import { semanticIndexFailureMessage } from "../../utils/semanticIndexDiagnostics";
+import type { SemanticIndexProgress } from "../../utils/semanticIndexDiagnostics";
 import type { SemanticIntelligenceSnapshot, SemanticSetupMode, SemanticSetupResult } from "../semanticIntelligencePort";
 
 export type SemanticAction = "enable" | "change" | "check" | "build" | "rebuild" | "search";
@@ -22,13 +24,28 @@ export function semanticIntelligenceViewModel(snapshot: SemanticIntelligenceSnap
     : snapshot.state === "error" ? ["check", "change"]
     : snapshot.state === "configured" ? indexRequired ? ["build", "change"] : ["check", "build", "change"] : [];
   const working = snapshot.operation === "connect" ? "@semantic.connecting"
-    : snapshot.operation === "build" || snapshot.operation === "rebuild" ? "@semantic.building" : "@semantic.working";
+    : snapshot.operation === "build" || snapshot.operation === "rebuild" || snapshot.progress ? "@semantic.building" : "@semantic.working";
   return {
     title: t("@semantic.title"), status: t(snapshot.busy ? working : `@semantic.state.${state}`),
-    description: t(`@semantic.description.${state}`),
+    description: !snapshot.busy && snapshot.failure ? semanticIndexFailureMessage(snapshot.failure) : t(`@semantic.description.${state}`),
+    progress: snapshot.busy && snapshot.progress ? semanticProgressViewModel(snapshot.progress) : undefined,
     details: snapshot.enabled ? `${mode === "custom" ? t("@semantic.mode.custom") : snapshot.providerLabel} · ${snapshot.model}` : undefined,
     vectors: snapshot.state === "ready" ? t("@semantic.vectors", { n: snapshot.vectorCount }) : undefined,
     privacy: semanticSetupCopy(mode).privacy,
     actions: actions.map((action) => ({ id: action, label: t(`@semantic.action.${action}`) })),
+  };
+}
+
+function semanticProgressViewModel(progress: SemanticIndexProgress) {
+  const numeric = progress.chunksTotal !== undefined && progress.chunksTotal > 0 && progress.chunksCompleted !== undefined;
+  return {
+    stage: t(`@semantic.progress.${progress.phase}`),
+    documents: progress.documentsTotal === undefined ? undefined : t("@semantic.progress.documents", { n: progress.documentsTotal }),
+    chunks: numeric ? t("@semantic.progress.chunks", { current: progress.chunksCompleted!, total: progress.chunksTotal! }) : undefined,
+    batch: progress.batchCurrent === undefined ? undefined : t("@semantic.progress.batch", { current: progress.batchCurrent, total: progress.batchTotal! }),
+    retry: progress.phase === "retrying" ? t("@semantic.progress.retry", { current: progress.retryAttempt! + 1, total: progress.retryMaximum! + 1 }) : undefined,
+    reason: progress.phase === "retrying" ? t(`@semantic.progress.${progress.retryReason}`) : undefined,
+    value: numeric ? progress.chunksCompleted : undefined,
+    max: numeric ? progress.chunksTotal : undefined,
   };
 }

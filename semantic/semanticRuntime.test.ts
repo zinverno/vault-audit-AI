@@ -1,3 +1,4 @@
+import type { SemanticIndexProgress } from "../utils/semanticIndexDiagnostics";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("obsidian", () => ({
@@ -314,7 +315,12 @@ describe("LazySemanticRuntime", () => {
 
   it("uses readAll plus reconcileAll for full indexing", async () => {
     const harness = createIntegrationHarness();
-    const first = await harness.runtime.indexVault();
+    const progress: SemanticIndexProgress[] = [];
+    const first = await harness.runtime.indexVault({ onProgress: (p) => progress.push(p) });
+    expect(progress.map((p) => p.phase).filter((phase, index, phases) => phase !== phases[index - 1]))
+      .toEqual(["reading", "preparing", "embedding", "committing"]);
+    expect(progress[0].documentsTotal).toBeUndefined();
+    expect(progress[1].documentsTotal).toBe(1);
     const second = await harness.runtime.indexVault();
     expect(harness.source.calls).toBe(2);
     expect(first.mode).toBe("reconcile");

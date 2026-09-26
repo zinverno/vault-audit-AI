@@ -52,9 +52,9 @@ export function createObsidianSemanticRuntime(
           id: settings.embeddingProvider,
           model: settings.embeddingModel.trim(),
           dimensions: async () => descriptor.dimensions,
-          embed: (texts) => {
+          embed: (texts, requestOptions) => {
             actualProvider ??= createEmbeddingProvider(settings);
-            return actualProvider.embed(texts);
+            return actualProvider.embed(texts, requestOptions);
           },
         }
       : createEmbeddingProvider(settings);

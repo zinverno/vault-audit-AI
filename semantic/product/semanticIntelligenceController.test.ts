@@ -157,3 +157,13 @@ describe("Semantic Intelligence product adapter", () => {
     expect(f.settings.update.mock.calls.length).toBe(0);
   });
 });
+
+it("copies transient progress and failure into the product snapshot without IO", () => {
+  const f = fixture({ enabled: true });
+  f.setStatus({ kind: "indexing", progress: { phase: "embedding", chunksTotal: 347, chunksCompleted: 96 } });
+  const snapshot = f.controller.getSnapshot(); snapshot.progress!.chunksCompleted = 200;
+  expect(f.controller.getSnapshot().progress!.chunksCompleted).toBe(96);
+  f.setStatus({ kind: "error", progress: undefined, failure: "provider-rate-limit" });
+  expect(f.controller.getSnapshot()).toMatchObject({ state: "error", failure: "provider-rate-limit", progress: undefined });
+  expect(request).not.toHaveBeenCalled(); expect(f.settings.update).not.toHaveBeenCalled();
+});

@@ -1,5 +1,7 @@
 import { requestUrl } from "obsidian";
 import type { RequestUrlResponse } from "obsidian";
+import { EmbeddingError } from "./errors";
+import type { EmbeddingRequestOptions } from "./types";
 import { t as tr } from "../i18n";
 import type {
   EmbeddingProvider,
@@ -9,12 +11,6 @@ import type {
 const EMBEDDING_TIMEOUT_MS = 30_000;
 const EMBEDDING_BATCH_SIZE = 64;
 const FLOAT32_MAX = 3.4028234663852886e38;
-
-function createTimeoutError(message: string): Error {
-  const error = new Error(message);
-  error.name = "TimeoutError";
-  return error;
-}
 
 export function parseEmbeddingBaseUrl(value: string): URL {
   let url: URL;
@@ -63,31 +59,11 @@ export function buildEmbeddingEndpoint(
   return url.toString();
 }
 
-function httpError(status: number): Error {
-  if (status === 401 || status === 403) {
-    return new Error(
-      tr("Ошибка авторизации embeddings (HTTP {code}). Проверьте API-ключ.", {
-        code: status,
-      }),
-    );
-  }
-  if (status === 429) {
-    return new Error(
-      tr("Лимит запросов embeddings исчерпан (HTTP 429). Повторите позже."),
-    );
-  }
-  if (status >= 500) {
-    return new Error(
-      tr("Сервер embeddings временно недоступен (HTTP {code}).", {
-        code: status,
-      }),
-    );
-  }
-  return new Error(
-    tr("Embeddings API вернул HTTP {code}. Проверьте URL, модель и настройки.", {
-      code: status,
-    }),
-  );
+function httpError(status: number): EmbeddingError {
+  const code = status === 401 || status === 403 ? "auth"
+    : status === 429 ? "rate-limit"
+    : status >= 500 && status < 600 ? "server" : "request";
+  return new EmbeddingError(code, status);
 }
 
 /**
@@ -107,11 +83,7 @@ export async function requestEmbeddingJson(
 
   const timeoutPromise = new Promise<never>((_resolve, reject) => {
     timeoutId = window.setTimeout(() => {
-      reject(
-        createTimeoutError(
-          tr("Таймаут запроса embeddings. Проверьте сервер и URL."),
-        ),
-      );
+      reject(new EmbeddingError("timeout"));
     }, timeoutMs);
   });
 
@@ -131,16 +103,15 @@ export async function requestEmbeddingJson(
   try {
     response = await Promise.race([requestPromise, timeoutPromise]);
   } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
+    if (error instanceof EmbeddingError) {
       throw error;
     }
-    throw new Error(
-      tr("Не удалось подключиться к серверу embeddings. Проверьте URL и доступность сервера."),
-    );
+    throw new EmbeddingError("network");
   } finally {
     if (timeoutId !== undefined) window.clearTimeout(timeoutId);
   }
 
+  if (!response || !Number.isInteger(response.status) || response.status <= 0) throw new EmbeddingError("network");
   if (response.status < 200 || response.status >= 300) {
     throw httpError(response.status);
   }
@@ -148,7 +119,7 @@ export async function requestEmbeddingJson(
   try {
     return JSON.parse(response.text) as unknown;
   } catch {
-    throw new Error(tr("Embeddings API вернул некорректный JSON."));
+    throw new EmbeddingError("invalid-response");
   }
 }
 
@@ -158,56 +129,32 @@ export function validateEmbeddingVectors(
   expectedDimensions?: number,
 ): Float32Array[] {
   if (!Array.isArray(rawVectors) || rawVectors.length === 0) {
-    throw new Error(tr("Embeddings API вернул пустой ответ."));
+    throw new EmbeddingError("invalid-response");
   }
   if (rawVectors.length !== expectedCount) {
-    throw new Error(
-      tr("Количество embeddings не совпало: ожидалось {expected}, получено {actual}.", {
-        expected: expectedCount,
-        actual: rawVectors.length,
-      }),
-    );
+    throw new EmbeddingError("invalid-response");
   }
 
   let dimensions = expectedDimensions;
   const validatedVectors: number[][] = rawVectors.map(
-    (rawVector, vectorIndex) => {
+    (rawVector) => {
       if (!Array.isArray(rawVector) || rawVector.length === 0) {
-        throw new Error(
-          tr("Embedding #{n} пуст или имеет неверный формат.", {
-            n: vectorIndex + 1,
-          }),
-        );
+        throw new EmbeddingError("invalid-response");
       }
 
       if (dimensions === undefined) dimensions = rawVector.length;
       if (rawVector.length !== dimensions) {
-        throw new Error(
-          tr("Размерность embeddings не совпала: ожидалось {expected}, получено {actual}.", {
-            expected: dimensions,
-            actual: rawVector.length,
-          }),
-        );
+        throw new EmbeddingError("invalid-response");
       }
 
       const vector: number[] = [];
       for (let valueIndex = 0; valueIndex < rawVector.length; valueIndex++) {
         const value: unknown = rawVector[valueIndex];
         if (typeof value !== "number" || !Number.isFinite(value)) {
-          throw new Error(
-            tr("Embedding #{vector} содержит некорректное число в позиции {value}.", {
-              vector: vectorIndex + 1,
-              value: valueIndex + 1,
-            }),
-          );
+          throw new EmbeddingError("invalid-response");
         }
         if (Math.abs(value) > FLOAT32_MAX) {
-          throw new Error(
-            tr("Embedding #{vector} содержит число вне диапазона Float32 в позиции {value}.", {
-              vector: vectorIndex + 1,
-              value: valueIndex + 1,
-            }),
-          );
+          throw new EmbeddingError("invalid-response");
         }
         vector.push(value);
       }
@@ -223,25 +170,20 @@ export function parseOpenAIEmbeddingResponse(
   expectedCount: number,
 ): unknown[] {
   if (!payload || typeof payload !== "object") {
-    throw new Error(tr("Embeddings API вернул ответ неверного формата."));
+    throw new EmbeddingError("invalid-response");
   }
 
   const data = (payload as { data?: unknown }).data;
   if (!Array.isArray(data) || data.length === 0) {
-    throw new Error(tr("Embeddings API вернул пустой ответ."));
+    throw new EmbeddingError("invalid-response");
   }
   if (data.length !== expectedCount) {
-    throw new Error(
-      tr("Количество embeddings не совпало: ожидалось {expected}, получено {actual}.", {
-        expected: expectedCount,
-        actual: data.length,
-      }),
-    );
+    throw new EmbeddingError("invalid-response");
   }
 
   const items = data.map((item) => {
     if (!item || typeof item !== "object") {
-      throw new Error(tr("Embeddings API вернул ответ неверного формата."));
+      throw new EmbeddingError("invalid-response");
     }
     return item as { index?: unknown; embedding?: unknown };
   });
@@ -258,21 +200,21 @@ export function parseOpenAIEmbeddingResponse(
       (item.index as number) >= expectedCount ||
       seenIndices.has(item.index as number)
     ) {
-      throw new Error(tr("Embeddings API вернул некорректные индексы результатов."));
+      throw new EmbeddingError("invalid-response");
     }
     seenIndices.add(item.index as number);
     ordered[item.index as number] = item.embedding;
   }
 
   if (seenIndices.size !== expectedCount) {
-    throw new Error(tr("Embeddings API вернул неполный набор результатов."));
+    throw new EmbeddingError("invalid-response");
   }
   return ordered;
 }
 
 export function parseOllamaEmbeddingResponse(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") {
-    throw new Error(tr("Ollama вернул ответ embeddings неверного формата."));
+    throw new EmbeddingError("invalid-response");
   }
   return (payload as { embeddings?: unknown }).embeddings;
 }
@@ -286,9 +228,9 @@ export abstract class BaseEmbeddingProvider implements EmbeddingProvider {
     this.model = model;
   }
 
-  protected abstract embedBatch(texts: string[]): Promise<unknown>;
+  protected abstract embedBatch(texts: string[], options?: EmbeddingRequestOptions): Promise<unknown>;
 
-  async embed(texts: string[]): Promise<Float32Array[]> {
+  async embed(texts: string[], options?: EmbeddingRequestOptions): Promise<Float32Array[]> {
     if (!Array.isArray(texts) || texts.length === 0) {
       throw new Error(tr("Передайте хотя бы один текст для embeddings."));
     }
@@ -299,7 +241,7 @@ export abstract class BaseEmbeddingProvider implements EmbeddingProvider {
     const result: Float32Array[] = [];
     for (let start = 0; start < texts.length; start += EMBEDDING_BATCH_SIZE) {
       const batch = texts.slice(start, start + EMBEDDING_BATCH_SIZE);
-      const rawVectors = await this.embedBatch(batch);
+      const rawVectors = await this.embedBatch(batch, options);
       const vectors = validateEmbeddingVectors(
         rawVectors,
         batch.length,
@@ -313,9 +255,9 @@ export abstract class BaseEmbeddingProvider implements EmbeddingProvider {
     return result;
   }
 
-  async dimensions(): Promise<number> {
+  async dimensions(options?: EmbeddingRequestOptions): Promise<number> {
     if (this.cachedDimensions !== undefined) return this.cachedDimensions;
-    const [vector] = await this.embed(["Vault Audit AI embedding test"]);
+    const [vector] = await this.embed(["Vault Audit AI embedding test"], options);
     return vector.length;
   }
 }

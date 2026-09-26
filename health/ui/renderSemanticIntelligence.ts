@@ -61,6 +61,7 @@ export function renderSemanticIntelligence(parent: HTMLElement, snapshot: Semant
   } else {
     section.createEl("p", { text: model.status, cls: "veynrel-health-state" });
     section.createEl("p", { text: model.description });
+    renderSemanticIndexProgress(section, model.progress);
     if (model.details) section.createEl("p", { text: model.details, cls: "veynrel-health-muted" });
     if (setup?.step === "connected") section.createEl("p", { text: t("@semantic.dimensions", { n: setup.dimensions }) });
     if (model.vectors) section.createEl("p", { text: model.vectors });
@@ -73,4 +74,21 @@ export function renderSemanticIntelligence(parent: HTMLElement, snapshot: Semant
       `semantic-${action.id}`, snapshot.busy);
   }
   if (setup) healthButton(section, t("@semantic.back"), actions.back, "semantic-back", snapshot.busy);
+}
+
+/** Shared by the inline setup and Discover capability section. */
+export function renderSemanticIndexProgress(
+  parent: HTMLElement, progress: ReturnType<typeof semanticIntelligenceViewModel>["progress"],
+): void {
+  if (!progress) return;
+  const surface = parent.createDiv({ cls: "veynrel-semantic-progress" });
+  surface.createEl("p", { text: progress.stage });
+  for (const text of [progress.documents, progress.chunks, progress.batch, progress.reason, progress.retry]) {
+    if (text) surface.createEl("p", { text });
+  }
+  const bar = surface.createEl("progress", { attr: { "aria-label": [progress.stage, progress.chunks].filter(Boolean).join(" ") } });
+  if (progress.max !== undefined && progress.value !== undefined) {
+    bar.max = progress.max;
+    bar.value = progress.value;
+  }
 }

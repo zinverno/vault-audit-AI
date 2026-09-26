@@ -1,3 +1,5 @@
+import { EmbeddingError } from "../embeddings/errors";
+
 export class IndexingError extends Error {
   readonly cause?: unknown;
 
@@ -26,13 +28,13 @@ export class IndexingValidationError extends IndexingError {
 
 export class IndexingProviderError extends IndexingError {
   constructor(message: string, cause?: unknown) {
-    super("IndexingProviderError", message, cause);
+    super("IndexingProviderError", message, cause instanceof EmbeddingError ? cause : undefined);
   }
 }
 
 export class IndexingProviderContractError extends IndexingProviderError {
   constructor(message: string) {
-    super(message);
+    super(message, new EmbeddingError("invalid-response"));
     this.name = "IndexingProviderContractError";
   }
 }
@@ -47,4 +49,9 @@ export class IndexingSourceError extends IndexingError {
   constructor(message: string, cause?: unknown) {
     super("IndexingSourceError", message, cause);
   }
+}
+
+/** An obsolete explicit build must stop before retrying or committing. */
+export class IndexingObsoleteError extends IndexingError {
+  constructor() { super("IndexingObsoleteError", "Indexing operation is obsolete."); }
 }

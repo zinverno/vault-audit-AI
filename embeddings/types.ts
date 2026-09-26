@@ -12,13 +12,17 @@ export interface EmbeddingSettings {
   openAICompatibleApiKey: string;
 }
 
+export interface EmbeddingRequestOptions {
+  timeoutMs?: number;
+}
+
 export interface EmbeddingProvider {
   readonly id: EmbeddingProviderId;
   readonly model: string;
 
-  embed(texts: string[]): Promise<Float32Array[]>;
+  embed(texts: string[], options?: EmbeddingRequestOptions): Promise<Float32Array[]>;
 
-  dimensions(): Promise<number>;
+  dimensions(options?: EmbeddingRequestOptions): Promise<number>;
 }
 
 export interface EmbeddingTestResult {
