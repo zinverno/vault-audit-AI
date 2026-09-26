@@ -738,3 +738,30 @@ it.each([['indexVault', 'save'], ['indexVault', 'capture'], ['rebuildIndex', 'sa
     } finally { vi.unstubAllGlobals(); }
   },
 );
+
+describe("transient rejected batch diagnostics", () => {
+  beforeEach(() => vi.stubGlobal("window", { setTimeout, clearTimeout }));
+  afterEach(() => vi.unstubAllGlobals());
+  const shape = { batchCurrent: 17, batchTotal: 17, inputCount: 3, largestInputChars: 1800, totalInputChars: 4700, oversizedInputCount: 0 };
+  it.each(["check", "build", "settings", "dispose"])("copies failure counts and clears them on %s", async (next) => {
+    const h = createHarness();
+    const runtime = fakeRuntime({ indexVault: vi.fn(async () => {
+      await runtime.initialize(); throw new IndexingProviderError("Safe request failure", new EmbeddingError("request", 400), shape);
+    }) });
+    h.runtimeFactory.mockReturnValue(runtime); await h.controller.indexVault();
+    expect(h.controller.getSemanticStatus()).toMatchObject({ kind: "error", failure: "provider-request", rejectedBatch: shape, progress: undefined });
+    h.controller.getSemanticStatus().rejectedBatch!.inputCount = 999;
+    h.controller.getCachedIndexState().rejectedBatch!.inputCount = 999;
+    expect(h.controller.getSemanticStatus().rejectedBatch).toEqual(shape);
+    if (next === "check") await h.controller.refreshSemanticStatus();
+    if (next === "build") {
+      vi.mocked(runtime.indexVault).mockImplementation(async () => {
+        expect(h.controller.getSemanticStatus().rejectedBatch).toBeUndefined(); return RESULT;
+      });
+      await h.controller.indexVault();
+    }
+    if (next === "settings") { h.plugin.settings.semantic.embeddingModel = "changed"; h.controller.notifySettingsChanged(); }
+    if (next === "dispose") await h.controller.dispose();
+    expect(h.controller.getSemanticStatus().rejectedBatch).toBeUndefined();
+  });
+});

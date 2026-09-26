@@ -2130,3 +2130,62 @@ describe("bounded full-build reliability", () => {
     expect((error as IndexingProviderError).cause).toBeUndefined(); expect(String(error)).not.toContain("private-");
   });
 });
+
+describe("rejected batch shape and bounded chunk reconciliation", () => {
+  it("retains only numeric shape on HTTP 400 with no retry, delay, or commit", async () => {
+    const sleep = vi.fn(async () => {});
+    const h = createHarness({ sleep });
+    h.chunker.resolver = ({ path }) => [1200, 1700, 1800].map((n, i) => noteChunk(`private-id-${i}`, path, i, "x".repeat(n), "private-hash"));
+    await h.service.initialize();
+    h.provider.embedImpl = async () => { throw new EmbeddingError("request", 400); };
+    const error = await h.service.reconcileAll([{ path: "private-path.md", content: "private-body" }], fullBuild).catch((e: unknown) => e) as IndexingProviderError;
+    expect(error.rejectedBatch).toEqual({ batchCurrent: 1, batchTotal: 1, inputCount: 3,
+      largestInputChars: 1800, totalInputChars: 4700, oversizedInputCount: 0 });
+    expect(Object.values(error.rejectedBatch!)).toEqual(expect.arrayContaining([1, 3, 1800, 4700, 0]));
+    expect(Object.values(error.rejectedBatch!).every(value => typeof value === "number")).toBe(true);
+    expect(JSON.stringify(error)).not.toMatch(/private-|xxxx|https|Authorization/u);
+    expect(classifyIndexingFailure(error)).toBe("provider-request");
+    expect(h.provider.embedCalls).toHaveLength(1); expect(sleep).not.toHaveBeenCalled();
+    expect(h.store().mutations).toHaveLength(0);
+  });
+
+  it.each(["reconcile", "sync"])("%s replaces old oversized identities in one commit after all bounded vectors succeed", async (mode) => {
+    const h = createHarness();
+    const content = "# SQL\n```sql\n" + "SELECT '😀 synthetic';\n".repeat(4000) + "```";
+    const doc = { path: "Synthetic.md", content };
+    h.chunker.resolver = ({ path }) => [{ ...noteChunk("old-oversized", path, 0, content), oversized: true }];
+    await h.service.initialize(); await h.service.indexDocument(doc);
+    const before = h.store().getStats(); const metadata = h.store().listMetadata();
+    const chunker = new MarkdownChunker(); h.chunker.resolver = input => chunker.chunk(input);
+    const chunks = chunker.chunk(doc); expect(chunks.length).toBeGreaterThan(32);
+    const run = (onProgress?: (p: SemanticIndexProgress) => void) => mode === "reconcile"
+      ? h.service.reconcileAll([doc], { ...fullBuild, onProgress })
+      : h.service.syncDocuments({ upsertDocuments: [doc], deletePaths: [] }, { ...fullBuild, onProgress });
+    let calls = 0;
+    h.provider.embedImpl = async texts => { if (++calls === 2) throw new EmbeddingError("request", 400); return texts.map(vectorForText); };
+    await expect(run()).rejects.toMatchObject({ rejectedBatch: { batchCurrent: 2, batchTotal: Math.ceil(chunks.length / 32) } });
+    expect(h.store().getStats()).toEqual(before); expect(h.store().listMetadata()).toEqual(metadata);
+    expect(h.store().mutations).toHaveLength(1);
+    h.provider.embedCalls.length = 0; h.provider.embedImpl = async texts => texts.map(vectorForText);
+    const progress: SemanticIndexProgress[] = []; await run(p => progress.push(p));
+    expect(h.provider.embedCalls[0]).toHaveLength(32);
+    expect(h.provider.embedCalls.flat()).toEqual(chunks.map(c => c.text));
+    expect(h.provider.embedCalls.flat().every(text => text.length <= 1800)).toBe(true);
+    expect(h.store().mutations).toHaveLength(2);
+    expect(h.store().mutations[1].deleteIds).toEqual(["old-oversized"]);
+    expect(h.store().listMetadata().map(c => c.id).sort()).toEqual(chunks.map(c => c.id).sort());
+    expect(h.store().getStats().embeddingSpaceId).toBe(before.embeddingSpaceId);
+    expect(progress.some(p => p.chunksTotal === chunks.length && p.batchTotal === Math.ceil(chunks.length / 32))).toBe(true);
+  });
+});
+
+it.each([new Float32Array([1, 0]), new Float32Array([0, 0, 0])])("retains batch shape for indexing-layer invalid vectors %j without retries", async (vector) => {
+  const sleep = vi.fn(async () => {}); const h = createHarness({ sleep });
+  h.chunker.resolver = ({ path }) => [noteChunk("synthetic", path, 0, "input")];
+  h.provider.embedImpl = async () => [vector]; await h.service.initialize();
+  const error = await h.service.reconcileAll([{ path: "Synthetic.md", content: "body" }], fullBuild).catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(IndexingProviderContractError);
+  expect(error).toMatchObject({ rejectedBatch: { batchCurrent: 1, batchTotal: 1, inputCount: 1, largestInputChars: 5, totalInputChars: 5, oversizedInputCount: 0 } });
+  expect(classifyIndexingFailure(error)).toBe("provider-response");
+  expect(h.provider.embedCalls).toHaveLength(1); expect(sleep).not.toHaveBeenCalled(); expect(h.store().mutations).toHaveLength(0);
+});

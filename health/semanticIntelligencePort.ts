@@ -1,10 +1,11 @@
 /** Product-only contract. Health has no dependency on the semantic engine or providers. */
-import type { SemanticIndexFailureReason, SemanticIndexProgress } from "../utils/semanticIndexDiagnostics";
+import type { SemanticIndexFailureReason, SemanticIndexProgress, SemanticRejectedBatchDiagnostic } from "../utils/semanticIndexDiagnostics";
 export type SemanticSetupMode = "local" | "cloud" | "custom";
 export type SemanticOperation = "connect" | "check" | "build" | "rebuild";
 
 export interface SemanticIntelligenceSnapshot {
   failure?: SemanticIndexFailureReason;
+  rejectedBatch?: SemanticRejectedBatchDiagnostic;
   progress?: SemanticIndexProgress;
   enabled: boolean;
   state: "disabled" | "configured" | "ready" | "busy" | "incompatible" | "error";

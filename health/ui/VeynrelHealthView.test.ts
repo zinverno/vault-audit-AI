@@ -1520,3 +1520,34 @@ describe("Semantic Intelligence indexing diagnostics", () => {
     expect(parent.texts()).not.toMatch(/\d|%/u);
   });
 });
+
+describe("safe rejected-batch UI", () => {
+  const snapshot: SemanticIntelligenceSnapshot = { enabled: true, state: "error", provider: "openrouter", providerLabel: "OpenRouter",
+    model: "synthetic", vectorCount: 0, indexRequired: true, busy: false, failure: "provider-request",
+    rejectedBatch: { batchCurrent: 17, batchTotal: 17, inputCount: 3, largestInputChars: 1800, totalInputChars: 4700, oversizedInputCount: 0 } };
+  const actions = { action: vi.fn(), choose: vi.fn(), edit: vi.fn(), connect: vi.fn(), back: vi.fn() };
+  it.each(["en", "ru"] as const)("shows counts without claiming their cause in both %s surfaces", (language) => {
+    setLanguage(language);
+    for (const surface of ["inline", "discover"]) {
+      const parent = new mocks.Element();
+      if (surface === "inline") renderSemanticIntelligence(parent as never, snapshot, undefined, actions);
+      else renderDiscover(parent as never, discoverViewModel(snapshot), vi.fn());
+      for (const text of ["17 / 17", "3", "1800", "4700", language === "en" ? "input-specific provider rejection" : "конкретными входными данными"])
+        expect(parent.texts()).toContain(text);
+      expect(parent.texts()).toContain(language === "en" ? "rejected the request" : "отклонил запрос");
+      expect(parent.texts()).not.toMatch(/Error:|private-|Authorization|stack|https:|<script/u);
+      expect(parent.all().some(e => e.tag === "progress")).toBe(false);
+      expect(parent.action(surface === "inline" ? "semantic-check" : "discover-check")).toBeDefined();
+    }
+  });
+  it.each(["provider-timeout", "provider-rate-limit", undefined] as const)("hides batch shape for %s", (failure) => {
+    const parent = new mocks.Element();
+    renderSemanticIntelligence(parent as never, { ...snapshot, failure }, undefined, actions);
+    expect(parent.texts()).not.toContain("4700");
+  });
+  it("hides previous counts during a new operation", () => {
+    const parent = new mocks.Element();
+    renderSemanticIntelligence(parent as never, { ...snapshot, busy: true, operation: "build" }, undefined, actions);
+    expect(parent.texts()).not.toContain("4700");
+  });
+});

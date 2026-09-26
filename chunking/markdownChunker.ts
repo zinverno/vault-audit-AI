@@ -39,11 +39,12 @@ interface LogicalBlock {
   endOffset: number;
   text: string;
   separatorBefore: string;
+  /** Hard-split atomic fragments never participate in overlap or regrouping. */
+  hardSplit?: boolean;
 }
 
 interface BlockGroup {
   primary: LogicalBlock[];
-  oversized: boolean;
 }
 
 interface Fence {
@@ -624,7 +625,17 @@ function joinBlocks(blocks: LogicalBlock[]): string {
 }
 
 function composeText(breadcrumb: string, blocks: LogicalBlock[]): string {
-  return `${breadcrumb}\n\n${joinBlocks(blocks)}`;
+  return (breadcrumb ? `${breadcrumb}\n\n` : "") + joinBlocks(blocks);
+}
+
+function boundedBreadcrumb(headingPath: string[], maxChars: number): string {
+  const breadcrumb = headingPath.join(" > ");
+  // Reserve at least half the input for body content (and two units for a code point).
+  const budget = Math.max(0, Math.floor(maxChars / 2) - 2);
+  if (breadcrumb.length <= budget) return breadcrumb;
+  if (!budget) return "";
+  const end = isBetweenSurrogatePair(breadcrumb, budget - 1) ? budget - 2 : budget - 1;
+  return breadcrumb.slice(0, end) + "…";
 }
 
 function closestBoundary(candidates: number[], target: number): number | null {
@@ -684,14 +695,8 @@ function isBetweenSurrogatePair(content: string, offset: number): boolean {
 function safeEndBoundary(
   content: string,
   offset: number,
-  minimum: number,
-  maximum: number,
 ): number {
-  if (!isBetweenSurrogatePair(content, offset)) return offset;
-  if (offset - 1 > minimum) return offset - 1;
-  // A code point is indivisible: the first surrogate pair may exceed max by one
-  // UTF-16 unit; groupBlocks then marks that minimal overflow as oversized.
-  return Math.min(maximum, offset + 1);
+  return isBetweenSurrogatePair(content, offset) ? offset - 1 : offset;
 }
 
 function safeStartBoundary(
@@ -726,8 +731,8 @@ function splitLongParagraph(
       maximum === block.endOffset
         ? block.endOffset
         : chooseParagraphBoundary(content, cursor, target, maximum);
-    boundary = safeEndBoundary(content, boundary, cursor, block.endOffset);
-    if (boundary <= cursor) boundary = maximum;
+    boundary = safeEndBoundary(content, boundary);
+    if (boundary <= cursor) boundary = safeEndBoundary(content, maximum);
 
     let trimmedEnd = boundary;
     while (trimmedEnd > cursor && /\s/.test(content[trimmedEnd - 1])) {
@@ -757,19 +762,38 @@ function splitLongParagraph(
   return pieces;
 }
 
+function splitAtomicBlock(content: string, block: LogicalBlock, budget: number): LogicalBlock[] {
+  if (block.text.length <= budget) return [block];
+  const pieces: LogicalBlock[] = [];
+  let cursor = block.startOffset;
+  while (cursor < block.endOffset) {
+    const maximum = Math.min(block.endOffset, cursor + budget);
+    const newline = content.slice(cursor, maximum).lastIndexOf("\n");
+    let boundary = maximum < block.endOffset && newline >= 0
+      ? cursor + newline + 1 : safeEndBoundary(content, maximum);
+    // Normalize a source CRLF once, never separately in adjacent pieces.
+    if (content[boundary - 1] === "\r" && content[boundary] === "\n") boundary--;
+    const raw = content.slice(cursor, boundary);
+    const text = block.kind === "code" ? raw.replace(/\r\n?/g, "\n") : normalizePlainText(raw);
+    if (text) pieces.push({ ...block, startOffset: cursor, endOffset: boundary, text, hardSplit: true });
+    cursor = boundary;
+  }
+  return pieces;
+}
+
 function prepareBlocks(
   content: string,
   blocks: LogicalBlock[],
   breadcrumb: string,
   options: ChunkingOptions,
 ): LogicalBlock[] {
-  const prefixLength = breadcrumb.length + 2;
-  const maxBodyChars = Math.max(1, options.maxChars - prefixLength);
+  const prefixLength = breadcrumb ? breadcrumb.length + 2 : 0;
+  const maxBodyChars = options.maxChars - prefixLength;
   const targetBodyChars = Math.max(1, options.targetChars - prefixLength);
   return blocks.flatMap((block) =>
     block.kind === "paragraph"
       ? splitLongParagraph(content, block, targetBodyChars, maxBodyChars)
-      : [block],
+      : splitAtomicBlock(content, block, maxBodyChars),
   );
 }
 
@@ -783,16 +807,14 @@ function groupBlocks(
 
   const flush = () => {
     if (!current.length) return;
-    const length = composeText(breadcrumb, current).length;
-    groups.push({ primary: current, oversized: length > options.maxChars });
+    groups.push({ primary: current });
     current = [];
   };
 
   for (const block of blocks) {
-    const standaloneLength = composeText(breadcrumb, [block]).length;
-    if (block.atomic && standaloneLength > options.maxChars) {
+    if (block.hardSplit) {
       flush();
-      groups.push({ primary: [block], oversized: true });
+      groups.push({ primary: [block] });
       continue;
     }
     if (!current.length) {
@@ -848,6 +870,7 @@ function selectOverlap(
   breadcrumb: string,
   options: ChunkingOptions,
 ): LogicalBlock[] {
+  if (primary.some((block) => block.hardSplit) || previousPrimary.some((block) => block.hardSplit)) return [];
   const primaryLength = composeText(breadcrumb, primary).length;
   const bridgeLength = primary[0]?.separatorBefore.length ?? 0;
   const hardBudget = Math.max(
@@ -874,7 +897,7 @@ function selectOverlap(
     return [last];
   }
   const suffix = suffixOverlapBlock(content, last, softBudget);
-  return suffix ? [suffix] : [];
+  return suffix && suffix.text.length <= hardBudget ? [suffix] : [];
 }
 
 function lineAtOffset(lines: SourceLine[], offset: number): number {
@@ -896,12 +919,13 @@ function validateOptions(options: ChunkingOptions): void {
     !isFiniteInteger(options.maxChars) ||
     !isFiniteInteger(options.overlapChars) ||
     options.targetChars <= 0 ||
+    options.maxChars < 2 ||
     options.maxChars < options.targetChars ||
     options.overlapChars < 0 ||
     options.overlapChars >= options.maxChars
   ) {
     throw new RangeError(
-      "Chunking options require 0 < targetChars <= maxChars and 0 <= overlapChars < maxChars.",
+      "Chunking options require 0 < targetChars <= maxChars, maxChars >= 2 and 0 <= overlapChars < maxChars.",
     );
   }
 }
@@ -946,7 +970,7 @@ export class MarkdownChunker implements ChunkingStrategy {
         section.endOffset,
       );
       if (!parsedBlocks.length) continue;
-      const breadcrumb = section.headingPath.join(" > ");
+      const breadcrumb = boundedBreadcrumb(section.headingPath, this.options.maxChars);
       const blocks = prepareBlocks(
         content,
         parsedBlocks,
@@ -988,9 +1012,6 @@ export class MarkdownChunker implements ChunkingStrategy {
             endLine: lineAtOffset(allLines, Math.max(startOffset, endOffset - 1)),
           },
         };
-        if (group.oversized || text.length > this.options.maxChars) {
-          chunk.oversized = true;
-        }
         chunks.push(chunk);
         previousPrimary = group.primary;
       }

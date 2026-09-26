@@ -167,3 +167,12 @@ it("copies transient progress and failure into the product snapshot without IO",
   expect(f.controller.getSnapshot()).toMatchObject({ state: "error", failure: "provider-rate-limit", progress: undefined });
   expect(request).not.toHaveBeenCalled(); expect(f.settings.update).not.toHaveBeenCalled();
 });
+
+it("copies rejected batch counts without leaking mutable engine state", () => {
+  const f = fixture({ enabled: true });
+  const rejectedBatch = { batchCurrent: 17, batchTotal: 17, inputCount: 3, largestInputChars: 1800, totalInputChars: 4700, oversizedInputCount: 0 };
+  f.setStatus({ kind: "error", failure: "provider-request", rejectedBatch });
+  f.controller.getSnapshot().rejectedBatch!.inputCount = 99;
+  expect(f.controller.getSnapshot().rejectedBatch).toEqual(rejectedBatch);
+  expect(request).not.toHaveBeenCalled(); expect(f.settings.update).not.toHaveBeenCalled();
+});

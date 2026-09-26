@@ -41,7 +41,8 @@ export class SemanticIntelligenceController implements SemanticIntelligencePort 
       providerLabel: EMBEDDING_PROVIDER_PROFILES[settings.embeddingProvider].label,
       model: settings.embeddingModel, vectorCount: status.vectorCount,
       indexRequired: status.kind === "ready" && status.vectorCount === 0, busy, operation: this.operation,
-      failure: status.failure, progress: status.progress ? { ...status.progress } : undefined };
+      failure: status.failure, progress: status.progress ? { ...status.progress } : undefined,
+      rejectedBatch: status.rejectedBatch ? { ...status.rejectedBatch } : undefined };
   }
 
   createDraft(mode: SemanticSetupMode): SemanticSetupDraft {

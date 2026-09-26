@@ -6,8 +6,9 @@ import type {
 } from "../vectorStore/types";
 import { VectorStoreCompatibilityError } from "../vectorStore/errors";
 import { EmbeddingError } from "../embeddings/errors";
+import { DEFAULT_CHUNKING_OPTIONS } from "../chunking/types";
 import { reportIndexingProgress } from "../utils/semanticIndexDiagnostics";
-import type { SemanticIndexProgress } from "../utils/semanticIndexDiagnostics";
+import type { SemanticIndexProgress, SemanticRejectedBatchDiagnostic } from "../utils/semanticIndexDiagnostics";
 import {
   IndexingCompatibilityError,
   IndexingNotInitializedError,
@@ -32,6 +33,15 @@ const MIN_VECTOR_NORM_SQUARED = 1e-24;
 const UINT32_MAX = 0xffff_ffff;
 const RETRY_DELAYS_MS = [1_000, 3_000] as const;
 export const INDEXING_EMBEDDING_TIMEOUT_MS = 90_000;
+
+function rejectedBatchShape(texts: readonly string[], batchCurrent: number, batchTotal: number): SemanticRejectedBatchDiagnostic {
+  return {
+    batchCurrent, batchTotal, inputCount: texts.length,
+    largestInputChars: texts.reduce((largest, text) => Math.max(largest, text.length), 0),
+    totalInputChars: texts.reduce((total, text) => total + text.length, 0),
+    oversizedInputCount: texts.filter((text) => text.length > DEFAULT_CHUNKING_OPTIONS.maxChars).length,
+  };
+}
 
 interface PreparedChunk {
   metadata: VectorChunkMetadata;
@@ -687,20 +697,21 @@ export class IndexingService {
       const batch = chunks.slice(start, start + this.embeddingBatchSize);
       const texts = batch.map((chunk) => chunk.text);
       const progress = { ...baseProgress, batchCurrent: Math.floor(start / this.embeddingBatchSize) + 1, chunksCompleted: start };
+      const contractError = (message: string) => new IndexingProviderContractError(message, rejectedBatchShape(texts, progress.batchCurrent, batchTotal));
       const rawVectors = await this.embedBatch(texts, options, progress);
       if (!Array.isArray(rawVectors) || rawVectors.length !== batch.length) {
-        throw new IndexingProviderContractError(
+        throw contractError(
           "Embedding provider returned an invalid vector count.",
         );
       }
       for (const rawVector of rawVectors) {
         if (!(rawVector instanceof Float32Array)) {
-          throw new IndexingProviderContractError(
+          throw contractError(
             "Embedding provider must return Float32Array vectors.",
           );
         }
         if (rawVector.length !== this.dimensionsValue) {
-          throw new IndexingProviderContractError(
+          throw contractError(
             "Embedding provider returned a vector with incompatible dimensions.",
           );
         }
@@ -708,7 +719,7 @@ export class IndexingService {
         for (let index = 0; index < rawVector.length; index++) {
           const value = rawVector[index];
           if (!Number.isFinite(value)) {
-            throw new IndexingProviderContractError(
+            throw contractError(
               "Embedding provider returned a non-finite vector.",
             );
           }
@@ -718,7 +729,7 @@ export class IndexingService {
           !Number.isFinite(normSquared) ||
           normSquared <= MIN_VECTOR_NORM_SQUARED
         ) {
-          throw new IndexingProviderContractError(
+          throw contractError(
             "Embedding provider returned a zero or invalid vector.",
           );
         }
@@ -731,7 +742,7 @@ export class IndexingService {
 
   private async embedBatch(
     texts: string[], options: IndexingExecutionOptions,
-    progress: Omit<SemanticIndexProgress, "phase">,
+    progress: Omit<SemanticIndexProgress, "phase"> & { batchCurrent: number; batchTotal: number },
   ): Promise<unknown> {
     for (let attempt = 0; ; attempt++) {
       if (options.isCurrent && !options.isCurrent()) throw new IndexingObsoleteError();
@@ -742,7 +753,8 @@ export class IndexingService {
         // requestUrl cannot abort: a timeout (or uncertain network failure) must never duplicate work.
         if (!options.retryTransient || !(error instanceof EmbeddingError)
           || (error.code !== "rate-limit" && error.code !== "server") || attempt >= RETRY_DELAYS_MS.length) {
-          throw new IndexingProviderError("Embedding provider request failed.", error);
+          throw new IndexingProviderError("Embedding provider request failed.", error,
+            rejectedBatchShape(texts, progress.batchCurrent, progress.batchTotal));
         }
         if (options.isCurrent && !options.isCurrent()) throw new IndexingObsoleteError();
         reportIndexingProgress(options.onProgress, { ...progress, phase: "retrying",

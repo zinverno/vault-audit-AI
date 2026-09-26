@@ -470,7 +470,8 @@ export class ObsidianSemanticController {
 
   getSemanticStatus(): SemanticStatus {
     this.reconcileCachedStatus();
-    return { ...this.status, progress: this.status.progress ? { ...this.status.progress } : undefined };
+    return { ...this.status, progress: this.status.progress ? { ...this.status.progress } : undefined,
+      rejectedBatch: this.status.rejectedBatch ? { ...this.status.rejectedBatch } : undefined };
   }
 
   /** Read cached status/settings only. Does not initialize, probe, test or build an index. */
@@ -805,7 +806,7 @@ export class ObsidianSemanticController {
       if (companionSnapshot && current()) this.queueCompanionReconciliation(companionSnapshot);
     } catch (error) {
       if (current() && !(error instanceof IndexingObsoleteError)) {
-        this.captureErrorStatus(error);
+        this.captureErrorStatus(error, true);
         this.notice(semanticIndexFailureMessage(classifyIndexingFailure(error)), 8000);
       }
     } finally {
@@ -1017,7 +1018,7 @@ export class ObsidianSemanticController {
       if (companionSnapshot && current()) this.queueCompanionReconciliation(companionSnapshot);
     } catch (error) {
       if (current() && !(error instanceof IndexingObsoleteError)) {
-        this.captureErrorStatus(error);
+        this.captureErrorStatus(error, true);
         this.notice(semanticIndexFailureMessage(classifyIndexingFailure(error)), 8000);
       }
     } finally {
@@ -1516,14 +1517,15 @@ export class ObsidianSemanticController {
     if (this.operationBusy) this.status.kind = "indexing";
   }
 
-  private captureErrorStatus(error: unknown): void {
+  private captureErrorStatus(error: unknown, fullBuild = false): void {
     this.status = this.defaultStatus(
       error instanceof SemanticCompatibilityError ||
         error instanceof IndexingCompatibilityError
         ? "incompatible"
         : "error",
     );
-    this.status = { ...this.status, failure: classifyIndexingFailure(error) };
+    this.status = { ...this.status, failure: classifyIndexingFailure(error),
+      rejectedBatch: fullBuild && error instanceof IndexingProviderError && error.rejectedBatch ? { ...error.rejectedBatch } : undefined };
   }
 
   private showError(error: unknown): void {
@@ -1552,7 +1554,7 @@ export class ObsidianSemanticController {
       embeddingTimeoutMs: INDEXING_EMBEDDING_TIMEOUT_MS,
       retryTransient: true,
       onProgress: (progress) => {
-        if (current()) this.status = { ...this.status, kind: "indexing", failure: undefined, progress: { ...progress } };
+        if (current()) this.status = { ...this.status, kind: "indexing", failure: undefined, rejectedBatch: undefined, progress: { ...progress } };
       },
     };
   }
