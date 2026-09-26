@@ -687,3 +687,20 @@ describe("SemanticDiscoveryService production boundaries", () => {
     expect(source).not.toContain(".clear(");
   });
 });
+
+
+describe("indexed document catalog", () => {
+  it("deduplicates chunk paths in canonical order without similarity or mutation", () => {
+    const { store, service } = similarHarness([entry("c", "C.md", [1, 0]), entry("b1", "B.md", [0, 1]),
+      entry("a1", "A.md", [1, 0]), entry("b2", "B.md", [0, 1]), entry("a2", "A.md", [1, 0])]);
+    expect(service.listIndexedPaths()).toEqual(["A.md", "B.md", "C.md"]);
+    expect(store.snapshotReads).toBe(1); expect(store.mutations).toBe(0); expect(store.search).not.toHaveBeenCalled();
+  });
+  it("validates the same snapshot structure for catalog and discovery", () => {
+    const { store, service } = similarHarness([entry("a", "A.md", [1, 0])]);
+    const snapshot = store.readSnapshot(); snapshot.vectors = new Float32Array(1);
+    vi.spyOn(store, "readSnapshot").mockReturnValue(snapshot);
+    expect(() => service.listIndexedPaths()).toThrow("invalid discovery snapshot");
+    expect(() => service.findSimilarNotes("A.md")).toThrow("invalid discovery snapshot");
+  });
+});

@@ -27,7 +27,7 @@ export const MIN_DOCUMENT_MEANINGFUL_CHARACTERS = 32;
  */
 export const MIN_DOCUMENT_COHERENCE = 1e-5;
 
-const DEFAULT_MATCHES_PER_DOCUMENT = 3;
+export const DEFAULT_MATCHES_PER_DOCUMENT = 3;
 const MAX_RESULT_LIMIT = 500;
 const MAX_MATCHES_PER_DOCUMENT = 10;
 const MEANINGFUL_CHARACTER = /[\p{L}\p{N}]/u;
@@ -330,6 +330,11 @@ export class SemanticDiscoveryService {
     }
   }
 
+  /** Catalog of the same snapshot, without document-centroid computation. */
+  listIndexedPaths(): readonly string[] {
+    return Object.freeze([...new Set(this.validatedSnapshot().metadata.map((item) => validatePath(item.path)))].sort(compareStrings));
+  }
+
   findSimilarNotes(
     rawSourcePath: string,
     rawOptions?: SemanticSimilarNotesOptions,
@@ -421,7 +426,7 @@ export class SemanticDiscoveryService {
       }));
   }
 
-  private prepareSnapshot(): PreparedSnapshot {
+  private validatedSnapshot(): VectorStoreSnapshot {
     const snapshot = this.vectorStore.readSnapshot();
     if (
       !snapshot ||
@@ -437,6 +442,11 @@ export class SemanticDiscoveryService {
       );
     }
 
+    return snapshot;
+  }
+
+  private prepareSnapshot(): PreparedSnapshot {
+    const snapshot = this.validatedSnapshot();
     const grouped = new Map<string, number[]>();
     for (let row = 0; row < snapshot.metadata.length; row++) {
       const metadata = snapshot.metadata[row];

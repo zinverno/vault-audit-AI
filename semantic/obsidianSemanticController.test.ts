@@ -117,6 +117,7 @@ function fakeRuntime(overrides: Partial<SemanticRuntime> = {}): SemanticRuntime 
         generationAfter: generation,
       };
     }),
+    listIndexedPaths: vi.fn(async () => ["Alpha.md"]),
     findSimilarNotes: vi.fn(async () => []),
     findPotentialDuplicates: vi.fn(async () => []),
     search: vi.fn(async () => []),
@@ -395,6 +396,7 @@ describe("ObsidianSemanticController commands and lazy behavior", () => {
       runtimeFactory: vi.fn(() => runtime),
     });
 
+    expect(await harness.controller.listIndexedPaths()).toEqual(["Alpha.md"]);
     await harness.controller.findSimilarNotes("Alpha.md");
     await harness.controller.findPotentialDuplicates();
 
