@@ -109,8 +109,8 @@ describe("native Health view lifecycle", () => {
     const pending = f.controller.runLocalScan(); release("Meaningful content longer than thirty two characters for the scan."); await pending;
     expect(f.content.texts()).toContain("Vault check complete"); expect(f.content.texts()).toContain("Review recommended");
     expect(f.content.action("scan").disabled).toBe(false); expect(f.content.action("open-note")).toBeDefined();
-    f.content.action("tools").click(); expect(f.content.action("nav-health").attrs["aria-current"]).toBe("page");
-    expect(f.content.action("nav-tools")).toBeUndefined();
+    f.content.action("nav-tools").click(); expect(f.content.action("nav-tools").attrs["aria-current"]).toBe("page");
+    expect(f.content.action("tools")).toBeUndefined();
     expect(f.tools.openBatchProcessing).not.toHaveBeenCalled();
   });
   it("close unsubscribes without cancelling; reopen reflects the same plugin-owned running scan", async () => {
@@ -377,7 +377,7 @@ describe("inline Semantic Intelligence boundaries", () => {
   ] as const)("Discover navigation is passive (enabled %s, %s, %s vectors)", async (enabled, kind, count) => {
     const f = semanticFixture(enabled, kind, count); await f.view.onOpen();
     expect(f.content.all().filter((e) => e.attrs["data-health-action"]?.startsWith("nav-")).map((e) => e.text))
-      .toEqual(["Health", "Findings", "Discover", "Settings"]);
+      .toEqual(["Health", "Findings", "Discover", "Tools", "Settings"]);
     f.content.action("nav-discover").click();
     expect(f.content.action("nav-discover").attrs["aria-current"]).toBe("page");
     expect(f.content.all().find((e) => e.tag === "h1")?.text).toBe("Discover");
@@ -661,19 +661,19 @@ describe("integrated Health onboarding", () => {
     f.content.action("scan").click(); const pending = f.controller.runLocalScan();
     expect(f.preferences.get().onboardingCompleted).toBe(false); await pending;
     expect(f.content.texts()).toContain("Veynrel found something"); expect(f.content.texts()).toContain("Note without connections");
-    expect(f.content.action("continue")).toBeDefined(); expect(f.content.action("tools")).toBeUndefined();
+    expect(f.content.action("continue")).toBeDefined(); expect(f.content.action("nav-tools")).toBeUndefined();
     expect(f.content.action("nav-findings")).toBeUndefined();
     expect(f.preferences.get().onboardingCompleted).toBe(false);
-    f.content.action("continue").click(); await vi.waitFor(() => expect(f.content.action("tools")).toBeDefined());
+    f.content.action("continue").click(); await vi.waitFor(() => expect(f.content.action("nav-tools")).toBeDefined());
     expect(f.preferences.get().onboardingCompleted).toBe(true); expect(f.vault.read).toHaveBeenCalledTimes(1);
     expect(f.content.action("nav-findings")).toBeDefined();
-    await f.view.onClose(); await f.view.onOpen(); expect(f.content.action("tools")).toBeDefined();
+    await f.view.onClose(); await f.view.onOpen(); expect(f.content.action("nav-tools")).toBeDefined();
     expect(f.content.all().filter((e) => e.attrs.role === "status")).toHaveLength(1);
     expect(f.vault.read).toHaveBeenCalledTimes(1);
   });
   it("Skip saves Mixed, permanently exits onboarding and never scans", async () => {
     const f = fixture({}); await f.view.onOpen(); f.content.action("skip").click();
-    await vi.waitFor(() => expect(f.content.action("tools")).toBeDefined());
+    await vi.waitFor(() => expect(f.content.action("nav-tools")).toBeDefined());
     expect(f.preferences.get()).toEqual({ profile: "mixed", profileChosen: true, onboardingCompleted: true, onboardingVersion: 1 });
     await f.view.onClose(); await f.view.onOpen(); expect(f.content.action("skip")).toBeUndefined();
     expect(f.vault.read).not.toHaveBeenCalled();
@@ -702,9 +702,9 @@ describe("integrated Health onboarding", () => {
     const result = fixture({ profileChosen: true }); await result.view.onOpen(); await result.controller.runLocalScan();
     result.save.mockRejectedValueOnce(new Error("private details")); result.content.action("continue").click();
     await vi.waitFor(() => expect(result.content.texts()).toContain("Couldn't save Health preferences"));
-    expect(result.content.action("continue")).toBeDefined(); expect(result.content.action("tools")).toBeUndefined();
+    expect(result.content.action("continue")).toBeDefined(); expect(result.content.action("nav-tools")).toBeUndefined();
     expect(result.preferences.get().onboardingCompleted).toBe(false); expect(result.content.texts()).not.toContain("private details");
-    result.content.action("continue").click(); await vi.waitFor(() => expect(result.content.action("tools")).toBeDefined());
+    result.content.action("continue").click(); await vi.waitFor(() => expect(result.content.action("nav-tools")).toBeDefined());
   });
   it("Change profile is secondary, shows a non-color selected marker, has no Skip and never scans", async () => {
     const f = fixture({ profile: "work", profileChosen: true, onboardingCompleted: true }); await f.view.onOpen();
@@ -719,7 +719,7 @@ describe("integrated Health onboarding", () => {
     f.content.action("profile-research").click(); await vi.waitFor(() => expect(f.content.action("profile-research")).toBeUndefined());
     expect(f.content.texts()).toContain("Profile: Research & writing");
     expect(f.preferences.get().onboardingCompleted).toBe(true); expect(f.vault.read).not.toHaveBeenCalled();
-    f.content.action("tools").click(); expect(f.content.action("nav-health").attrs["aria-current"]).toBe("page");
+    f.content.action("nav-tools").click(); expect(f.content.action("nav-tools").attrs["aria-current"]).toBe("page");
     expect(f.tools.openBatchProcessing).not.toHaveBeenCalled();
   });
   it.each(["findings.json", "scan-runs.json"])("recovery of %s wins before Welcome and preserves preferences", async (file) => {
@@ -809,8 +809,8 @@ describe("Findings navigation and lifecycle integration", () => {
     for (const dimension of ["recall", "knowledge", "all"]) f.content.action(`filter-${dimension}`).click();
     const row = f.content.action(`finding-${id}`); row.focus(); row.click();
     expect(f.content.ownerDocument.activeElement?.tag).toBe("h2");
-    f.content.action("tools").click(); expect(f.content.action("nav-health").attrs["aria-current"]).toBe("page");
-    expect(f.content.action("nav-tools")).toBeUndefined();
+    f.content.action("tools").click(); expect(f.content.action("nav-tools").attrs["aria-current"]).toBe("page");
+    expect(f.content.action("tools")).toBeUndefined();
     expect(f.tools.openBatchProcessing).not.toHaveBeenCalled();
     f.content.action("nav-health").click(); expect(f.content.action("scan")).toBeDefined();
     expect(f.vault.read).not.toHaveBeenCalled(); expect(f.vault.getMarkdownFiles).not.toHaveBeenCalled(); expect(f.adapter.write).not.toHaveBeenCalled();
@@ -1097,11 +1097,10 @@ describe("final Tools and Settings IA", () => {
   it.each(["en", "ru"] as const)("renders final navigation, passive Tools and safe Settings in %s", async (language) => {
     setLanguage(language); mocks.requestUrl.mockClear(); const f = overviewFixture(); await f.view.onOpen();
     expect(f.content.all().filter((e) => e.attrs["data-health-action"]?.startsWith("nav-")).map((e) => e.attrs["data-health-action"]))
-      .toEqual(["nav-health", "nav-findings", "nav-discover", "nav-recall", "nav-connect", "nav-settings"]);
+      .toEqual(["nav-health", "nav-findings", "nav-discover", "nav-recall", "nav-connect", "nav-tools", "nav-settings"]);
     for (const page of ["tools", "settings"] as const) {
-      f.content.action(page === "tools" ? "tools" : "nav-settings").click(); passive(f);
-      expect(f.content.action(page === "tools" ? "nav-health" : "nav-settings").attrs["aria-current"]).toBe("page");
-      expect(f.content.action("nav-tools")).toBeUndefined();
+      f.content.action(`nav-${page}`).click(); passive(f);
+      expect(f.content.action(`nav-${page}`).attrs["aria-current"]).toBe("page");
       expect(f.content.ownerDocument.activeElement?.attrs["data-health-heading"]).toBe("true");
       expect(f.content.texts()).not.toMatch(/@(?:tools|settings|deep|semantic|connect)|PRIVATE_ENDPOINT|AI Hub|Vault Audit AI/u);
       expect(f.content.all().filter((e) => e.attrs["data-health-action"]).every((e) => e.tag === "button")).toBe(true);
@@ -1115,7 +1114,7 @@ describe("final Tools and Settings IA", () => {
     await f.view.onClose(); f.recall.dispose(); f.controller.dispose();
   });
   it("each Tools action invokes one host operation and editor entries never guess an editor", async () => {
-    const f = overviewFixture(); mocks.requestUrl.mockClear(); await f.view.onOpen(); f.content.action("tools").click();
+    const f = overviewFixture(); mocks.requestUrl.mockClear(); await f.view.onOpen(); f.content.action("nav-tools").click();
     expect(f.content.texts()).toContain("command palette"); expect(f.content.texts()).toContain("Single Audit");
     expect(f.content.texts()).toContain("Knowledge Health"); expect(f.content.texts()).toContain("backups");
     const actions = f.content.all().filter((e) => e.attrs["data-health-action"]?.startsWith("tool-"));
@@ -1141,13 +1140,13 @@ describe("final Tools and Settings IA", () => {
     const f = overviewFixture(); await f.view.onOpen();
     const second = new VeynrelHealthView({ app: f.app } as never, f.controller, f.tools, f.semantic, f.recall, f.deep, undefined, f.connect);
     await second.onOpen(); const content = second.contentEl as unknown as InstanceType<typeof mocks.Element>;
-    f.content.action("tools").click(); content.action("nav-settings").click();
+    f.content.action("nav-tools").click(); content.action("nav-settings").click();
     let fail!: (error: Error) => void; f.tools.generateMocs.mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { fail = reject; }));
     const stale = f.content.action("tool-generateMocs"); stale.click(); f.content.action("nav-settings").click(); stale.click();
     expect(f.tools.generateMocs).toHaveBeenCalledTimes(1);
     fail(new Error("PRIVATE_PROVIDER_BODY")); await flush();
     expect(f.content.action("nav-settings").attrs["aria-current"]).toBe("page"); expect(f.content.texts()).not.toContain("PRIVATE_PROVIDER_BODY");
-    content.action("nav-health").click(); content.action("tools").click(); f.tools.openAskVault.mockImplementationOnce(() => { throw new Error("PRIVATE_PROVIDER_BODY"); });
+    content.action("nav-health").click(); content.action("nav-tools").click(); f.tools.openAskVault.mockImplementationOnce(() => { throw new Error("PRIVATE_PROVIDER_BODY"); });
     content.action("tool-openAskVault").click(); await flush();
     expect(content.texts()).toContain("Could not open this tool"); expect(content.texts()).not.toContain("PRIVATE_PROVIDER_BODY");
     const feedback = content.querySelector("[data-workspace-message]")!;
@@ -1159,7 +1158,7 @@ describe("final Tools and Settings IA", () => {
     await second.onClose(); await f.view.onClose(); f.recall.dispose(); f.controller.dispose();
   });
   it.each(["onboarding", "findings.json", "scan-runs.json"])("%s hides Tools/Settings and rejects stale launch actions", async (boundary) => {
-    const f = overviewFixture(); await f.view.onOpen(); f.content.action("tools").click();
+    const f = overviewFixture(); await f.view.onOpen(); f.content.action("nav-tools").click();
     const stale = f.content.action("tool-openBatchProcessing"); await f.view.onClose();
     if (boundary === "onboarding") await f.preferences.update({ onboardingCompleted: false, profileChosen: false });
     else f.files.set(`${root}/${boundary}`, "invalid");
@@ -1172,7 +1171,7 @@ describe("final Tools and Settings IA", () => {
     await view.onClose(); controller.dispose(); f.controller.dispose(); f.recall.dispose();
   });
   it("onboarding taking over a mounted Tools view invalidates actions and cannot resurrect its route", async () => {
-    const f = overviewFixture(); await f.view.onOpen(); f.content.action("tools").click();
+    const f = overviewFixture(); await f.view.onOpen(); f.content.action("nav-tools").click();
     const stale = f.content.action("tool-openAskVault");
     await f.controller.updatePreferences({ onboardingCompleted: false, profileChosen: false });
     stale.click(); expect(f.tools.openAskVault).not.toHaveBeenCalled(); expect(f.content.action("nav-tools")).toBeUndefined();
@@ -1242,6 +1241,23 @@ describe("visual Health dashboard", () => {
 });
 
 describe("real topology child route", () => {
+  it("places topology before secondary profile controls without a standalone Health Tools action", async () => {
+    const f = fixture(); const topology = new VaultTopologyController(new ObsidianLocalVaultSource(f.app));
+    const view = new VeynrelHealthView({ app: f.app } as never, f.controller, f.tools, undefined, undefined, undefined, undefined, undefined, topology);
+    const content = view.contentEl as unknown as InstanceType<typeof mocks.Element>;
+    await view.onOpen(); await f.controller.runLocalScan();
+    const elements = content.all();
+    const order = ["veynrel-vault-pulse", "veynrel-health-recommendation", "veynrel-health-dimensions", "veynrel-dashboard-insights", "veynrel-topology-preview", "veynrel-dashboard-controls"]
+      .map((cls) => elements.findIndex((e) => e.cls.split(" ").includes(cls)));
+    expect(order.every((position) => position >= 0)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(content.action("change-profile")).toBeDefined();
+    expect(content.action("tools")).toBeUndefined();
+    content.action("nav-tools").click();
+    expect(content.action("nav-tools").attrs["aria-current"]).toBe("page");
+    expect(content.all().filter((e) => e.attrs["data-health-action"]?.startsWith("tool-"))).toHaveLength(5);
+    await view.onClose(); topology.dispose(); f.controller.dispose();
+  });
   it("preserves inline scroll and nearby focus through held loads, refreshes and stale updates", async () => {
     const f = fixture(); const source = new ObsidianLocalVaultSource(f.app);
     const topology = new VaultTopologyController(source);

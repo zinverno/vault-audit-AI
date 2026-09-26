@@ -35,7 +35,7 @@ const reports = [];
 try {
   assert.equal(await evaluate('app.vault.adapter.getBasePath()'), vault);
   await send('Page.bringToFront');
-  for (const width of [390, 768, 1280]) for (const theme of ['dark', 'light', 'yellow']) {
+  for (const width of [390, 768, 1280, 1600]) for (const theme of ['dark', 'light', 'yellow']) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 800, deviceScaleFactor: 1, mobile: false });
     await evaluate(`document.body.classList.toggle('theme-dark', ${theme !== 'light'});
       document.body.classList.toggle('theme-light', ${theme === 'light'});
@@ -114,24 +114,24 @@ try {
           accent: getComputedStyle(root).getPropertyValue('--interactive-accent').trim(),
           preview: [p.borderTopWidth, p.borderRightWidth, p.borderBottomWidth, p.borderLeftWidth, p.borderRadius, p.backgroundColor] };
       })()`);
-      assert(style.fits && style.row && style.cells && style.count === 6 && style.overflow === 'auto', JSON.stringify(style));
+      assert(style.fits && style.row && style.cells && style.count === 7 && style.overflow === 'auto', JSON.stringify(style));
       for (const border of [style.rail, style.preview]) assert.deepEqual(border, ['0px', '0px', '1px', '0px', '0px', 'rgba(0, 0, 0, 0)']);
       assert(style.underline.includes('inset') && (theme !== 'yellow' || style.underline.includes('224, 182, 30')));
       // Browser-native Tab scrolls overflowed tabs into view; no application JS scrolling.
       await evaluate(`polishView.contentEl.querySelector('[data-health-action=nav-health]').focus()`);
-      for (let i = 0; i < 5; i++) await key('Tab', 'Tab', 9);
+      for (let i = 0; i < 6; i++) await key('Tab', 'Tab', 9);
       assert(await evaluate(`(() => { const b = document.activeElement, n = b.closest('nav'); return b.dataset.healthAction === 'nav-settings' && b.matches(':focus-visible') && b.getBoundingClientRect().right <= n.getBoundingClientRect().right + 1; })()`));
     }
     console.log(`PASS ${width}px ${theme}: pointer/keyboard load, refresh, stale, route focus, CSS and Tab`);
   }
   // Every route shares the rail's horizontal axis; ordinary state stays in-page.
   let surfaces = 0;
-  for (const width of [320, 390, 768, 1024, 1280, 1440]) for (const theme of ['dark', 'light', 'yellow']) {
+  for (const width of [320, 390, 768, 1024, 1280, 1440, 1600]) for (const theme of ['dark', 'light', 'yellow']) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
     await evaluate(`document.body.classList.toggle('theme-dark', ${theme !== 'light'});
       document.body.classList.toggle('theme-light', ${theme === 'light'});
       document.body.style.setProperty('--interactive-accent', ${JSON.stringify(theme === 'yellow' ? 'rgb(224, 182, 30)' : '')});`);
-    for (const action of ['nav-health', 'nav-findings', 'nav-discover', 'nav-recall', 'nav-connect', 'nav-settings', 'tools', 'topology-open']) {
+    for (const action of ['nav-health', 'nav-findings', 'nav-discover', 'nav-recall', 'nav-connect', 'nav-tools', 'nav-settings', 'topology-open']) {
       const layout = await evaluate(`(() => {
         const view = polishView, root = view.contentEl;
         root.querySelector('[data-health-action=nav-health]').click();
@@ -140,8 +140,15 @@ try {
         const surface = body.lastElementChild.firstElementChild, n = nav.getBoundingClientRect(), p = surface.getBoundingClientRect();
         const live = root.querySelector('[role=status]'), l = getComputedStyle(live);
         const prose = surface.querySelector('p'), ps = prose && getComputedStyle(prose);
+        const topology = surface.querySelector('.veynrel-topology-preview'), profile = surface.querySelector('.veynrel-dashboard-controls');
+        const fullWidth = ['.veynrel-health-grid', '.veynrel-dashboard-insights-grid', '.veynrel-topology-preview'];
         return { route: view.route.page, width: p.width, aligned: Math.abs(n.left - p.left) < 1 && Math.abs(n.width - p.width) < 1,
           fits: root.scrollWidth <= root.clientWidth + 1,
+          railScrolls: nav.scrollWidth > nav.clientWidth && getComputedStyle(nav).overflowX === 'auto',
+          healthOrder: !!topology && !!profile && !!(topology.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING),
+          healthTools: !!surface.querySelector('[data-health-action=tools]'),
+          fullDashboard: fullWidth.every(s => Math.abs((surface.querySelector(s)?.getBoundingClientRect().width ?? 0) - p.width) < 1),
+          currentWider: (surface.querySelector('.veynrel-dashboard-current')?.getBoundingClientRect().width ?? 0) > (surface.querySelector('.veynrel-dashboard-findings')?.getBoundingClientRect().width ?? 0),
           tabs: [...nav.children].map(b => b.dataset.healthAction), current: nav.querySelector('[aria-current=page]').dataset.healthAction,
           hiddenLive: l.position === 'absolute' && l.clipPath === 'inset(50%)' && live.getBoundingClientRect().height <= 1 && l.display !== 'none' && l.visibility !== 'hidden',
           liveAttributes: [live.getAttribute('aria-live'), live.getAttribute('aria-atomic')],
@@ -151,17 +158,22 @@ try {
           tools: surface.querySelectorAll('[data-health-action^="tool-"]').length };
       })()`);
       assert(layout.aligned && layout.fits && layout.hiddenLive, JSON.stringify({width, theme, layout}));
-      assert.deepEqual(layout.tabs, ['nav-health', 'nav-findings', 'nav-discover', 'nav-recall', 'nav-connect', 'nav-settings']);
+      assert.deepEqual(layout.tabs, ['nav-health', 'nav-findings', 'nav-discover', 'nav-recall', 'nav-connect', 'nav-tools', 'nav-settings']);
       assert.deepEqual(layout.liveAttributes, ['polite', 'true']);
-      if (width >= 1280) assert(layout.width > 1050 && layout.width <= 1200, JSON.stringify(layout));
-      if (action === 'tools') assert(layout.current === 'nav-health' && layout.tools === 5);
+      if (width <= 390) assert(layout.railScrolls, JSON.stringify(layout));
+      if (action === 'nav-health') {
+        assert(layout.healthOrder && !layout.healthTools && layout.fullDashboard, JSON.stringify(layout));
+        if (width >= 1024) assert(layout.currentWider, JSON.stringify(layout));
+      }
+      if (width >= 1440) assert(layout.width > 1152 * 1.12 && layout.width <= 1420, JSON.stringify(layout));
+      if (action === 'nav-tools') assert(layout.current === 'nav-tools' && layout.tools === 5);
       if (action === 'topology-open') assert.equal(layout.current, 'nav-health');
       if (action === 'nav-connect' || action === 'nav-settings') assert(layout.proseBounded);
       if (action === 'nav-connect' || action === 'nav-discover') assert(layout.pageState && layout.pageState === layout.liveText && !layout.feedback, JSON.stringify(layout));
       surfaces++;
     }
   }
-  console.log(`PASS ${surfaces} route/theme/width surfaces: shell alignment, prose, six primary tabs and contextual status`);
+  console.log(`PASS ${surfaces} route/theme/width surfaces: shell alignment, prose, seven primary tabs and contextual status`);
   await evaluate(`polishView.contentEl.querySelector('[data-health-action=nav-health]').click()`);
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   await evaluate(`polishView.contentEl.querySelector('[data-health-action=topology-open]').click()`);

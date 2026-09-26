@@ -1,17 +1,24 @@
 # Veynrel product information architecture
 
 The visible primary navigation is **Health | Findings | Discover | Recall |
-Connect | Settings** (Recall and Connect appear when their ports are available).
-Tools is a secondary Health utility surface: its existing `{ page: "tools" }`
-route keeps **Health** selected, like the Topology child route. All surfaces render in the existing
+Connect | Tools | Settings** (Recall and Connect appear when their ports are available).
+Tools is a primary workspace tab: its existing `{ page: "tools" }` route selects
+**Tools**. The Topology child route keeps **Health** selected. All surfaces render in the existing
 `VeynrelHealthView` (`veynrel-health`). Routes and setup drafts are view-local and
 transient. Reopening starts on Health; no route is saved. Onboarding and Health
-recovery take precedence and hide normal navigation, including the Tools shortcut.
+recovery take precedence and hide normal navigation.
 
-Navigation and page content share a centered 1200px product shell with responsive
-24px/12px gutters. Dashboards, grids, toolbars and maps use the available shell;
+Navigation and page content share a centered product shell up to 1400px, using the
+available pane width minus 32px and 12px inner gutters on narrow panes.
+Dashboards, grids, toolbars and maps use the available shell;
 explanatory prose stays within 80ch, and Recall's focused review retains its inner
 measure. The flat rail and its native horizontal overflow remain unchanged.
+
+Normal Health orders Vault Pulse, recommendation, four Health dimensions and
+current-data panels, then Vault Topology, then secondary profile controls, followed
+by Semantic/Deep capability sections. On desktop, Findings by area gets two fifths
+of the insights row; Last local check, Recall and Knowledge share the other three
+fifths. Local-check metrics use a horizontal strip. Narrow panes collapse naturally.
 
 The persistent `role="status"`, polite, atomic live region is visually hidden on
 every route without `display: none` or `visibility: hidden`. Routine status stays
@@ -29,6 +36,15 @@ prose, accessible hidden status and the original topology loading/focus contract
 Error regressions cover note opening, Finding updates, preference saves, setup and
 tool launch failures. Screen-reader speech and mobile OS behavior were not tested.
 
+The final polish follow-up restores the seven primary tabs and verifies
+320/390/768/1024/1280/1440/1600px in dark/light/yellow themes. Native usable dashboard
+width grows from PR #53's 1152px to 1328px at 1440px (+15.3%) and 1400px at 1600px
+(+21.5%), compared with the earlier 1072px inner shell. At 1280px, where the pane
+already limited available width, it grows to 1168px; the current-data column grows
+from 568px to 691px. Navigation, dimensions, insights and topology share the new
+bounds. Topology precedes profile controls in DOM and visual order. The retained
+native regression also checks keyboard rail access and topology scroll/focus.
+
 ## Responsibilities
 
 | Surface | User intent | Authoritative implementation |
@@ -38,11 +54,12 @@ tool launch failures. Screen-reader speech and mobile OS behavior were not teste
 | Discover | Semantic exploration and Semantic Health | Existing Semantic owner and analysis port |
 | Recall | Inventory, generation and native FSRS review | Existing Recall product owner and authoring adapter |
 | Connect | Companion setup, mirror sync, MCP explanation and proposals | Existing Connect product adapter, Companion service and proposal review |
-| Tools (Health child) | Advanced/manual workflows | Explicit host launchers for existing commands/modals |
+| Tools | Advanced/manual workflows | Explicit host launchers for existing commands/modals |
 | Settings | What powers each capability? | Safe cached product snapshots and links to existing setup flows |
 | Command palette / editor context menu | Fast, contextual execution | Existing command IDs, editor callbacks and public menu actions |
 
-Health and Findings **Tools** shortcuts now navigate to Tools. They do not launch
+The primary **Tools** tab and Findings **Tools** shortcut navigate to Tools. Only
+the redundant Health dashboard Tools button is removed. These entries do not launch
 batch processing. The historical `ai-hub-open-panel` and `ai-batch-process`
 commands still open `BatchProcessModal` directly.
 
