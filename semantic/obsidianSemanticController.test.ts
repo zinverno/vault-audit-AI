@@ -1,3 +1,7 @@
+import { EmbeddingError } from "../embeddings/errors";
+import { IndexingProviderError } from "../indexing/errors";
+import type { IndexingExecutionOptions } from "../indexing/types";
+import { semanticIndexFailureMessage } from "../utils/semanticIndexDiagnostics";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("obsidian", () => ({
@@ -653,3 +657,84 @@ describe("ObsidianSemanticController commands and lazy behavior", () => {
     expect(harness.runtimeFactory).not.toHaveBeenCalled();
   });
 });
+
+describe("safe explicit indexing status", () => {
+  beforeEach(() => vi.stubGlobal("window", { setTimeout, clearTimeout }));
+  afterEach(() => vi.unstubAllGlobals());
+  it.each(["indexVault", "rebuildIndex"] as const)("%s forwards policy, copies progress, then clears it on failure/check/success", async (method) => {
+    const h = createHarness(); const gate = deferred<void>();
+    const runtime = fakeRuntime({ indexVault: vi.fn(async (options?: IndexingExecutionOptions) => {
+      expect(options?.embeddingTimeoutMs).toBe(90_000); expect(options?.retryTransient).toBe(true);
+      expect(options?.shouldCommit?.()).toBe(true);
+      await runtime.initialize();
+      options?.onProgress?.({ phase: "embedding", documentsTotal: 159, chunksTotal: 347, chunksCompleted: 96, batchCurrent: 3, batchTotal: 11 });
+      await gate.promise;
+      throw new IndexingProviderError("Safe request failure", new EmbeddingError("server", 503));
+    }) });
+    h.runtimeFactory.mockReturnValue(runtime);
+    const listener = vi.fn(); h.controller.subscribeStatus(listener);
+    const pending = h.controller[method]();
+    await vi.waitFor(() => expect(h.controller.getSemanticStatus().progress?.chunksCompleted).toBe(96));
+    h.controller.getSemanticStatus().progress!.chunksCompleted = 200;
+    h.controller.getCachedIndexState().progress!.chunksCompleted = 300;
+    expect(h.controller.getSemanticStatus().progress?.chunksCompleted).toBe(96);
+    expect(listener).toHaveBeenCalled(); gate.resolve(); await pending;
+    expect(h.controller.getSemanticStatus()).toMatchObject({ kind: "error", failure: "provider-server", progress: undefined });
+    expect(h.notices).toContain(semanticIndexFailureMessage("provider-server"));
+    await h.controller.refreshSemanticStatus(); expect(h.controller.getSemanticStatus().failure).toBeUndefined();
+    vi.mocked(runtime.indexVault).mockResolvedValue(RESULT);
+    await h.controller[method](); expect(h.controller.getSemanticStatus().progress).toBeUndefined();
+    expect(h.controller.getSemanticStatus().failure).toBeUndefined();
+  });
+  it.each(["settings", "dispose"])("drops old progress and errors after %s", async (change) => {
+    const h = createHarness(); const gate = deferred<void>(); let options: IndexingExecutionOptions | undefined;
+    const runtime = fakeRuntime({ indexVault: vi.fn(async (input?: IndexingExecutionOptions) => {
+      options = input; await runtime.initialize(); input?.onProgress?.({ phase: "reading" }); await gate.promise;
+      input?.onProgress?.({ phase: "embedding", chunksTotal: 5, chunksCompleted: 4 });
+      throw new IndexingProviderError("Safe failure", new EmbeddingError("auth", 401));
+    }) });
+    h.runtimeFactory.mockReturnValue(runtime); const pending = h.controller.indexVault();
+    await vi.waitFor(() => expect(options).toBeDefined());
+    let disposed: Promise<void> | undefined;
+    if (change === "settings") { h.plugin.settings.semantic.embeddingModel = "changed"; h.controller.notifySettingsChanged(); }
+    else disposed = h.controller.dispose();
+    expect(h.controller.getSemanticStatus().progress).toBeUndefined(); expect(options?.isCurrent?.()).toBe(false);
+    gate.resolve(); await pending; await disposed;
+    expect(h.controller.getSemanticStatus().progress).toBeUndefined(); expect(h.controller.getSemanticStatus().failure).toBeUndefined();
+    expect(h.notices).not.toContain(semanticIndexFailureMessage("provider-auth"));
+  });
+});
+
+it.each([['indexVault', 'save'], ['indexVault', 'capture'], ['rebuildIndex', 'save'], ['rebuildIndex', 'capture']] as const)(
+  "does not publish %s success after settings change during %s", async (method, stage) => {
+    vi.stubGlobal("window", { setTimeout, clearTimeout });
+    try {
+      const entered = deferred<void>(), gate = deferred<void>();
+      const companion: CompanionSyncPort = {
+        getStatus: () => ({ kind: "idle" as const }), subscribeStatus: () => () => undefined,
+        invalidateConfiguration: vi.fn(), testConnection: vi.fn(async () => {}), reconcile: vi.fn(async () => {}),
+        enqueueIncremental: vi.fn(), dispose: vi.fn(async () => {}),
+      };
+      const capture = vi.fn(async () => {
+        if (stage === 'capture') { entered.resolve(); await gate.promise; }
+        return { generation: 1, notes: [], descriptor: { providerId: "openai-compatible", model: "model-a",
+          baseUrl: "https://example.test/v1", dimensions: 3, normalized: true as const, embeddingSpaceId: "space" } };
+      });
+      const runtime = fakeRuntime({ captureCompanionSnapshot: capture });
+      const h = createHarness(semantic(), { companionService: companion, runtimeFactory: () => runtime });
+      h.plugin.settings.companion.enabled = true;
+      if (stage === 'save') {
+        h.plugin.settings.semanticAutoSyncSuspended = true;
+        h.plugin.saveSettings.mockImplementation(async () => { entered.resolve(); await gate.promise; });
+      }
+      const pending = h.controller[method](); await entered.promise;
+      h.plugin.settings.semantic.embeddingModel = "changed"; h.controller.notifySettingsChanged();
+      gate.resolve(); await pending;
+      expect(h.notices.join(' ')).not.toContain('generation');
+      expect(companion.reconcile).not.toHaveBeenCalled();
+      expect(h.controller.getSemanticStatus().failure).toBeUndefined();
+      expect(h.controller.getSemanticStatus().progress).toBeUndefined();
+      if (stage === 'save') expect(capture).not.toHaveBeenCalled();
+    } finally { vi.unstubAllGlobals(); }
+  },
+);

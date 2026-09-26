@@ -1,3 +1,9 @@
+import { EmbeddingError } from "../embeddings/errors";
+import { INDEXING_EMBEDDING_TIMEOUT_MS } from "../indexing/indexingService";
+import { IndexingObsoleteError } from "../indexing/errors";
+import type { IndexingExecutionOptions } from "../indexing/types";
+import { semanticIndexFailureMessage } from "../utils/semanticIndexDiagnostics";
+import { classifyIndexingFailure } from "./indexingFailure";
 import { App, Notice, Plugin, TFile } from "obsidian";
 import type { TAbstractFile } from "obsidian";
 import { streamOpenRouter, validateSettings } from "../api";
@@ -451,6 +457,7 @@ export class ObsidianSemanticController {
     if (this.autoSyncPolicy !== "disposed") {
       this.autoSyncPolicy = "disposed";
       this.autoSync.dispose();
+      this.status = this.defaultStatus("not-initialized");
       this.statusListeners.clear();
       this.runtimeSlot = null;
     }
@@ -463,7 +470,7 @@ export class ObsidianSemanticController {
 
   getSemanticStatus(): SemanticStatus {
     this.reconcileCachedStatus();
-    return { ...this.status };
+    return { ...this.status, progress: this.status.progress ? { ...this.status.progress } : undefined };
   }
 
   /** Read cached status/settings only. Does not initialize, probe, test or build an index. */
@@ -744,10 +751,11 @@ export class ObsidianSemanticController {
   async indexVault(): Promise<void> {
     if (!this.ensureEnabled() || !this.acquireOperation()) return;
     let companionSnapshot: CompanionSnapshot | null = null;
+    const snapshot = safeSettingsSnapshot(this.plugin.settings.semantic);
+    const epoch = this.settingsEpoch;
+    const current = () => !this.isDisposed() && this.snapshotIsCurrent(snapshot, epoch);
     try {
       const fileCount = this.plugin.app.vault.getMarkdownFiles().length;
-      const snapshot = safeSettingsSnapshot(this.plugin.settings.semantic);
-      const epoch = this.settingsEpoch;
       const provider =
         EMBEDDING_PROVIDER_PROFILES[snapshot.embeddingProvider].label;
       const confirmed = await this.confirm(this.plugin.app, {
@@ -764,10 +772,11 @@ export class ObsidianSemanticController {
         ],
         confirmText: tr("Обновить индекс"),
       });
-      if (!confirmed) return;
+      if (!confirmed || !current()) return;
 
       await this.enqueueIndexMutation(() =>
         this.barrier.withShared(async () => {
+          if (!current()) return;
           const runtime = await this.runtimeForSnapshot(
             snapshot,
             epoch,
@@ -779,21 +788,26 @@ export class ObsidianSemanticController {
             0,
           );
           try {
-            const result = await runtime.indexVault();
+            const result = await runtime.indexVault(this.fullBuildOptions(current));
+            if (!current()) return;
             this.updateReadyStatus(runtime);
             await this.activateAutomaticSync();
+            if (!current()) return;
             this.autoSyncFailureNoticed = false;
             companionSnapshot = await this.captureFromRuntime(runtime);
+            if (!current()) { companionSnapshot = null; return; }
             this.notice(this.formatVaultResult(result), 10000);
           } finally {
             progress.hide();
           }
         }),
       );
-      if (companionSnapshot) this.queueCompanionReconciliation(companionSnapshot);
+      if (companionSnapshot && current()) this.queueCompanionReconciliation(companionSnapshot);
     } catch (error) {
-      this.captureErrorStatus(error);
-      this.showError(error);
+      if (current() && !(error instanceof IndexingObsoleteError)) {
+        this.captureErrorStatus(error);
+        this.notice(semanticIndexFailureMessage(classifyIndexingFailure(error)), 8000);
+      }
     } finally {
       this.releaseOperation();
     }
@@ -943,10 +957,11 @@ export class ObsidianSemanticController {
   async rebuildIndex(): Promise<void> {
     if (!this.ensureEnabled() || !this.acquireOperation()) return;
     let companionSnapshot: CompanionSnapshot | null = null;
+    const snapshot = safeSettingsSnapshot(this.plugin.settings.semantic);
+    const epoch = this.settingsEpoch;
+    const current = () => !this.isDisposed() && this.snapshotIsCurrent(snapshot, epoch);
     try {
       const fileCount = this.plugin.app.vault.getMarkdownFiles().length;
-      const snapshot = safeSettingsSnapshot(this.plugin.settings.semantic);
-      const epoch = this.settingsEpoch;
       const confirmed = await this.confirm(this.plugin.app, {
         title: tr("Перестроить семантический индекс"),
         paragraphs: [
@@ -962,10 +977,11 @@ export class ObsidianSemanticController {
         confirmText: tr("Перестроить индекс"),
         danger: true,
       });
-      if (!confirmed) return;
+      if (!confirmed || !current()) return;
 
       await this.enqueueIndexMutation(() =>
         this.barrier.withExclusive(async () => {
+          if (!current()) return;
           const basePath = this.basePath();
           this.runtimeSlot = null;
           try {
@@ -984,21 +1000,26 @@ export class ObsidianSemanticController {
             0,
           );
           try {
-            const result = await runtime.indexVault();
+            const result = await runtime.indexVault(this.fullBuildOptions(current));
+            if (!current()) return;
             this.updateReadyStatus(runtime);
             await this.activateAutomaticSync();
+            if (!current()) return;
             this.autoSyncFailureNoticed = false;
             companionSnapshot = await this.captureFromRuntime(runtime);
+            if (!current()) { companionSnapshot = null; return; }
             this.notice(this.formatVaultResult(result), 10000);
           } finally {
             progress.hide();
           }
         }),
       );
-      if (companionSnapshot) this.queueCompanionReconciliation(companionSnapshot);
+      if (companionSnapshot && current()) this.queueCompanionReconciliation(companionSnapshot);
     } catch (error) {
-      this.captureErrorStatus(error);
-      this.showError(error);
+      if (current() && !(error instanceof IndexingObsoleteError)) {
+        this.captureErrorStatus(error);
+        this.notice(semanticIndexFailureMessage(classifyIndexingFailure(error)), 8000);
+      }
     } finally {
       this.releaseOperation();
     }
@@ -1035,10 +1056,10 @@ export class ObsidianSemanticController {
     if (error instanceof SemanticValidationError) {
       return tr("Проверьте параметры семантического поиска.");
     }
-    if (
-      error instanceof SemanticProviderError ||
-      error instanceof IndexingProviderError
-    ) {
+    if (error instanceof IndexingProviderError || error instanceof EmbeddingError) {
+      return semanticIndexFailureMessage(classifyIndexingFailure(error));
+    }
+    if (error instanceof SemanticProviderError) {
       return tr(
         "Embedding-провайдер не выполнил запрос. Проверьте его настройки.",
       );
@@ -1444,6 +1465,7 @@ export class ObsidianSemanticController {
 
   private releaseOperation(): void {
     this.operationBusy = false;
+    if (this.status.progress) this.status = { ...this.status, progress: undefined };
     if (this.status.kind === "error" || this.status.kind === "incompatible") {
       return;
     }
@@ -1490,7 +1512,7 @@ export class ObsidianSemanticController {
     const stats = this.runtimeSlot.runtime.getStats();
     // A cached read must not turn an in-flight reinspection into Ready.
     // Its initiating operation publishes Ready when initialization completes.
-    if (stats.initialized && this.status.kind !== "initializing") this.updateReadyStatus(this.runtimeSlot.runtime);
+    if (stats.initialized && this.status.kind !== "initializing" && !this.status.progress) this.updateReadyStatus(this.runtimeSlot.runtime);
     if (this.operationBusy) this.status.kind = "indexing";
   }
 
@@ -1501,6 +1523,7 @@ export class ObsidianSemanticController {
         ? "incompatible"
         : "error",
     );
+    this.status = { ...this.status, failure: classifyIndexingFailure(error) };
   }
 
   private showError(error: unknown): void {
@@ -1519,6 +1542,18 @@ export class ObsidianSemanticController {
       providerLabel:
         EMBEDDING_PROVIDER_PROFILES[settings.embeddingProvider]?.label ?? "",
       model: settings.embeddingModel,
+    };
+  }
+
+  private fullBuildOptions(current: () => boolean): IndexingExecutionOptions {
+    return {
+      shouldCommit: current,
+      isCurrent: current,
+      embeddingTimeoutMs: INDEXING_EMBEDDING_TIMEOUT_MS,
+      retryTransient: true,
+      onProgress: (progress) => {
+        if (current()) this.status = { ...this.status, kind: "indexing", failure: undefined, progress: { ...progress } };
+      },
     };
   }
 

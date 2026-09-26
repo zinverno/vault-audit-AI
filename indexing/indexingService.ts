@@ -5,9 +5,13 @@ import type {
   VectorStoreMutation,
 } from "../vectorStore/types";
 import { VectorStoreCompatibilityError } from "../vectorStore/errors";
+import { EmbeddingError } from "../embeddings/errors";
+import { reportIndexingProgress } from "../utils/semanticIndexDiagnostics";
+import type { SemanticIndexProgress } from "../utils/semanticIndexDiagnostics";
 import {
   IndexingCompatibilityError,
   IndexingNotInitializedError,
+  IndexingObsoleteError,
   IndexingProviderContractError,
   IndexingProviderError,
   IndexingValidationError,
@@ -26,6 +30,8 @@ const DEFAULT_EMBEDDING_BATCH_SIZE = 32;
 const DEFAULT_PREVIEW_MAX_CODE_POINTS = 240;
 const MIN_VECTOR_NORM_SQUARED = 1e-24;
 const UINT32_MAX = 0xffff_ffff;
+const RETRY_DELAYS_MS = [1_000, 3_000] as const;
+export const INDEXING_EMBEDDING_TIMEOUT_MS = 90_000;
 
 interface PreparedChunk {
   metadata: VectorChunkMetadata;
@@ -296,6 +302,7 @@ export class IndexingService {
     options: IndexingExecutionOptions = {},
   ): Promise<IndexingRunResult> {
     this.requireInitialized();
+    reportIndexingProgress(options.onProgress, { phase: "preparing", documentsTotal: documents.length });
     const prepared = this.prepareDocuments(documents);
     return this.enqueue(() =>
       this.executeDocuments("reconcile", prepared, [], options),
@@ -358,9 +365,10 @@ export class IndexingService {
     if (dimensions === undefined) {
       try {
         dimensions = await this.options.embeddingProvider.dimensions();
-      } catch {
+      } catch (error) {
         throw new IndexingProviderError(
           "Embedding provider dimensions request failed.",
+          error,
         );
       }
       if (
@@ -368,7 +376,7 @@ export class IndexingService {
         dimensions <= 0 ||
         dimensions > UINT32_MAX
       ) {
-        throw new IndexingValidationError(
+        throw new IndexingProviderContractError(
           "Embedding provider dimensions must be a positive safe integer.",
         );
       }
@@ -566,7 +574,7 @@ export class IndexingService {
     }
     deleteIds.sort(compareStrings);
 
-    const vectors = await this.embedChangedChunks(changedChunks);
+    const vectors = await this.embedChangedChunks(changedChunks, options, documents.length);
     const upserts: VectorEntry[] = changedChunks.map((chunk, index) => ({
       ...cloneMetadata(chunk.metadata),
       vector: vectors[index],
@@ -583,6 +591,12 @@ export class IndexingService {
       mutation.deleteIds!.length > 0 ||
       mutation.upserts!.length > 0;
     if (hasMutation && (options.shouldCommit?.() ?? true)) {
+      reportIndexingProgress(options.onProgress, {
+        phase: "committing", documentsTotal: documents.length,
+        chunksTotal: changedChunks.length, chunksCompleted: changedChunks.length,
+      });
+      // A presentation listener may synchronously change the settings.
+      if (options.shouldCommit && !options.shouldCommit()) throw new IndexingObsoleteError();
       try {
         await store.applyChanges(mutation);
       } catch (error) {
@@ -658,8 +672,13 @@ export class IndexingService {
 
   private async embedChangedChunks(
     chunks: readonly PreparedChunk[],
+    options: IndexingExecutionOptions,
+    documentsTotal: number,
   ): Promise<Float32Array[]> {
     const result: Float32Array[] = [];
+    const batchTotal = Math.ceil(chunks.length / this.embeddingBatchSize);
+    const baseProgress = { documentsTotal, chunksTotal: chunks.length, batchTotal };
+    reportIndexingProgress(options.onProgress, { ...baseProgress, phase: "embedding", chunksCompleted: 0 });
     for (
       let start = 0;
       start < chunks.length;
@@ -667,12 +686,8 @@ export class IndexingService {
     ) {
       const batch = chunks.slice(start, start + this.embeddingBatchSize);
       const texts = batch.map((chunk) => chunk.text);
-      let rawVectors: unknown;
-      try {
-        rawVectors = await this.options.embeddingProvider.embed(texts);
-      } catch {
-        throw new IndexingProviderError("Embedding provider request failed.");
-      }
+      const progress = { ...baseProgress, batchCurrent: Math.floor(start / this.embeddingBatchSize) + 1, chunksCompleted: start };
+      const rawVectors = await this.embedBatch(texts, options, progress);
       if (!Array.isArray(rawVectors) || rawVectors.length !== batch.length) {
         throw new IndexingProviderContractError(
           "Embedding provider returned an invalid vector count.",
@@ -709,8 +724,34 @@ export class IndexingService {
         }
         result.push(new Float32Array(rawVector));
       }
+      reportIndexingProgress(options.onProgress, { ...progress, phase: "embedding", chunksCompleted: result.length });
     }
     return result;
+  }
+
+  private async embedBatch(
+    texts: string[], options: IndexingExecutionOptions,
+    progress: Omit<SemanticIndexProgress, "phase">,
+  ): Promise<unknown> {
+    for (let attempt = 0; ; attempt++) {
+      if (options.isCurrent && !options.isCurrent()) throw new IndexingObsoleteError();
+      reportIndexingProgress(options.onProgress, { ...progress, phase: "embedding" });
+      try {
+        return await this.options.embeddingProvider.embed(texts, { timeoutMs: options.embeddingTimeoutMs });
+      } catch (error) {
+        // requestUrl cannot abort: a timeout (or uncertain network failure) must never duplicate work.
+        if (!options.retryTransient || !(error instanceof EmbeddingError)
+          || (error.code !== "rate-limit" && error.code !== "server") || attempt >= RETRY_DELAYS_MS.length) {
+          throw new IndexingProviderError("Embedding provider request failed.", error);
+        }
+        if (options.isCurrent && !options.isCurrent()) throw new IndexingObsoleteError();
+        reportIndexingProgress(options.onProgress, { ...progress, phase: "retrying",
+          retryAttempt: attempt + 1, retryMaximum: RETRY_DELAYS_MS.length, retryReason: error.code });
+        const sleep = this.options.sleep ?? ((ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms)));
+        await sleep(RETRY_DELAYS_MS[attempt]);
+        // The loop rechecks ownership after the delay, before another provider call.
+      }
+    }
   }
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {

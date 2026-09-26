@@ -1,3 +1,5 @@
+import type { SemanticIndexProgress } from "../utils/semanticIndexDiagnostics";
+
 import type {
   ChunkingStrategy,
   MarkdownChunkInput,
@@ -32,6 +34,12 @@ export interface IndexingDocumentChanges {
 export interface IndexingExecutionOptions {
   /** Checked after every required embedding has been validated, before commit. */
   shouldCommit?: () => boolean;
+  /** Optional early ownership guard for explicit builds, including delayed retries. */
+  isCurrent?: () => boolean;
+  onProgress?: (progress: SemanticIndexProgress) => void;
+  embeddingTimeoutMs?: number;
+  /** Explicit full builds opt in; automatic sync keeps its existing policy. */
+  retryTransient?: boolean;
 }
 
 export interface IndexingServiceStats {
@@ -65,6 +73,8 @@ export interface IndexingServiceOptions {
   vectorStoreFactory: VectorStoreFactory;
   embeddingBatchSize?: number;
   previewMaxCodePoints?: number;
+  /** Injectable backoff; defaults to the runtime timer. */
+  sleep?: (milliseconds: number) => Promise<void>;
 }
 
 export interface MarkdownDocumentSource {

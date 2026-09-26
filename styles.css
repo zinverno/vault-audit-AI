@@ -2325,3 +2325,8 @@
 @media (prefers-reduced-motion: reduce) {
   .veynrel-neighborhood *, .veynrel-neighborhood-card * { animation: none !important; transition: none !important; }
 }
+
+.veynrel-semantic-progress progress {
+  width: 100%;
+  max-width: 32rem;
+}

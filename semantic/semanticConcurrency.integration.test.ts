@@ -832,7 +832,7 @@ describe("semantic read/write barrier with real services and store", () => {
 });
 
 describe("one LocalVectorStore per basePath across settings epochs", () => {
-  it("rotates only the API key while sharing one store through generations 0, 1, and 2", async () => {
+  it("drops the obsolete API-key build and shares one store for later current commits", async () => {
     const harness = createHarness();
     const pendingEmbedding = blockNext(
       (call) =>
@@ -860,6 +860,9 @@ describe("one LocalVectorStore per basePath across settings epochs", () => {
     pendingEmbedding.release();
     await oldIndex;
     expect(activeSlot(harness.controller).runtime).toBe(runtimeB);
+    expect(storeB.getStats()).toMatchObject({ count: 0, generation: 0 });
+    expect(harness.controller.getSemanticStatus().progress).toBeUndefined();
+    await harness.controller.indexVault();
     expect(storeB.getStats()).toMatchObject({ count: 1, generation: 1 });
     expect(previewText(await harness.controller.search("alpha through key b")))
       .toContain("alpha old committed");
@@ -924,13 +927,15 @@ describe("one LocalVectorStore per basePath across settings epochs", () => {
 
     pendingEmbedding.release();
     await oldIndex;
-    expect(oldStore?.getStats()).toMatchObject({ count: 1, generation: 1 });
-    expect(durableSnapshot(harness.adapter).manifest.generation).toBe(1);
+    expect(oldStore?.getStats()).toMatchObject({ count: 0, generation: 0 });
+    expect(harness.adapter.files.has(`${BASE_PATH}/${VECTOR_MANIFEST_FILE}`)).toBe(false);
+    expect(harness.controller.getSemanticStatus().progress).toBeUndefined();
 
     harness.plugin.settings.semantic = originalSettings;
     harness.controller.notifySettingsChanged();
     await harness.controller.prepareSearch();
     expect(harness.registry.peek(BASE_PATH)?.store).toBe(oldStore);
+    await harness.controller.indexVault();
     expect(previewText(await harness.controller.search("alpha restored")))
       .toContain("alpha old committed");
   });
@@ -964,6 +969,8 @@ describe("one LocalVectorStore per basePath across settings epochs", () => {
     pendingEmbedding.release();
     await oldIndex;
     expect(activeSlot(harness.controller).runtime).toBe(currentRuntime);
+    expect(oldStore.getStats()).toMatchObject({ count: 0, generation: 0 });
+    await harness.controller.indexVault();
     expect(oldStore.getStats()).toMatchObject({ count: 1, generation: 1 });
     expect(previewText(await harness.controller.search("alpha re-enabled")))
       .toContain("alpha old committed");

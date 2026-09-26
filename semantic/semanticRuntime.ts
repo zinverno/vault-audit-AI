@@ -14,7 +14,8 @@ import type {
   MarkdownDocumentSource,
 } from "../indexing/types";
 import type { IndexingService } from "../indexing/indexingService";
-import { IndexingCompatibilityError } from "../indexing/errors";
+import { IndexingCompatibilityError, IndexingObsoleteError } from "../indexing/errors";
+import { reportIndexingProgress } from "../utils/semanticIndexDiagnostics";
 import type { VectorStore } from "../vectorStore/types";
 import {
   SemanticCompatibilityError,
@@ -84,11 +85,15 @@ export class LazySemanticRuntime implements SemanticRuntime {
   async indexVault(
     options: IndexingExecutionOptions = {},
   ): Promise<IndexingRunResult> {
+    if (options.isCurrent && !options.isCurrent()) throw new IndexingObsoleteError();
     await this.initialize();
     const components = this.requireComponents();
     this.indexing = true;
     try {
+      if (options.isCurrent && !options.isCurrent()) throw new IndexingObsoleteError();
+      reportIndexingProgress(options.onProgress, { phase: "reading" });
       const documents = await components.source.readAll();
+      if (options.isCurrent && !options.isCurrent()) throw new IndexingObsoleteError();
       return await components.indexingService.reconcileAll(documents, options);
     } finally {
       this.indexing = false;
