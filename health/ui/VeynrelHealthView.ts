@@ -47,6 +47,10 @@ import { renderTopology, renderTopologyPreview } from "../topology/renderTopolog
 import { newTopologyViewState } from "../topology/renderTopologyMap";
 import { topologyStatus } from "../topology/topologyPresentation";
 
+import type { SemanticNeighborhoodPort } from "../semanticNeighborhoodPort";
+import { renderSemanticNeighborhood, neighborhoodStatus } from "./renderSemanticNeighborhood";
+import type { SemanticNeighborhoodViewState } from "./renderSemanticNeighborhood";
+
 export class VeynrelHealthView extends ItemView {
   // One transient review surface per plugin owner, including duplicated workspace tabs.
   private static readonly recallViews = new WeakMap<RecallProductPort, VeynrelHealthView>();
@@ -55,6 +59,8 @@ export class VeynrelHealthView extends ItemView {
   private unsubscribeDeep?: () => void;
   private unsubscribeAuthoring?: () => void;
   private unsubscribeConnect?: () => void;
+  private neighborhoodView: SemanticNeighborhoodViewState = { query: "" };
+  private unsubscribeNeighborhood?: () => void;
   private unsubscribeTopology?: () => void;
   private cleanupTopology?: () => void;
   private topologyView = newTopologyViewState();
@@ -81,7 +87,7 @@ export class VeynrelHealthView extends ItemView {
   constructor(leaf: WorkspaceLeaf, private readonly controller: HealthPluginController, private readonly tools: VeynrelToolsPort,
     private readonly semantic?: SemanticIntelligencePort, private readonly recall?: RecallProductPort,
     private readonly deep?: DeepIntelligencePort, private readonly authoring?: RecallAuthoringPort, private readonly connect?: ConnectPort,
-    private readonly topology?: VaultTopologyPort) { super(leaf); }
+    private readonly topology?: VaultTopologyPort, private readonly neighborhood?: SemanticNeighborhoodPort) { super(leaf); }
   getViewType(): string { return VEYNREL_HEALTH_VIEW_TYPE; }
   getDisplayText(): string { return t("@health.title"); }
   getIcon(): string { return "activity"; }
@@ -106,6 +112,8 @@ export class VeynrelHealthView extends ItemView {
       this.unsubscribeAuthoring = this.authoring?.subscribe(() => this.render());
       this.unsubscribeConnect?.();
       this.unsubscribeConnect = this.connect?.subscribe(() => { this.connectResult = undefined; this.render(); });
+      this.unsubscribeNeighborhood?.();
+      this.unsubscribeNeighborhood = this.neighborhood?.subscribe(() => this.render());
       this.unsubscribeTopology?.();
       this.unsubscribeTopology = this.topology?.subscribe(() => this.render());
       this.render();
@@ -118,6 +126,8 @@ export class VeynrelHealthView extends ItemView {
   }
 
   async onClose(): Promise<void> {
+    this.unsubscribeNeighborhood?.(); this.unsubscribeNeighborhood = undefined;
+    this.neighborhoodView = { query: "" };
     this.epoch++; this.unsubscribe?.(); this.unsubscribe = undefined;
     this.unsubscribeTopology?.(); this.unsubscribeTopology = undefined;
     this.cleanupTopology?.(); this.cleanupTopology = undefined; this.topologyView = newTopologyViewState();
@@ -143,7 +153,9 @@ export class VeynrelHealthView extends ItemView {
     const onboarding = healthOnboardingViewModel(state, model);
     const active = this.contentEl.ownerDocument.activeElement;
     const hadFocus = active && this.contentEl.contains(active);
-    const focusKey = hadFocus ? active.getAttribute("data-health-action") ?? active.getAttribute("data-health-focus-action") : null;
+    const neighborhoodFocus = this.route.page === "semantic-neighborhood" ? this.neighborhoodView.focusAction : undefined;
+    this.neighborhoodView.focusAction = undefined;
+    const focusKey = hadFocus ? neighborhoodFocus ?? active.getAttribute("data-health-action") ?? active.getAttribute("data-health-focus-action") : null;
     const scan = (): void => { this.navigationMessage = undefined; if (!this.controller.getState().busy) void this.controller.runLocalScan(); };
     const openNote = (): void => { void this.openNote(this.controller.getRecommendationPath()); };
     const choose = (profile: VaultProfile): void => { void this.savePreferences({ profile, profileChosen: true }); };
@@ -164,12 +176,12 @@ export class VeynrelHealthView extends ItemView {
     this.body.empty();
     if (normal) {
       const nav = this.body.createEl("nav", { cls: "veynrel-findings-navigation", attr: { "aria-label": t("@findings.navigation") } });
-      const pages: Array<Exclude<VeynrelHealthRoute["page"], "topology">> = ["health", "findings", "discover", ...(this.recall ? ["recall" as const] : []), ...(this.connect ? ["connect" as const] : []), "tools", "settings"];
+      const pages: Array<Exclude<VeynrelHealthRoute["page"], "topology" | "semantic-neighborhood">> = ["health", "findings", "discover", ...(this.recall ? ["recall" as const] : []), ...(this.connect ? ["connect" as const] : []), "tools", "settings"];
       const labels = { health: "@findings.health", findings: "@findings.title", discover: "@discover.title", recall: "@recall.title", connect: "@connect.nav", tools: "@health.tools", settings: "@settings.title" };
       for (const page of pages) {
         const button = healthButton(nav, t(labels[page]),
           () => this.navigate(page === "findings" ? findingsRoute() : { page }), `nav-${page}`);
-        const current = this.route.page === page || this.route.page === "topology" && page === "health";
+        const current = this.route.page === page || this.route.page === "topology" && page === "health" || this.route.page === "semantic-neighborhood" && page === "discover";
         button.setAttribute("aria-pressed", String(current));
         if (current) button.setAttribute("aria-current", "page");
       }
@@ -183,7 +195,11 @@ export class VeynrelHealthView extends ItemView {
     const recall = recallSnapshot ? recallViewModel(recallSnapshot) : undefined;
     const authoring = recall && !recallSnapshot?.session ? this.authoring?.getSnapshot() : undefined;
     const connectSnapshot = normal && this.route.page === "connect" ? this.connect?.getSnapshot() : undefined;
-    if (normal && this.route.page === "topology" && this.topology) {
+    if (normal && this.route.page === "semantic-neighborhood" && this.neighborhood) {
+      renderSemanticNeighborhood(surface, this.neighborhood, this.neighborhoodView, {
+        back: () => this.navigate({ page: "discover" }), openNote: (path) => { void this.openNote(path); },
+      });
+    } else if (normal && this.route.page === "topology" && this.topology) {
       this.cleanupTopology = renderTopology(surface, this.topology, this.topologyView, {
         back: () => this.navigate({ page: "health" }), openNote: (path) => { void this.openNote(path); },
       });
@@ -221,7 +237,9 @@ export class VeynrelHealthView extends ItemView {
         this.wakeAt(recallSnapshot.nextDueAt);
       }
     } else if (discover) {
-      renderDiscover(surface, discover, (action) => this.semanticAction(action));
+      renderDiscover(surface, discover, (action) => this.semanticAction(action), this.neighborhood ? () => {
+        this.navigate({ page: "semantic-neighborhood" }); void this.neighborhood!.prepare();
+      } : undefined);
     } else if (normal && this.route.page === "findings") {
       const route = this.route;
       const inbox = findingsInboxViewModel({ findings: this.controller.listFindings(), route,
@@ -287,7 +305,8 @@ export class VeynrelHealthView extends ItemView {
       : semanticError ?? semanticStatus ?? this.navigationMessage ?? status ?? "";
     // A connection result must not hide a later Health scan, recovery or navigation message.
     const mapStatus = normal && (this.route.page === "health" || this.route.page === "topology") && this.topology ? topologyStatus(this.topology.getSnapshot()) : undefined;
-    this.status.setText([this.route.page === "topology" ? this.navigationMessage : primaryStatus, deepError ?? (deepSnapshot ? knowledgeScanStatus(state) ?? deepStatus : undefined), mapStatus].filter(Boolean).join(" · "));
+    const neighborhoodMessage = this.route.page === "semantic-neighborhood" && this.neighborhood ? neighborhoodStatus(this.neighborhood.getSnapshot()) : undefined;
+    this.status.setText([this.route.page === "semantic-neighborhood" ? neighborhoodMessage ?? this.navigationMessage : this.route.page === "topology" ? this.navigationMessage : primaryStatus, deepError ?? (deepSnapshot ? knowledgeScanStatus(state) ?? deepStatus : undefined), mapStatus].filter(Boolean).join(" · "));
     // Routine state and setup errors already belong to their page sections. Keep
     // otherwise unrepresented failures/results visible below the rail as well.
     const healthNotice = model.statusError || state.outcome?.freshness === "stale" ||
@@ -321,9 +340,9 @@ export class VeynrelHealthView extends ItemView {
       else {
         // Keep the keyboard near a temporarily disabled action. Carry its key on
         // the replacement parent so completion restores it only if focus stayed here.
-        const nearby = target?.parentElement ?? this.body;
+        const nearby = target?.parentElement ?? (this.route.page === "semantic-neighborhood" ? heading() : undefined) ?? this.body;
         nearby.setAttribute("tabindex", "-1");
-        if (target && focusKey) nearby.setAttribute("data-health-focus-action", focusKey);
+        if (focusKey && (target || this.route.page === "semantic-neighborhood")) nearby.setAttribute("data-health-focus-action", focusKey);
         nearby.focus({ preventScroll: true });
       }
     }

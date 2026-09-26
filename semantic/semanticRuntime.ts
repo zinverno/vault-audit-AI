@@ -146,6 +146,11 @@ export class LazySemanticRuntime implements SemanticRuntime {
     return this.ragContextBuilder.build(question);
   }
 
+  async listIndexedPaths(): Promise<readonly string[]> {
+    await this.initialize();
+    return this.requireDiscoveryService().listIndexedPaths();
+  }
+
   async findSimilarNotes(
     sourcePath: string,
     options?: SemanticSimilarNotesOptions,

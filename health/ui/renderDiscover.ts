@@ -1,11 +1,20 @@
+import { t } from "../../i18n";
 import { healthButton } from "./renderHealthHome";
 import type { DiscoverAction, DiscoverViewModel } from "./discoverViewModel";
 
-export function renderDiscover(parent: HTMLElement, model: DiscoverViewModel, action: (action: DiscoverAction) => void): void {
+export function renderDiscover(parent: HTMLElement, model: DiscoverViewModel, action: (action: DiscoverAction) => void, openNeighborhood?: () => void): void {
   const section = parent.createEl("section", { cls: "veynrel-health-home veynrel-discover",
     attr: { "aria-label": model.title, "aria-busy": String(model.busy) } });
   section.createEl("h1", { text: model.title, attr: { tabindex: "-1", "data-health-heading": "true" } });
   section.createEl("p", { text: model.introduction });
+  if (model.state === "ready" && openNeighborhood) {
+    const card = section.createEl("section", { cls: "veynrel-neighborhood-card" });
+    card.createEl("h2", { text: t("@neighborhood.title") });
+    card.createEl("p", { text: t("@neighborhood.tagline"), cls: "veynrel-neighborhood-card-lead" });
+    card.createEl("p", { text: t("@neighborhood.card-description") });
+    healthButton(card, t("@neighborhood.open"), openNeighborhood, "neighborhood-open", model.busy).addClass("mod-cta");
+    card.createEl("p", { text: t("@neighborhood.index-only"), cls: "veynrel-health-muted" });
+  }
   if (model.workflows.length) {
     section.createEl("h2", { text: model.exploreTitle });
     const workflows = section.createDiv({ cls: "veynrel-discover-workflows" });

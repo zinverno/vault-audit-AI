@@ -71,6 +71,7 @@ export interface SemanticPathChanges {
 }
 
 export interface SemanticRuntime {
+  listIndexedPaths: () => Promise<readonly string[]>;
   initialize: () => Promise<void>;
   indexVault: (options?: IndexingExecutionOptions) => Promise<IndexingRunResult>;
   indexDocument: (document: IndexDocumentInput) => Promise<IndexingRunResult>;

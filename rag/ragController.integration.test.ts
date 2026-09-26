@@ -153,6 +153,7 @@ function fakeRuntime(initialContext = ragContext()) {
     }),
     search: vi.fn(async () => []),
     buildRagContext: vi.fn(async () => currentContext),
+    listIndexedPaths: vi.fn(async () => ["Alpha.md"]),
     findSimilarNotes: vi.fn(async () => []),
     findPotentialDuplicates: vi.fn(async () => []),
     captureCompanionSnapshot: vi.fn(async () => ({

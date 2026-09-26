@@ -17,6 +17,7 @@ describe("Health production dependency boundary", () => {
       FindingStore: "health/obsidian/healthPluginController.ts",
       ObsidianSemanticController: "main.ts",
       SemanticIntelligenceController: "main.ts",
+      SemanticNeighborhoodController: "main.ts",
       DeepIntelligenceController: "main.ts",
       RecallProductController: "recall/product/obsidianRecallProduct.ts",
       RecallService: "recall/product/obsidianRecallProduct.ts",

@@ -70,6 +70,7 @@ import { AsyncReadWriteBarrier } from "./asyncReadWriteBarrier";
 import type { CompanionSyncPort } from "../companionSync";
 import type { SemanticControllerDependencies } from "./obsidianSemanticController";
 import { SemanticIntelligenceController } from "./product/semanticIntelligenceController";
+import { SemanticNeighborhoodController } from "./product/semanticNeighborhoodController";
 import { SemanticHealthAnalysisAdapter } from "./health/semanticHealthAnalysisAdapter";
 import { HealthPluginController } from "../health/obsidian/healthPluginController";
 import { preferencesFixture } from "../health/obsidian/testSupport";
@@ -477,13 +478,12 @@ function createHarness(
   };
 }
 
-beforeAll(() => {
-  vi.stubGlobal("window", {
-    setTimeout: (callback: () => void, delayMs: number) =>
-      setTimeout(callback, delayMs) as unknown as number,
-    clearTimeout: (timer: number) => clearTimeout(timer),
-  });
-});
+const testWindow = {
+  setTimeout: (callback: () => void, delayMs: number) =>
+    setTimeout(callback, delayMs) as unknown as number,
+  clearTimeout: (timer: number) => clearTimeout(timer),
+};
+beforeAll(() => { vi.stubGlobal("window", testWindow); });
 
 afterAll(() => {
   vi.unstubAllGlobals();
@@ -497,6 +497,38 @@ beforeEach(() => {
 });
 
 describe("semantic read/write barrier with real services and store", () => {
+  it("Neighborhood prepares, loads, refreshes and recenters through the real engine with zero external IO", async () => {
+    const harness = createHarness();
+    harness.setContent("# Alpha\n\nalpha synthetic semantic content with enough meaningful characters for discovery");
+    harness.createFile("Near.md", "# Near\n\nalpha synthetic semantic content with enough meaningful characters for discovery");
+    await harness.controller.indexVault();
+    const port = new SemanticNeighborhoodController(harness.controller);
+    const embed = vi.spyOn(BaseEmbeddingProvider.prototype, "embed");
+    const fetchSpy = vi.fn(); const xhr = vi.fn(); vi.stubGlobal("fetch", fetchSpy); vi.stubGlobal("XMLHttpRequest", xhr);
+    const read = vi.fn(); Object.assign(harness.plugin.app.vault, { read });
+    harness.plugin.app.vault.cachedRead.mockClear(); harness.plugin.app.vault.getMarkdownFiles.mockClear();
+    obsidianMocks.requestUrl.mockClear();
+    const write = vi.spyOn(harness.adapter, "write"); const writeBinary = vi.spyOn(harness.adapter, "writeBinary");
+    const save = vi.spyOn(harness.plugin, "saveSettings");
+    try {
+      await port.prepare(); expect(port.searchSources("").paths).toEqual(["Alpha.md", "Near.md"]);
+      await port.load("Alpha.md"); expect(port.getSnapshot().map?.neighbors[0].path).toBe("Near.md");
+      await port.refresh(); await port.load("Near.md"); expect(port.getSnapshot().map?.source.path).toBe("Near.md");
+      for (const spy of [embed, fetchSpy, xhr, obsidianMocks.requestUrl, read, harness.plugin.app.vault.cachedRead,
+        harness.plugin.app.vault.getMarkdownFiles, write, writeBinary, save]) expect(spy).not.toHaveBeenCalled();
+    } finally { port.dispose(); embed.mockRestore(); vi.unstubAllGlobals(); vi.stubGlobal("window", testWindow); }
+  });
+
+  it("holds the shared lease for indexed-path reads while Clear waits", async () => {
+    const harness = createHarness(); await harness.controller.indexVault();
+    const runtime = activeSlot(harness.controller).runtime;
+    const clearSpy = vi.spyOn(runtimeStore(runtime), "clear"); const gate = manualGate();
+    vi.spyOn(runtime, "listIndexedPaths").mockImplementationOnce(async () => { gate.markEntered(); await gate.wait; return ["Alpha.md"]; });
+    const catalog = harness.controller.listIndexedPaths(); await gate.entered;
+    const clear = harness.controller.clearIndex(); await flushTask(); expect(clearSpy).not.toHaveBeenCalled();
+    gate.release(); expect(await catalog).toEqual(["Alpha.md"]); await clear; expect(clearSpy).toHaveBeenCalledOnce();
+  });
+
   it("Semantic Health reuses real discovery with zero provider calls, Markdown reads/writes or preview persistence", async () => {
     const harness = createHarness();
     harness.setContent("# Alpha\n\nalpha synthetic PRIVATE_PREVIEW content with enough detail for duplicate discovery");

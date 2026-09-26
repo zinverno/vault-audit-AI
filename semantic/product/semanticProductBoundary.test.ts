@@ -7,11 +7,20 @@ describe("semantic product dependency boundary", () => {
     const allowed = new Set(["../../embeddings/factory", "../../embeddings/types", "../../health/semanticIntelligencePort",
       "../types", "./semanticSettingsPort"]);
     for (const file of readdirSync("semantic/product").filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))) {
+      const neighborhoodImports = new Set(file === "semanticNeighborhoodController.ts"
+        ? ["../../health/domain/validation", "../../health/semanticNeighborhoodPort", "../errors", "../types", "./semanticNeighborhoodModel"]
+        : file === "semanticNeighborhoodModel.ts"
+          ? ["../../health/domain/validation", "../../health/semanticNeighborhoodPort", "../semanticDiscoveryService", "../types"] : []);
       const source = readFileSync(`semantic/product/${file}`, "utf8");
       const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
       function visit(node: ts.Node): void {
         if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
-          expect(allowed.has(node.moduleSpecifier.text), `${file}: ${node.moduleSpecifier.text}`).toBe(true);
+          expect((neighborhoodImports.size ? neighborhoodImports : allowed).has(node.moduleSpecifier.text), `${file}: ${node.moduleSpecifier.text}`).toBe(true);
+          if (node.moduleSpecifier.text === "../semanticDiscoveryService" && ts.isImportDeclaration(node)) {
+            const bindings = node.importClause?.namedBindings;
+            expect(bindings && ts.isNamedImports(bindings) ? bindings.elements.map((item) => item.name.text).sort() : [])
+              .toEqual(["DEFAULT_MATCHES_PER_DOCUMENT", "DEFAULT_SIMILAR_NOTES_LIMIT"]);
+          }
           if (node.moduleSpecifier.text === "../../embeddings/factory" && ts.isImportDeclaration(node)) {
             const bindings = node.importClause?.namedBindings;
             expect(bindings && ts.isNamedImports(bindings) ? bindings.elements.map((item) => item.name.text).sort() : [])

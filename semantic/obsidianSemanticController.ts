@@ -712,6 +712,13 @@ export class ObsidianSemanticController {
     });
   }
 
+  async listIndexedPaths(): Promise<readonly string[]> {
+    return this.barrier.withShared(async () => {
+      const runtime = await this.runtimeForDiscovery();
+      return runtime.listIndexedPaths();
+    });
+  }
+
   async findSimilarNotes(
     sourcePath: string,
   ): Promise<SemanticDocumentSimilarity[]> {

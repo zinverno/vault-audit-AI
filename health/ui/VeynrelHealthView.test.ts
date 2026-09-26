@@ -9,7 +9,10 @@ const mocks = vi.hoisted(() => {
       const child = new Element(); Object.assign(child, { tag, text: opts.text ?? "", cls: opts.cls ?? "", attrs: opts.attr ?? {}, ownerDocument: this.ownerDocument, parentElement: this });
       this.children.push(child); return child;
     }
-    createSvg(tag: string, opts: { cls?: string; attr?: Record<string, string> } = {}): Element { return this.append(tag, opts); }
+    createSvg(tag: string, opts: { cls?: string; attr?: Record<string, string> } = {}): Element {
+      if (opts.cls && /\s/u.test(opts.cls)) throw new Error("Native createSvg requires a single class token");
+      return this.append(tag, opts);
+    }
     createEl(tag: string, opts: { text?: string; cls?: string; attr?: Record<string, string> } = {}): Element { return this.append(tag, opts); }
     createDiv(opts: { cls?: string; attr?: Record<string, string> } = {}): Element { return this.append("div", opts); }
     createSpan(opts: { text?: string; cls?: string; attr?: Record<string, string> } = {}): Element { return this.append("span", opts); }
@@ -1381,5 +1384,74 @@ describe("real topology child route", () => {
     parent.action("topology-back").click(); expect(back).toHaveBeenCalledOnce();
     expect(port.load).not.toHaveBeenCalled(); expect(port.refresh).not.toHaveBeenCalled();
     cleanup();
+  });
+});
+
+describe("Semantic Neighborhood Discover child surface", () => {
+  beforeEach(() => { vi.stubGlobal("window", { setTimeout, clearTimeout }); });
+  afterEach(() => vi.unstubAllGlobals());
+  async function neighborhoodFixture() {
+    const { SemanticNeighborhoodController } = await import("../../semantic/product/semanticNeighborhoodController");
+    let index = { kind: "ready" as SemanticStatus["kind"], vectorCount: 9, vectorGeneration: 1, dimensions: 3,
+      provider: "ollama", providerLabel: "Ollama", model: "synthetic", configurationRevision: 0, runtimeRevision: 1 };
+    const listeners = new Set<() => void>();
+    const engine = { getCachedIndexState: () => index, getSemanticStatus: () => index,
+      subscribeStatus: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+      listIndexedPaths: vi.fn(async () => ["A.md", "B.md"]),
+      findSimilarNotes: vi.fn(async (source: string) => [{ path: source === "A.md" ? "B.md" : "A.md", score: 0.91,
+        matches: [{ id: "chunk", path: source === "A.md" ? "B.md" : "A.md", score: 0.94, headingPath: ["Stored heading"], ordinal: 0, contentHash: "hash",
+          preview: "<img src=x onerror=alert(1)> literal preview", source: { startLine: 2, endLine: 5, startOffset: 0, endOffset: 100 } }] }]),
+      refreshSemanticStatus: vi.fn(async () => index), indexVault: vi.fn(), rebuildIndex: vi.fn(), openSearch: vi.fn(), openSimilarNotes: vi.fn(), openPotentialDuplicates: vi.fn() };
+    const settings = { get: () => ({ ...DEFAULT_EMBEDDING_SETTINGS, enabled: true }), update: vi.fn() };
+    const semantic = new SemanticIntelligenceController(settings, engine);
+    const neighborhood = new SemanticNeighborhoodController(engine);
+    const f = fixture();
+    const cachedRead = vi.fn(); Object.assign(f.vault, { cachedRead });
+    const view = new VeynrelHealthView({ app: f.app } as never, f.controller, f.tools, semantic, undefined, undefined, undefined, undefined, undefined, neighborhood);
+    const content = view.contentEl as unknown as InstanceType<typeof mocks.Element>;
+    await view.onOpen();
+    return { ...f, cachedRead, view, content, engine, semantic, neighborhood, change: () => { index = { ...index, vectorGeneration: 2 }; for (const l of listeners) l(); } };
+  }
+  it("keeps passive Discover free of catalog/similarity/body/network/write work, and preserves existing launchers", async () => {
+    const f = await neighborhoodFixture();
+    f.vault.read.mockClear(); f.cachedRead.mockClear(); f.adapter.write.mockClear();
+    mocks.requestUrl.mockClear();
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    f.content.action("nav-discover").click();
+    expect(f.engine.listIndexedPaths).not.toHaveBeenCalled(); expect(f.engine.findSimilarNotes).not.toHaveBeenCalled();
+    for (const spy of [f.vault.read, f.cachedRead, f.adapter.write, mocks.requestUrl, fetch]) expect(spy).not.toHaveBeenCalled();
+    for (const action of ["discover-search", "discover-related", "discover-duplicates", "semantic-health-scan"]) expect(f.content.action(action)).toBeDefined();
+    f.content.action("neighborhood-open").click(); await f.neighborhood.prepare();
+    expect(f.content.action("nav-discover").attrs["aria-current"]).toBe("page");
+    expect(f.content.action("nav-semantic-neighborhood")).toBeUndefined(); expect(f.content.action("nav-tools")).toBeDefined();
+    expect(f.content.action("neighborhood-search")).toBeDefined();
+    expect(f.engine.listIndexedPaths).toHaveBeenCalledOnce(); expect(f.engine.findSimilarNotes).not.toHaveBeenCalled();
+    await f.view.onClose(); f.neighborhood.dispose(); f.controller.dispose();
+  });
+  it.each(["en", "ru"] as const)("selects without querying, recenters explicitly, preserves viewport, and renders literal evidence in %s", async (lang) => {
+    setLanguage(lang); const f = await neighborhoodFixture();
+    f.content.action("nav-discover").click(); f.content.action("neighborhood-open").click(); await f.neighborhood.prepare();
+    f.content.action("neighborhood-source-0").focus(); f.content.action("neighborhood-source-0").click(); await f.neighborhood.load("A.md");
+    expect(f.engine.findSimilarNotes).toHaveBeenCalledTimes(1);
+    expect(f.content.ownerDocument.activeElement).toBe(f.content.action("neighborhood-select-0"));
+    f.content.action("neighborhood-select-1").focus(); f.content.action("neighborhood-select-1").click();
+    expect(f.engine.findSimilarNotes).toHaveBeenCalledTimes(1); expect(f.content.texts()).toContain("<img src=x onerror=alert(1)> literal preview");
+    expect(f.content.all().filter((e) => e.tag === "img")).toEqual([]);
+    expect(f.content.texts()).toContain(t("@neighborhood.evidence")); expect(f.content.texts()).not.toContain("@neighborhood.");
+    f.content.scrollTop = 850; f.content.action("neighborhood-explore").focus(); f.content.action("neighborhood-explore").click();
+    expect(f.content.scrollTop).toBe(850); expect(f.content.texts()).toContain(t("@neighborhood.loading"));
+    await f.neighborhood.load("B.md"); expect(f.neighborhood.getSnapshot().map?.source.path).toBe("B.md");
+    expect(f.content.ownerDocument.activeElement).toBe(f.content.action("neighborhood-select-0"));
+    expect(f.engine.findSimilarNotes.mock.calls).toEqual([["A.md"], ["B.md"]]); expect(f.content.scrollTop).toBe(850);
+    f.change(); expect(f.content.texts()).toContain(t("@neighborhood.stale")); expect(f.engine.findSimilarNotes).toHaveBeenCalledTimes(2);
+    f.content.action("neighborhood-refresh").focus(); f.content.action("neighborhood-refresh").click(); await f.neighborhood.refresh();
+    expect(f.content.scrollTop).toBe(850); expect(f.content.ownerDocument.activeElement).toBe(f.content.action("neighborhood-refresh"));
+    expect(f.content.action("neighborhood-refresh").focusOptions).toEqual({ preventScroll: true });
+    f.content.action("neighborhood-choose").focus(); f.content.action("neighborhood-choose").click();
+    expect(f.content.ownerDocument.activeElement).toBe(f.content.action("neighborhood-search")); expect(f.content.action("neighborhood-search")).toBeDefined();
+    expect(f.engine.listIndexedPaths).toHaveBeenCalledTimes(2);
+    await f.view.onClose(); await f.view.onOpen(); f.content.action("nav-discover").click(); f.content.action("neighborhood-open").click(); await f.neighborhood.prepare();
+    expect(f.engine.listIndexedPaths).toHaveBeenCalledTimes(2);
+    await f.view.onClose(); f.neighborhood.dispose(); f.controller.dispose();
   });
 });

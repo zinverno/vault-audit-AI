@@ -1,0 +1,59 @@
+{
+  "documents": 1000,
+  "chunks": 3000,
+  "dimensions": 8,
+  "neighbors": 10,
+  "samples": 7,
+  "node": "v24.14.1",
+  "measurements": [
+    {
+      "catalogMs": 2.890703000000002,
+      "findSimilarNotesMs": 21.809057999999993,
+      "projectionMs": 1.5243749999999636,
+      "layoutMs": 0.20256200000000035
+    },
+    {
+      "catalogMs": 1.780147999999997,
+      "findSimilarNotesMs": 13.020650999999987,
+      "projectionMs": 0.3967180000000212,
+      "layoutMs": 0.03522600000002285
+    },
+    {
+      "catalogMs": 1.5916120000000546,
+      "findSimilarNotesMs": 11.35909700000002,
+      "projectionMs": 0.33180599999997185,
+      "layoutMs": 0.0474399999999946
+    },
+    {
+      "catalogMs": 1.4783990000000244,
+      "findSimilarNotesMs": 11.085309999999993,
+      "projectionMs": 0.42853900000000067,
+      "layoutMs": 0.07390899999995781
+    },
+    {
+      "catalogMs": 1.4490330000000426,
+      "findSimilarNotesMs": 15.032875999999987,
+      "projectionMs": 0.30268100000000686,
+      "layoutMs": 0.0236850000000004
+    },
+    {
+      "catalogMs": 1.5354259999999726,
+      "findSimilarNotesMs": 10.246717999999987,
+      "projectionMs": 0.23955200000000332,
+      "layoutMs": 0.014667000000031294
+    },
+    {
+      "catalogMs": 1.7837449999999535,
+      "findSimilarNotesMs": 15.857792000000018,
+      "projectionMs": 0.39540599999997994,
+      "layoutMs": 0.03644900000000462
+    }
+  ],
+  "medians": {
+    "catalogMs": 1.5916120000000546,
+    "findSimilarNotesMs": 13.020650999999987,
+    "projectionMs": 0.39540599999997994,
+    "layoutMs": 0.03644900000000462
+  },
+  "scope": "One source against the corpus using existing discovery. No global all-pairs graph. DOM rendering measured separately in native Obsidian."
+}
