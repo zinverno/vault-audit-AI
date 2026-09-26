@@ -6,6 +6,20 @@ const rule = (selector: string): string => css.slice(css.indexOf(`\n${selector} 
 const nav = ".veynrel-health-view .veynrel-findings-navigation";
 
 describe("workspace presentation contract", () => {
+  it("shares one wide responsive shell, with bounded prose and an out-of-layout live region", () => {
+    const shell = rule(".veynrel-health-view .veynrel-workspace");
+    expect(shell).toContain("max-width: 1200px;");
+    expect(shell).toContain("margin-inline: auto;");
+    expect(shell).toContain("padding: 16px 24px;");
+    expect(css).toContain(".veynrel-health-view .veynrel-workspace { padding: 12px; }");
+    expect(css).toContain("max-width: 80ch;");
+    expect(css).not.toMatch(/max-width: (?:880|1120)px/u);
+    const live = rule(".veynrel-health-view .veynrel-health-status");
+    for (const declaration of ["position: absolute;", "width: 1px;", "height: 1px;", "clip-path: inset(50%);", "overflow: hidden;"])
+      expect(live).toContain(declaration);
+    expect(live).not.toMatch(/display:\s*none|visibility:\s*hidden/u);
+    expect(css).not.toContain(".veynrel-health-status:empty");
+  });
   it("uses a flat scrolling rail, transparent buttons, short separators and an accent underline", () => {
     expect(rule(nav)).toContain("flex-wrap: nowrap;");
     expect(rule(nav)).toContain("overflow-x: auto;");

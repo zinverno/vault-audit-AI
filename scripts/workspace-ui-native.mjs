@@ -114,16 +114,55 @@ try {
           accent: getComputedStyle(root).getPropertyValue('--interactive-accent').trim(),
           preview: [p.borderTopWidth, p.borderRightWidth, p.borderBottomWidth, p.borderLeftWidth, p.borderRadius, p.backgroundColor] };
       })()`);
-      assert(style.fits && style.row && style.cells && style.count === 7 && style.overflow === 'auto', JSON.stringify(style));
+      assert(style.fits && style.row && style.cells && style.count === 6 && style.overflow === 'auto', JSON.stringify(style));
       for (const border of [style.rail, style.preview]) assert.deepEqual(border, ['0px', '0px', '1px', '0px', '0px', 'rgba(0, 0, 0, 0)']);
       assert(style.underline.includes('inset') && (theme !== 'yellow' || style.underline.includes('224, 182, 30')));
       // Browser-native Tab scrolls overflowed tabs into view; no application JS scrolling.
       await evaluate(`polishView.contentEl.querySelector('[data-health-action=nav-health]').focus()`);
-      for (let i = 0; i < 6; i++) await key('Tab', 'Tab', 9);
+      for (let i = 0; i < 5; i++) await key('Tab', 'Tab', 9);
       assert(await evaluate(`(() => { const b = document.activeElement, n = b.closest('nav'); return b.dataset.healthAction === 'nav-settings' && b.matches(':focus-visible') && b.getBoundingClientRect().right <= n.getBoundingClientRect().right + 1; })()`));
     }
     console.log(`PASS ${width}px ${theme}: pointer/keyboard load, refresh, stale, route focus, CSS and Tab`);
   }
+  // Every route shares the rail's horizontal axis; ordinary state stays in-page.
+  let surfaces = 0;
+  for (const width of [320, 390, 768, 1024, 1280, 1440]) for (const theme of ['dark', 'light', 'yellow']) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
+    await evaluate(`document.body.classList.toggle('theme-dark', ${theme !== 'light'});
+      document.body.classList.toggle('theme-light', ${theme === 'light'});
+      document.body.style.setProperty('--interactive-accent', ${JSON.stringify(theme === 'yellow' ? 'rgb(224, 182, 30)' : '')});`);
+    for (const action of ['nav-health', 'nav-findings', 'nav-discover', 'nav-recall', 'nav-connect', 'nav-settings', 'tools', 'topology-open']) {
+      const layout = await evaluate(`(() => {
+        const view = polishView, root = view.contentEl;
+        root.querySelector('[data-health-action=nav-health]').click();
+        root.querySelector('[data-health-action=${action}]').click();
+        const body = root.querySelector('.veynrel-workspace'), nav = body.querySelector('nav');
+        const surface = body.lastElementChild.firstElementChild, n = nav.getBoundingClientRect(), p = surface.getBoundingClientRect();
+        const live = root.querySelector('[role=status]'), l = getComputedStyle(live);
+        const prose = surface.querySelector('p'), ps = prose && getComputedStyle(prose);
+        return { route: view.route.page, width: p.width, aligned: Math.abs(n.left - p.left) < 1 && Math.abs(n.width - p.width) < 1,
+          fits: root.scrollWidth <= root.clientWidth + 1,
+          tabs: [...nav.children].map(b => b.dataset.healthAction), current: nav.querySelector('[aria-current=page]').dataset.healthAction,
+          hiddenLive: l.position === 'absolute' && l.clipPath === 'inset(50%)' && live.getBoundingClientRect().height <= 1 && l.display !== 'none' && l.visibility !== 'hidden',
+          liveAttributes: [live.getAttribute('aria-live'), live.getAttribute('aria-atomic')],
+          pageState: surface.querySelector('.veynrel-health-state')?.textContent,
+          liveText: live.textContent, feedback: body.querySelector('[data-workspace-message]').textContent,
+          proseBounded: prose && Number.isFinite(parseFloat(ps.maxWidth)) && prose.getBoundingClientRect().width <= parseFloat(ps.maxWidth) + 1,
+          tools: surface.querySelectorAll('[data-health-action^="tool-"]').length };
+      })()`);
+      assert(layout.aligned && layout.fits && layout.hiddenLive, JSON.stringify({width, theme, layout}));
+      assert.deepEqual(layout.tabs, ['nav-health', 'nav-findings', 'nav-discover', 'nav-recall', 'nav-connect', 'nav-settings']);
+      assert.deepEqual(layout.liveAttributes, ['polite', 'true']);
+      if (width >= 1280) assert(layout.width > 1050 && layout.width <= 1200, JSON.stringify(layout));
+      if (action === 'tools') assert(layout.current === 'nav-health' && layout.tools === 5);
+      if (action === 'topology-open') assert.equal(layout.current, 'nav-health');
+      if (action === 'nav-connect' || action === 'nav-settings') assert(layout.proseBounded);
+      if (action === 'nav-connect' || action === 'nav-discover') assert(layout.pageState && layout.pageState === layout.liveText && !layout.feedback, JSON.stringify(layout));
+      surfaces++;
+    }
+  }
+  console.log(`PASS ${surfaces} route/theme/width surfaces: shell alignment, prose, six primary tabs and contextual status`);
+  await evaluate(`polishView.contentEl.querySelector('[data-health-action=nav-health]').click()`);
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   await evaluate(`polishView.contentEl.querySelector('[data-health-action=topology-open]').click()`);
   assert(await evaluate(`[...polishView.contentEl.querySelectorAll('.veynrel-health-page-enter,.veynrel-topology-detail,.veynrel-topology-detail *,nav button')].every(e => getComputedStyle(e).animationName === 'none' && getComputedStyle(e).transitionDuration === '0s')`));

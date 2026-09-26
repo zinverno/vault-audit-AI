@@ -33,7 +33,7 @@ It helps you answer three simple questions:
 Instead of being a collection of unrelated AI commands, Veynrel brings vault analysis, semantic discovery, spaced repetition, AI-assisted workflows, and external agent integration into one workspace.
 
 ```text
-Health → Findings → Discover → Recall → Connect → Tools → Settings
+Health | Findings | Discover | Recall | Connect | Settings
 ```
 
 AI is explicit. Local features stay local. External agents cannot silently rewrite your vault.
@@ -162,6 +162,9 @@ The plugin remains the authoritative vault writer.
 ---
 
 ### Tools
+
+Tools is a secondary Health utility surface, reached from Health or Findings.
+It keeps Health selected in the primary navigation; existing commands and context workflows remain available.
 
 **Advanced workflows without cluttering the main product loops.**
 

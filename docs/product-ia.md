@@ -1,10 +1,33 @@
 # Veynrel product information architecture
 
-The final normal workspace navigation is **Health | Findings | Discover | Recall |
-Connect | Tools | Settings**. All seven routes render in the existing
+The visible primary navigation is **Health | Findings | Discover | Recall |
+Connect | Settings** (Recall and Connect appear when their ports are available).
+Tools is a secondary Health utility surface: its existing `{ page: "tools" }`
+route keeps **Health** selected, like the Topology child route. All surfaces render in the existing
 `VeynrelHealthView` (`veynrel-health`). Routes and setup drafts are view-local and
 transient. Reopening starts on Health; no route is saved. Onboarding and Health
 recovery take precedence and hide normal navigation, including the Tools shortcut.
+
+Navigation and page content share a centered 1200px product shell with responsive
+24px/12px gutters. Dashboards, grids, toolbars and maps use the available shell;
+explanatory prose stays within 80ch, and Recall's focused review retains its inner
+measure. The flat rail and its native horizontal overflow remain unchanged.
+
+The persistent `role="status"`, polite, atomic live region is visually hidden on
+every route without `display: none` or `visibility: hidden`. Routine status stays
+visible in its owning page. Setup errors stay beside their forms; otherwise
+unrepresented note-opening, tool-launch, Finding-update, preference-save and
+Health/Recall failures or incomplete results render below the rail. The live region still announces
+them. Same-route scroll preservation and nearby disabled-action focus are retained.
+
+PR #53 native verification used isolated Linux Obsidian 1.12.7 / Electron 39.8.10:
+EN/RU, 320/390/768/1024/1280/1440px, dark/light/yellow accent. At 1440px the previous
+1120px page wrapper had 1072px of inner content against a 1360–1372px rail; the new
+1200px shell aligns both rail and page at 1152px inside its gutters. The retained
+[native regression](../scripts/workspace-ui-native.mjs) checks every route, bounded
+prose, accessible hidden status and the original topology loading/focus contract.
+Error regressions cover note opening, Finding updates, preference saves, setup and
+tool launch failures. Screen-reader speech and mobile OS behavior were not tested.
 
 ## Responsibilities
 
@@ -15,7 +38,7 @@ recovery take precedence and hide normal navigation, including the Tools shortcu
 | Discover | Semantic exploration and Semantic Health | Existing Semantic owner and analysis port |
 | Recall | Inventory, generation and native FSRS review | Existing Recall product owner and authoring adapter |
 | Connect | Companion setup, mirror sync, MCP explanation and proposals | Existing Connect product adapter, Companion service and proposal review |
-| Tools | Advanced/manual workflows | Explicit host launchers for existing commands/modals |
+| Tools (Health child) | Advanced/manual workflows | Explicit host launchers for existing commands/modals |
 | Settings | What powers each capability? | Safe cached product snapshots and links to existing setup flows |
 | Command palette / editor context menu | Fast, contextual execution | Existing command IDs, editor callbacks and public menu actions |
 

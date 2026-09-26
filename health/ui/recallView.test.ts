@@ -496,6 +496,9 @@ describe("Recall recovery and presentation", () => {
     expect(recallViewModel(f.product.getSnapshot()).emptyTitle).toBe("No flashcards found");
     f.vault.read.mockRejectedValueOnce(new Error("PRIVATE")); await f.product.refreshCards();
     const model = recallViewModel(f.product.getSnapshot()); expect(model.emptyTitle).toBe("No cards available"); expect(model.status).toContain("incomplete");
+    await f.view.onOpen(); f.action("nav-recall").click(); await flush();
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toContain("incomplete");
+    await f.view.onClose();
   });
 
   it.each([[1_000, "1 sec"], [60_000, "1 min"], [330_000, "5 min 30 sec"], [600_000, "10 min"], [10_800_000, "3 h"], [345_600_000, "4 days"]])("formats %s milliseconds as %s", (ms, expected) => expect(formatRecallInterval(Number(ms))).toBe(expected));

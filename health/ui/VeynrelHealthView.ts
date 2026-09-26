@@ -92,7 +92,7 @@ export class VeynrelHealthView extends ItemView {
     // Keep the live region mounted while the inexpensive dashboard content is replaced.
     this.status = this.contentEl.createDiv({ cls: "veynrel-health-status", attr: { role: "status", "aria-live": "polite", "aria-atomic": "true" } });
     this.status.setText(t("@health.loading"));
-    this.body = this.contentEl.createDiv();
+    this.body = this.contentEl.createDiv({ cls: "veynrel-workspace" });
     try {
       await this.controller.getHealthService();
       if (epoch !== this.epoch) return;
@@ -110,7 +110,10 @@ export class VeynrelHealthView extends ItemView {
       this.unsubscribeTopology = this.topology?.subscribe(() => this.render());
       this.render();
     } catch {
-      if (epoch === this.epoch) this.status?.setText(t("@health.error.load"));
+      if (epoch === this.epoch) {
+        this.status?.setText(t("@health.error.load"));
+        this.body?.createEl("p", { text: t("@health.error.load"), cls: "veynrel-workspace-message veynrel-health-status-error" });
+      }
     }
   }
 
@@ -161,16 +164,17 @@ export class VeynrelHealthView extends ItemView {
     this.body.empty();
     if (normal) {
       const nav = this.body.createEl("nav", { cls: "veynrel-findings-navigation", attr: { "aria-label": t("@findings.navigation") } });
-      const pages: Array<Exclude<VeynrelHealthRoute["page"], "topology">> = ["health", "findings", "discover", ...(this.recall ? ["recall" as const] : []), ...(this.connect ? ["connect" as const] : []), "tools", "settings"];
-      const labels = { health: "@findings.health", findings: "@findings.title", discover: "@discover.title", recall: "@recall.title", connect: "@connect.nav", tools: "@health.tools", settings: "@settings.title" };
+      const pages: Array<Exclude<VeynrelHealthRoute["page"], "topology" | "tools">> = ["health", "findings", "discover", ...(this.recall ? ["recall" as const] : []), ...(this.connect ? ["connect" as const] : []), "settings"];
+      const labels = { health: "@findings.health", findings: "@findings.title", discover: "@discover.title", recall: "@recall.title", connect: "@connect.nav", settings: "@settings.title" };
       for (const page of pages) {
         const button = healthButton(nav, t(labels[page]),
           () => this.navigate(page === "findings" ? findingsRoute() : { page }), `nav-${page}`);
-        const current = this.route.page === page || this.route.page === "topology" && page === "health";
+        const current = this.route.page === page || (this.route.page === "topology" || this.route.page === "tools") && page === "health";
         button.setAttribute("aria-pressed", String(current));
         if (current) button.setAttribute("aria-current", "page");
       }
     }
+    const feedback = this.body.createDiv({ cls: "veynrel-workspace-message", attr: { "data-workspace-message": "true" } });
     const surface = this.body.createDiv({ cls: enteringPage ? "veynrel-health-page-enter" : "" });
     const deepSnapshot = normal && this.route.page === "health" ? this.deep?.getSnapshot() : undefined;
     const semanticSnapshot = normal && (this.route.page === "health" || this.route.page === "discover") ? this.semantic?.getSnapshot() : undefined;
@@ -285,8 +289,16 @@ export class VeynrelHealthView extends ItemView {
     // A connection result must not hide a later Health scan, recovery or navigation message.
     const mapStatus = normal && (this.route.page === "health" || this.route.page === "topology") && this.topology ? topologyStatus(this.topology.getSnapshot()) : undefined;
     this.status.setText([this.route.page === "topology" ? this.navigationMessage : primaryStatus, deepError ?? (deepSnapshot ? knowledgeScanStatus(state) ?? deepStatus : undefined), mapStatus].filter(Boolean).join(" · "));
-    // Coverage is visible beside the topology title; retain the mounted live announcement.
-    this.status.setAttribute("data-topology-contextual", String(this.route.page === "topology" && !this.navigationMessage && !deepError));
+    // Routine state and setup errors already belong to their page sections. Keep
+    // otherwise unrepresented failures/results visible below the rail as well.
+    const healthNotice = model.statusError || state.outcome?.freshness === "stale" ||
+      state.outcome?.findingsCommitted && !state.outcome.historyRecorded ? model.status : undefined;
+    const recallNotice = recall?.error || recallSnapshot?.inventoryResult?.complete === false ||
+      recallSnapshot?.inventoryResult?.committed === false ? recall?.status : undefined;
+    const messages = [this.navigationMessage, state.preferencesError ? t("@health.profile.save-failed") : undefined,
+      mutationError ? t("@findings.update-failed") : undefined, healthNotice,
+      recallNotice, authoring?.result ? recallAuthoringStatus(authoring) : undefined];
+    for (const message of new Set(messages.filter((message): message is string => Boolean(message)))) feedback.createEl("p", { text: message });
     this.status.toggleClass("veynrel-health-status-error", connectSnapshot ? Boolean(connectSnapshot.error || (this.connectResult && !this.connectResult.ok) || (this.connectSetup?.step === "form" && this.connectSetup.result && !this.connectSetup.result.ok)) : recall ? recall.error || Boolean(authoring?.result && authoring.result.status !== "success") : state.preferencesError || mutationError || model.statusError || Boolean(semanticError || deepError) || deepSnapshot?.state === "error");
     // Leave the sibling live region available to announce the running state.
     this.body.setAttribute("aria-busy", String(state.busy || state.savingPreferences || connectSnapshot?.busy));

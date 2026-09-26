@@ -201,8 +201,8 @@ Live-region availability was checked; screen-reader speech and mobile OS behavio
 were not exercised. Screenshots were inspected for dark/light/yellow presentation.
 
 Coverage sits with the page title, including the observed-only explanation for
-partial maps. Its persistent live announcement is visually hidden on this route
-to avoid duplicate status copy; note-opening errors remain visible. Refresh is
+partial maps. The persistent global live announcement is visually hidden on all
+routes; note-opening errors remain visible below navigation. Refresh is
 the primary action, Back is a quiet navigation button, and search/Fit belong to
 the canvas toolbar. The full legend remains available in a native disclosure.
 The inspector separates note identity, numeric facts, classifications and bounded

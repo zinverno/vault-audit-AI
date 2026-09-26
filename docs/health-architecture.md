@@ -3,7 +3,8 @@
 The [integrated MVP audit](mvp-hardening.md) consolidates current ownership, passive
 IO, migration/recovery contracts, native evidence and remaining limitations.
 
-The current main IA is **Health | Findings | Discover | Recall | Connect | Tools | Settings**, inside
+The current primary IA is **Health | Findings | Discover | Recall | Connect | Settings**,
+with Tools as a secondary Health surface, inside
 the same `VeynrelHealthView`. [Veynrel Connect](veynrel-connect.md) adapts the existing
 Semantic-owned Companion service and proposal review implementation. It is not a
 fifth Health dimension and creates no Findings or scan receipts. Its route is

@@ -109,7 +109,8 @@ describe("native Health view lifecycle", () => {
     const pending = f.controller.runLocalScan(); release("Meaningful content longer than thirty two characters for the scan."); await pending;
     expect(f.content.texts()).toContain("Vault check complete"); expect(f.content.texts()).toContain("Review recommended");
     expect(f.content.action("scan").disabled).toBe(false); expect(f.content.action("open-note")).toBeDefined();
-    f.content.action("tools").click(); expect(f.content.action("nav-tools").attrs["aria-current"]).toBe("page");
+    f.content.action("tools").click(); expect(f.content.action("nav-health").attrs["aria-current"]).toBe("page");
+    expect(f.content.action("nav-tools")).toBeUndefined();
     expect(f.tools.openBatchProcessing).not.toHaveBeenCalled();
   });
   it("close unsubscribes without cancelling; reopen reflects the same plugin-owned running scan", async () => {
@@ -133,12 +134,21 @@ describe("native Health view lifecycle", () => {
     await f.view.onClose(); release(false); await opening;
     expect(subscribe).not.toHaveBeenCalled(); expect(f.content.children).toHaveLength(0);
   });
+  it("keeps an initialization failure visible in the workspace as well as announced", async () => {
+    const f = fixture(); vi.spyOn(f.controller, "getHealthService").mockRejectedValueOnce(new Error("private"));
+    await f.view.onOpen();
+    expect(f.content.all().find((e) => e.cls === "veynrel-workspace")?.texts()).toContain(t("@health.error.load"));
+    expect(f.content.all().find((e) => e.attrs.role === "status")?.text).toBe(t("@health.error.load"));
+    expect(f.content.texts()).not.toContain("private");
+    await f.view.onClose(); f.controller.dispose();
+  });
   it("rechecks note existence at click time and leaves Findings unchanged if the note disappeared", async () => {
     const f = fixture(); await f.view.onOpen(); await f.controller.runLocalScan();
     const service = await f.controller.getHealthService(); const before = service.listFindings();
     f.vault.getAbstractFileByPath.mockReturnValue(null);
     f.content.action("open-note").click(); await flush();
     expect(f.content.texts()).toContain("This note is no longer available"); expect(f.openFile).not.toHaveBeenCalled();
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toContain("This note is no longer available");
     expect(service.listFindings()).toEqual(before); expect(f.content.action("open-note")).toBeUndefined();
   });
   it("blocking recovery requires modal confirmation and Cancel leaves files untouched", async () => {
@@ -321,6 +331,8 @@ describe("inline Deep Intelligence boundaries", () => {
     f.content.action("deep-connect").click(); await flush();
     expect(f.settings.get()).toEqual(before); expect(f.content.action("deep-field-model")).toBeDefined();
     expect(f.content.texts()).toContain(failure === "connection" ? "Couldn't connect" : "Couldn't save");
+    expect(f.content.all().find((e) => e.cls.includes("veynrel-deep"))?.texts()).toContain(failure === "connection" ? "Couldn't connect" : "Couldn't save");
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toBe("");
     expect(f.content.texts()).not.toContain("synthetic-DO-NOT-EXPOSE-key"); expect(f.content.action("deep-connect").disabled).toBe(false); noWork(f);
   });
 });
@@ -347,13 +359,25 @@ describe("inline Semantic Intelligence boundaries", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it.each(["en", "ru"] as const)("disabled Discover owns its visible status and retains the global live region in %s", async (language) => {
+    setLanguage(language); const f = semanticFixture(false, "not-initialized", 0); await f.view.onOpen();
+    const live = f.content.all().find((e) => e.attrs.role === "status")!;
+    f.content.action("nav-discover").click();
+    expect(f.content.all().find((e) => e.attrs.role === "status")).toBe(live);
+    expect(live.attrs).toMatchObject({ role: "status", "aria-live": "polite", "aria-atomic": "true" });
+    expect(live.text).toContain(t("@discover.required"));
+    expect(f.content.all().find((e) => e.cls.includes("veynrel-discover"))?.texts()).toContain(t("@discover.required"));
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toBe("");
+    await f.view.onClose(); f.controller.dispose();
+  });
+
   it.each([
     [false, "not-initialized", 0], [true, "not-initialized", 0], [true, "ready", 4],
     [true, "incompatible", 4], [true, "error", 0], [true, "ready", 0], [true, "indexing", 4],
   ] as const)("Discover navigation is passive (enabled %s, %s, %s vectors)", async (enabled, kind, count) => {
     const f = semanticFixture(enabled, kind, count); await f.view.onOpen();
     expect(f.content.all().filter((e) => e.attrs["data-health-action"]?.startsWith("nav-")).map((e) => e.text))
-      .toEqual(["Health", "Findings", "Discover", "Tools", "Settings"]);
+      .toEqual(["Health", "Findings", "Discover", "Settings"]);
     f.content.action("nav-discover").click();
     expect(f.content.action("nav-discover").attrs["aria-current"]).toBe("page");
     expect(f.content.all().find((e) => e.tag === "h1")?.text).toBe("Discover");
@@ -592,6 +616,8 @@ describe("inline Semantic Intelligence boundaries", () => {
     await vi.waitFor(() => expect(f.content.texts()).toContain("Couldn't connect to Ollama"));
     f.settings.update.mockRejectedValueOnce(new Error("private-save-response")); f.content.action("semantic-connect").click();
     await vi.waitFor(() => expect(f.content.texts()).toContain("Couldn't save Semantic Intelligence settings"));
+    expect(f.content.all().find((e) => e.cls.includes("veynrel-semantic"))?.texts()).toContain("Couldn't save Semantic Intelligence settings");
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toBe("");
     expect(f.content.texts()).not.toContain("private-"); expect(f.settings.get().enabled).toBe(false);
     expect(f.engine.refreshSemanticStatus).not.toHaveBeenCalled(); await f.view.onClose();
   });
@@ -669,6 +695,7 @@ describe("integrated Health onboarding", () => {
   it("safe errors retain Profile or Result when choice, Skip or completion fails", async () => {
     const f = fixture({}); await f.view.onOpen(); f.save.mockRejectedValue(new Error("private details"));
     f.content.action("profile-work").click(); await vi.waitFor(() => expect(f.content.texts()).toContain("Couldn't save Health preferences"));
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toContain("Couldn't save Health preferences");
     expect(f.content.action("profile-work")).toBeDefined(); expect(f.preferences.get().profileChosen).toBe(false);
     f.content.action("skip").click(); await flush(); expect(f.preferences.get().onboardingCompleted).toBe(false);
     expect(f.content.texts()).not.toContain("private details");
@@ -686,12 +713,13 @@ describe("integrated Health onboarding", () => {
     expect(f.content.action("profile-work").texts()).toContain("✓ Selected"); expect(f.content.action("skip")).toBeUndefined();
     f.save.mockRejectedValueOnce(new Error("private detail")); f.content.action("profile-research").click();
     await vi.waitFor(() => expect(f.content.texts()).toContain("Couldn't save Health preferences"));
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toContain("Couldn't save Health preferences");
     expect(f.content.action("profile-work").attrs["aria-pressed"]).toBe("true");
     expect(f.content.action("profile-research").attrs["aria-pressed"]).toBe("false");
     f.content.action("profile-research").click(); await vi.waitFor(() => expect(f.content.action("profile-research")).toBeUndefined());
     expect(f.content.texts()).toContain("Profile: Research & writing");
     expect(f.preferences.get().onboardingCompleted).toBe(true); expect(f.vault.read).not.toHaveBeenCalled();
-    f.content.action("tools").click(); expect(f.content.action("nav-tools").attrs["aria-current"]).toBe("page");
+    f.content.action("tools").click(); expect(f.content.action("nav-health").attrs["aria-current"]).toBe("page");
     expect(f.tools.openBatchProcessing).not.toHaveBeenCalled();
   });
   it.each(["findings.json", "scan-runs.json"])("recovery of %s wins before Welcome and preserves preferences", async (file) => {
@@ -781,7 +809,8 @@ describe("Findings navigation and lifecycle integration", () => {
     for (const dimension of ["recall", "knowledge", "all"]) f.content.action(`filter-${dimension}`).click();
     const row = f.content.action(`finding-${id}`); row.focus(); row.click();
     expect(f.content.ownerDocument.activeElement?.tag).toBe("h2");
-    f.content.action("tools").click(); expect(f.content.action("nav-tools").attrs["aria-current"]).toBe("page");
+    f.content.action("tools").click(); expect(f.content.action("nav-health").attrs["aria-current"]).toBe("page");
+    expect(f.content.action("nav-tools")).toBeUndefined();
     expect(f.tools.openBatchProcessing).not.toHaveBeenCalled();
     f.content.action("nav-health").click(); expect(f.content.action("scan")).toBeDefined();
     expect(f.vault.read).not.toHaveBeenCalled(); expect(f.vault.getMarkdownFiles).not.toHaveBeenCalled(); expect(f.adapter.write).not.toHaveBeenCalled();
@@ -831,6 +860,7 @@ describe("Findings navigation and lifecycle integration", () => {
     f.content.action("review-finding").click(); f.adapter.write.mockRejectedValueOnce(new Error("PRIVATE STORAGE ERROR"));
     f.content.action("finding-dismiss").click();
     await vi.waitFor(() => expect(f.content.texts()).toContain("Couldn't update this finding."));
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toContain("Couldn't update this finding.");
     expect(f.controller.getFinding(id)?.state).toBe("open"); expect(f.files.get(`${root}/findings.json`)).toBe(bytes);
     expect(f.content.texts()).not.toContain("PRIVATE"); expect(JSON.stringify(f.controller.getState())).not.toContain("PRIVATE");
     return { ...f, id };
@@ -953,6 +983,16 @@ describe("Connect view boundaries", () => {
     expect(f.adapter.write).not.toHaveBeenCalled(); expect(f.save).not.toHaveBeenCalled();
     expect(f.engine.syncCurrent).not.toHaveBeenCalled(); expect(f.engine.openProposalReview).not.toHaveBeenCalled();
   }
+  it.each(["en", "ru"] as const)("disabled Connect owns its visible status in %s", async (language) => {
+    setLanguage(language); const f = connectFixture(false); await f.view.onOpen();
+    f.content.action("nav-connect").click();
+    const live = f.content.all().find((e) => e.attrs.role === "status")!;
+    expect(live.text).toBe(t("@connect.state.disabled"));
+    expect(live.attrs).toMatchObject({ role: "status", "aria-live": "polite", "aria-atomic": "true" });
+    expect(f.content.all().find((e) => e.cls.includes("veynrel-connect"))?.texts()).toContain(t("@connect.state.disabled"));
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toBe("");
+    passive(f); await f.view.onClose(); f.connect.dispose(); f.controller.dispose();
+  });
   it.each(["en", "ru"] as const)("Connect opens passively with localized capabilities, credential distinction and no direct writes in %s", async (language) => {
     setLanguage(language); const f = connectFixture(); await f.view.onOpen();
     f.content.action("nav-connect").click(); passive(f); expect(f.engine.test).not.toHaveBeenCalled();
@@ -1003,6 +1043,8 @@ describe("Connect view boundaries", () => {
     f.content.action("connect-submit").click(); await flush();
     expect(f.content.action("connect-field-token").value).toBe("PRIVATE_CONNECT_TOKEN");
     expect(f.content.texts()).not.toMatch(/PRIVATE_CONNECT_TOKEN|raw response/u); expect(f.settings.update).not.toHaveBeenCalled();
+    expect(f.content.all().find((e) => e.cls.includes("veynrel-connect"))?.all().some((e) => e.cls === "veynrel-health-status-error" && Boolean(e.text))).toBe(true);
+    expect(f.content.querySelector("[data-workspace-message]")?.texts()).toBe("");
     let release!: () => void; f.engine.test.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
     f.content.action("connect-submit").click(); f.content.action("nav-health").click(); release(); await flush();
     expect(f.content.action("connect-field-token")).toBeUndefined();
@@ -1055,10 +1097,11 @@ describe("final Tools and Settings IA", () => {
   it.each(["en", "ru"] as const)("renders final navigation, passive Tools and safe Settings in %s", async (language) => {
     setLanguage(language); mocks.requestUrl.mockClear(); const f = overviewFixture(); await f.view.onOpen();
     expect(f.content.all().filter((e) => e.attrs["data-health-action"]?.startsWith("nav-")).map((e) => e.attrs["data-health-action"]))
-      .toEqual(["nav-health", "nav-findings", "nav-discover", "nav-recall", "nav-connect", "nav-tools", "nav-settings"]);
+      .toEqual(["nav-health", "nav-findings", "nav-discover", "nav-recall", "nav-connect", "nav-settings"]);
     for (const page of ["tools", "settings"] as const) {
-      f.content.action(`nav-${page}`).click(); passive(f);
-      expect(f.content.action(`nav-${page}`).attrs["aria-current"]).toBe("page");
+      f.content.action(page === "tools" ? "tools" : "nav-settings").click(); passive(f);
+      expect(f.content.action(page === "tools" ? "nav-health" : "nav-settings").attrs["aria-current"]).toBe("page");
+      expect(f.content.action("nav-tools")).toBeUndefined();
       expect(f.content.ownerDocument.activeElement?.attrs["data-health-heading"]).toBe("true");
       expect(f.content.texts()).not.toMatch(/@(?:tools|settings|deep|semantic|connect)|PRIVATE_ENDPOINT|AI Hub|Vault Audit AI/u);
       expect(f.content.all().filter((e) => e.attrs["data-health-action"]).every((e) => e.tag === "button")).toBe(true);
@@ -1098,21 +1141,25 @@ describe("final Tools and Settings IA", () => {
     const f = overviewFixture(); await f.view.onOpen();
     const second = new VeynrelHealthView({ app: f.app } as never, f.controller, f.tools, f.semantic, f.recall, f.deep, undefined, f.connect);
     await second.onOpen(); const content = second.contentEl as unknown as InstanceType<typeof mocks.Element>;
-    f.content.action("nav-tools").click(); content.action("nav-settings").click();
+    f.content.action("tools").click(); content.action("nav-settings").click();
     let fail!: (error: Error) => void; f.tools.generateMocs.mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { fail = reject; }));
     const stale = f.content.action("tool-generateMocs"); stale.click(); f.content.action("nav-settings").click(); stale.click();
     expect(f.tools.generateMocs).toHaveBeenCalledTimes(1);
     fail(new Error("PRIVATE_PROVIDER_BODY")); await flush();
     expect(f.content.action("nav-settings").attrs["aria-current"]).toBe("page"); expect(f.content.texts()).not.toContain("PRIVATE_PROVIDER_BODY");
-    content.action("nav-tools").click(); f.tools.openAskVault.mockImplementationOnce(() => { throw new Error("PRIVATE_PROVIDER_BODY"); });
+    content.action("nav-health").click(); content.action("tools").click(); f.tools.openAskVault.mockImplementationOnce(() => { throw new Error("PRIVATE_PROVIDER_BODY"); });
     content.action("tool-openAskVault").click(); await flush();
     expect(content.texts()).toContain("Could not open this tool"); expect(content.texts()).not.toContain("PRIVATE_PROVIDER_BODY");
+    const feedback = content.querySelector("[data-workspace-message]")!;
+    expect(feedback.texts()).toContain("Could not open this tool");
+    expect(feedback.parentElement!.children[0].tag).toBe("nav");
+    expect(feedback.parentElement!.children[1]).toBe(feedback);
     content.action("tool-openAskVault").click(); await flush();
     expect(f.tools.openAskVault).toHaveBeenCalledTimes(2); expect(content.texts()).not.toContain("Could not open this tool");
     await second.onClose(); await f.view.onClose(); f.recall.dispose(); f.controller.dispose();
   });
   it.each(["onboarding", "findings.json", "scan-runs.json"])("%s hides Tools/Settings and rejects stale launch actions", async (boundary) => {
-    const f = overviewFixture(); await f.view.onOpen(); f.content.action("nav-tools").click();
+    const f = overviewFixture(); await f.view.onOpen(); f.content.action("tools").click();
     const stale = f.content.action("tool-openBatchProcessing"); await f.view.onClose();
     if (boundary === "onboarding") await f.preferences.update({ onboardingCompleted: false, profileChosen: false });
     else f.files.set(`${root}/${boundary}`, "invalid");
@@ -1125,7 +1172,7 @@ describe("final Tools and Settings IA", () => {
     await view.onClose(); controller.dispose(); f.controller.dispose(); f.recall.dispose();
   });
   it("onboarding taking over a mounted Tools view invalidates actions and cannot resurrect its route", async () => {
-    const f = overviewFixture(); await f.view.onOpen(); f.content.action("nav-tools").click();
+    const f = overviewFixture(); await f.view.onOpen(); f.content.action("tools").click();
     const stale = f.content.action("tool-openAskVault");
     await f.controller.updatePreferences({ onboardingCompleted: false, profileChosen: false });
     stale.click(); expect(f.tools.openAskVault).not.toHaveBeenCalled(); expect(f.content.action("nav-tools")).toBeUndefined();
@@ -1260,7 +1307,7 @@ describe("real topology child route", () => {
     content.action("topology-open").click();
     expect(content.action("nav-health").attrs["aria-current"]).toBe("page");
     expect(content.action("nav-topology")).toBeUndefined();
-    expect(content.all().find((e) => e.attrs["aria-live"] === "polite")?.attrs["data-topology-contextual"]).toBe("true");
+    expect(content.all().find((e) => e.attrs["aria-live"] === "polite")?.attrs["aria-atomic"]).toBe("true");
     expect(content.all().some((e) => e.cls === "veynrel-health-page-enter")).toBe(true);
     content.action("topology-search").input("a.MD");
     content.action("topology-result-0").click();
@@ -1269,7 +1316,7 @@ describe("real topology child route", () => {
     expect(f.openFile).toHaveBeenCalledTimes(1);
     f.vault.getAbstractFileByPath.mockReturnValue(null);
     content.action("topology-open-note").click(); await flush();
-    expect(content.all().find((e) => e.attrs["aria-live"] === "polite")?.attrs["data-topology-contextual"]).toBe("false");
+    expect(content.querySelector("[data-workspace-message]")?.texts()).toContain("This note is no longer available");
     expect(content.texts()).toContain("This note is no longer available");
     expect(content.all().some((e) => e.cls === "veynrel-health-page-enter")).toBe(false);
     content.action("topology-back").click(); expect(capture).toHaveBeenCalledTimes(2);
