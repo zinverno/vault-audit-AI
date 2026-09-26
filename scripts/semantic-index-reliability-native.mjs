@@ -114,7 +114,7 @@ const build = async (name, language = 'en', fresh = true, method = 'indexVault')
   if (name === 'success') {
     await waitFor("Boolean(hv.contentEl.querySelector('progress')?.max===159)");
     const ui = await evaluate(`({text:hv.contentEl.querySelector('.veynrel-discover').innerText,label:hv.contentEl.querySelector('progress').getAttribute('aria-label')})`);
-    assert(ui.text.includes('159')); assert(ui.label); await screenshot('building-' + language);
+    assert(ui.text.includes('159')); assert(ui.label); await screenshot('success-' + language);
   }
   if (name === 'rate-limit') {
     await waitFor("engine.getSemanticStatus().progress?.phase==='retrying'");
