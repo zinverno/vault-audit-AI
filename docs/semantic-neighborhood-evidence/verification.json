@@ -1,0 +1,32 @@
+{
+  "baseline": "196af09311ba80fb2fce459feffa7106e65e9927",
+  "npm ci": "passed; no lockfile or dependency change",
+  "npm run typecheck": "passed",
+  "npm test -- semantic": {
+    "files": 19,
+    "tests": 391,
+    "passed": true
+  },
+  "npm test -- health": {
+    "files": 42,
+    "tests": 895,
+    "passed": true
+  },
+  "npm test": {
+    "files": 102,
+    "tests": 2442,
+    "passed": true
+  },
+  "npx eslint semantic health": "passed without warnings",
+  "npm run lint": "passed; existing reviewed api.ts:402 no-restricted-globals advisory only",
+  "npm run audit:proposals": "passed outside sandbox; 5/5 mutations killed, all restored tests passed",
+  "npm run build": "passed",
+  "git diff --check": "passed",
+  "native": "378 presentation cases; 18 boundary sequences; 7 interaction groups; zero product exceptions",
+  "mainJsSha256": "008ff05f20a77e1db24b0d4c4162af105ed9a1010b28018e6c2483cafca0cfcb",
+  "review": "Independent read-only review; transition focus finding fixed; re-review found no blocker",
+  "environmentNotes": [
+    "Proposal-audit child process produced empty output in sandbox; escalated rerun passed.",
+    "One existing Health settings dynamic-import test timed out during overlapping runs; focused and sequential domain/full reruns passed without timeout changes."
+  ]
+}
