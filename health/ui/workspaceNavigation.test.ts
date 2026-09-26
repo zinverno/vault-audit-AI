@@ -8,10 +8,11 @@ const nav = ".veynrel-health-view .veynrel-findings-navigation";
 describe("workspace presentation contract", () => {
   it("shares one wide responsive shell, with bounded prose and an out-of-layout live region", () => {
     const shell = rule(".veynrel-health-view .veynrel-workspace");
-    expect(shell).toContain("max-width: 1200px;");
+    expect(shell).toContain("max-width: 1400px;");
+    expect(shell).toContain("width: calc(100% - 32px);");
     expect(shell).toContain("margin-inline: auto;");
-    expect(shell).toContain("padding: 16px 24px;");
-    expect(css).toContain(".veynrel-health-view .veynrel-workspace { padding: 12px; }");
+    expect(shell).toContain("padding-block: 16px;");
+    expect(css).toContain(".veynrel-health-view .veynrel-workspace { width: 100%; padding: 12px; }");
     expect(css).toContain("max-width: 80ch;");
     expect(css).not.toMatch(/max-width: (?:880|1120)px/u);
     const live = rule(".veynrel-health-view .veynrel-health-status");
@@ -23,6 +24,7 @@ describe("workspace presentation contract", () => {
   it("uses a flat scrolling rail, transparent buttons, short separators and an accent underline", () => {
     expect(rule(nav)).toContain("flex-wrap: nowrap;");
     expect(rule(nav)).toContain("overflow-x: auto;");
+    expect(rule(nav)).toContain("scroll-padding-inline: var(--size-4-2);");
     expect(rule(nav)).toContain("width: 100%;");
     for (const selector of [nav, `${nav} button`, ".veynrel-topology-preview"]) {
       expect(rule(selector)).toContain("border: 0;");

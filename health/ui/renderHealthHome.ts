@@ -7,7 +7,7 @@ import type { HealthDimension } from "../domain/finding";
 import { renderVaultPulse } from "./renderVaultPulse";
 import { renderHealthInsights, renderHealthMetric } from "./renderHealthInsights";
 
-export interface HealthHomeActions { scan: () => void; tools?: () => void; recover: () => void; openNote: () => void;
+export interface HealthHomeActions { scan: () => void; recover: () => void; openNote: () => void;
   changeProfile: () => void; chooseProfile: (profile: VaultProfile) => void;
   findings?: (dimension?: HealthDimension) => void; recall?: () => void; reviewFinding?: (id: string) => void }
 
@@ -34,7 +34,8 @@ function renderHealthCard(parent: HTMLElement, card: HealthCardModel, actions: H
   article.createDiv({ cls: "veynrel-health-state-rail", attr: { "aria-hidden": "true" } });
 }
 
-export function renderHealthHome(parent: HTMLElement, model: HealthHomeViewModel, actions: HealthHomeActions, changingProfile = false): void {
+export function renderHealthHome(parent: HTMLElement, model: HealthHomeViewModel, actions: HealthHomeActions, changingProfile = false,
+  renderTopology?: (parent: HTMLElement) => void): void {
   parent.empty();
   const home = parent.createDiv({ cls: "veynrel-health-home" });
   const header = home.createEl("header", { cls: "veynrel-health-header" });
@@ -65,6 +66,7 @@ export function renderHealthHome(parent: HTMLElement, model: HealthHomeViewModel
   const grid = health.createDiv({ cls: "veynrel-health-grid" });
   for (const card of model.cards) renderHealthCard(grid, card, actions);
   renderHealthInsights(home, model.dashboard, actions);
+  renderTopology?.(home);
   const controls = home.createEl("footer", { cls: "veynrel-dashboard-controls" });
   if (model.profile && !model.recovery) {
     const profile = controls.createDiv({ cls: "veynrel-health-profile-control" });
@@ -72,5 +74,4 @@ export function renderHealthHome(parent: HTMLElement, model: HealthHomeViewModel
     healthButton(profile, t(changingProfile ? "@health.cancel" : "@health.profile.change"), actions.changeProfile, "change-profile", model.profile.saving);
     if (changingProfile) renderHealthProfileOptions(controls, model.profile.value, model.profile.saving, actions.chooseProfile);
   }
-  if (actions.tools) healthButton(controls, t("@health.tools"), actions.tools, "tools");
 }

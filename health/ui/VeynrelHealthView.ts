@@ -164,12 +164,12 @@ export class VeynrelHealthView extends ItemView {
     this.body.empty();
     if (normal) {
       const nav = this.body.createEl("nav", { cls: "veynrel-findings-navigation", attr: { "aria-label": t("@findings.navigation") } });
-      const pages: Array<Exclude<VeynrelHealthRoute["page"], "topology" | "tools">> = ["health", "findings", "discover", ...(this.recall ? ["recall" as const] : []), ...(this.connect ? ["connect" as const] : []), "settings"];
-      const labels = { health: "@findings.health", findings: "@findings.title", discover: "@discover.title", recall: "@recall.title", connect: "@connect.nav", settings: "@settings.title" };
+      const pages: Array<Exclude<VeynrelHealthRoute["page"], "topology">> = ["health", "findings", "discover", ...(this.recall ? ["recall" as const] : []), ...(this.connect ? ["connect" as const] : []), "tools", "settings"];
+      const labels = { health: "@findings.health", findings: "@findings.title", discover: "@discover.title", recall: "@recall.title", connect: "@connect.nav", tools: "@health.tools", settings: "@settings.title" };
       for (const page of pages) {
         const button = healthButton(nav, t(labels[page]),
           () => this.navigate(page === "findings" ? findingsRoute() : { page }), `nav-${page}`);
-        const current = this.route.page === page || (this.route.page === "topology" || this.route.page === "tools") && page === "health";
+        const current = this.route.page === page || this.route.page === "topology" && page === "health";
         button.setAttribute("aria-pressed", String(current));
         if (current) button.setAttribute("aria-current", "page");
       }
@@ -249,7 +249,7 @@ export class VeynrelHealthView extends ItemView {
       this.renderSemantic(surface);
     } else if (normal || onboarding.step === "recovery") {
       renderHealthHome(surface, model, {
-        scan, openNote, tools: normal ? () => this.navigate({ page: "tools" }) : undefined,
+        scan, openNote,
         recover: () => {
           if (this.controller.getState().busy || !model.recovery) return;
           const scope = model.recovery.scope;
@@ -259,8 +259,7 @@ export class VeynrelHealthView extends ItemView {
         findings: normal ? (dimension) => this.navigate(findingsRoute({ dimension: dimension ?? "all" })) : undefined,
         recall: normal && this.recall ? () => this.navigate({ page: "recall" }) : undefined,
         reviewFinding: normal ? (selectedFindingId) => this.navigate(findingsRoute({ selectedFindingId })) : undefined,
-      }, this.changingProfile);
-      if (normal && this.topology) renderTopologyPreview(surface, this.topology, () => this.navigate({ page: "topology" }));
+      }, this.changingProfile, normal && this.topology ? (home) => renderTopologyPreview(home, this.topology!, () => this.navigate({ page: "topology" })) : undefined);
       const recallHealth = state.snapshot?.recall;
       if (normal && recallHealth?.loadState === "ready" && recallHealth.active > 0 && recallHealth.due === 0 && recallHealth.nextDueAt !== undefined) {
         this.wakeAt(recallHealth.nextDueAt);

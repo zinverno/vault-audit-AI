@@ -1739,11 +1739,11 @@
 }
 .veynrel-health-view .veynrel-workspace {
   box-sizing: border-box;
-  width: 100%;
-  max-width: 1200px;
+  width: calc(100% - 32px);
+  max-width: 1400px;
   min-width: 0;
   margin-inline: auto;
-  padding: 16px 24px;
+  padding-block: 16px;
   overflow-wrap: anywhere;
 }
 .veynrel-health-view .veynrel-health-home,
@@ -1822,7 +1822,7 @@
 .veynrel-health-view .veynrel-health-profile-control { font-size: var(--font-ui-small); }
 @container (max-width: 520px) {
   .veynrel-health-view .veynrel-health-grid { grid-template-columns: minmax(0, 1fr); }
-  .veynrel-health-view .veynrel-workspace { padding: 12px; }
+  .veynrel-health-view .veynrel-workspace { width: 100%; padding: 12px; }
   .veynrel-health-view .veynrel-health-header { align-items: flex-start; flex-direction: column; }
   .veynrel-health-view .veynrel-health-primary { width: 100%; }
 }
@@ -1853,6 +1853,7 @@
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
+  scroll-padding-inline: var(--size-4-2);
   width: 100%;
   padding: 0;
   margin-block-end: var(--size-4-5);
@@ -2092,9 +2093,13 @@
 .veynrel-dashboard-legend [data-impact="info"]::before { background: var(--text-faint); }
 .veynrel-dashboard-breakdown { color: var(--text-muted); font-size: var(--font-ui-small); line-height: 1.5; }
 .veynrel-dashboard-controls { margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--background-modifier-border); }
+.veynrel-topology-preview + .veynrel-dashboard-controls { border-top: 0; }
 @container (min-width: 900px) {
   .veynrel-health-home .veynrel-health-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .veynrel-dashboard-insights-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
   .veynrel-dashboard-current { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .veynrel-dashboard-current [data-insight="local"] .veynrel-dashboard-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .veynrel-dashboard-current [data-insight="local"] .veynrel-dashboard-metric:first-child { grid-column: auto; }
 }
 @container (max-width: 520px) {
   .veynrel-dashboard-insights-grid { grid-template-columns: minmax(0, 1fr); }
