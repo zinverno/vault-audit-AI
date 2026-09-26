@@ -25,11 +25,13 @@ export interface NoteChunk {
   text: string;
   contentHash: string;
   source: ChunkSourceRange;
+  /** Legacy compatibility field. MarkdownChunker bounds every output and never sets it. */
   oversized?: boolean;
 }
 
 export interface ChunkingOptions {
   targetChars: number;
+  /** Hard UTF-16 length limit, including breadcrumbs; at least 2 for a code point. */
   maxChars: number;
   overlapChars: number;
 }

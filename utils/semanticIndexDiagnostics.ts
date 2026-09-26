@@ -19,6 +19,17 @@ export interface SemanticIndexProgress {
   retryReason?: "rate-limit" | "server";
 }
 
+/** Shape of one finally failed embedding batch; no source or provider payload. */
+export interface SemanticRejectedBatchDiagnostic {
+  batchCurrent: number;
+  batchTotal: number;
+  inputCount: number;
+  largestInputChars: number;
+  totalInputChars: number;
+  /** Inputs exceeding the semantic chunker's default hard character limit. */
+  oversizedInputCount: number;
+}
+
 export function semanticIndexFailureMessage(reason: SemanticIndexFailureReason): string {
   return t(`@semantic.failure.${reason}`);
 }

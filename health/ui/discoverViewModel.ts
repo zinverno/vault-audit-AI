@@ -24,6 +24,7 @@ export function discoverViewModel(snapshot?: SemanticIntelligenceSnapshot, healt
     status: state === "disabled" ? t("@discover.required") : capability!.status,
     description: state === "disabled" ? t("@discover.disabled") : capability!.description,
     progress: capability?.progress,
+    rejectedBatch: capability?.rejectedBatch,
     details: capability?.details, vectors: capability?.vectors, workflows,
     exploreTitle: t("@discover.explore"), healthStatus,
     healthAnalysis: state === "ready" ? { title: t("@semantic-health.title"), description: t("@semantic-health.description"),

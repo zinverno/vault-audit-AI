@@ -1,4 +1,4 @@
-import { renderSemanticIndexProgress } from "./renderSemanticIntelligence";
+import { renderSemanticIndexProgress, renderSemanticRejectedBatch } from "./renderSemanticIntelligence";
 import { t } from "../../i18n";
 import { healthButton } from "./renderHealthHome";
 import type { DiscoverAction, DiscoverViewModel } from "./discoverViewModel";
@@ -36,6 +36,7 @@ export function renderDiscover(parent: HTMLElement, model: DiscoverViewModel, ac
   section.createEl("h2", { text: model.capabilityTitle });
   section.createEl("p", { text: model.status, cls: "veynrel-health-state" });
   section.createEl("p", { text: model.description });
+  renderSemanticRejectedBatch(section, model.rejectedBatch);
   renderSemanticIndexProgress(section, model.progress);
   if (model.details) section.createEl("p", { text: model.details, cls: "veynrel-health-muted" });
   if (model.vectors) section.createEl("p", { text: model.vectors });

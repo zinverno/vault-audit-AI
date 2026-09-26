@@ -61,6 +61,7 @@ export function renderSemanticIntelligence(parent: HTMLElement, snapshot: Semant
   } else {
     section.createEl("p", { text: model.status, cls: "veynrel-health-state" });
     section.createEl("p", { text: model.description });
+    renderSemanticRejectedBatch(section, model.rejectedBatch);
     renderSemanticIndexProgress(section, model.progress);
     if (model.details) section.createEl("p", { text: model.details, cls: "veynrel-health-muted" });
     if (setup?.step === "connected") section.createEl("p", { text: t("@semantic.dimensions", { n: setup.dimensions }) });
@@ -74,6 +75,13 @@ export function renderSemanticIntelligence(parent: HTMLElement, snapshot: Semant
       `semantic-${action.id}`, snapshot.busy);
   }
   if (setup) healthButton(section, t("@semantic.back"), actions.back, "semantic-back", snapshot.busy);
+}
+
+/** Shared by the inline setup and Discover capability section. */
+export function renderSemanticRejectedBatch(parent: HTMLElement, lines: string[] | undefined): void {
+  if (!lines) return;
+  const surface = parent.createDiv({ cls: "veynrel-semantic-rejected-batch" });
+  for (const text of lines) surface.createEl("p", { text });
 }
 
 /** Shared by the inline setup and Discover capability section. */

@@ -1,4 +1,5 @@
 import { EmbeddingError } from "../embeddings/errors";
+import type { SemanticRejectedBatchDiagnostic } from "../utils/semanticIndexDiagnostics";
 
 export class IndexingError extends Error {
   readonly cause?: unknown;
@@ -27,14 +28,14 @@ export class IndexingValidationError extends IndexingError {
 }
 
 export class IndexingProviderError extends IndexingError {
-  constructor(message: string, cause?: unknown) {
+  constructor(message: string, cause?: unknown, readonly rejectedBatch?: SemanticRejectedBatchDiagnostic) {
     super("IndexingProviderError", message, cause instanceof EmbeddingError ? cause : undefined);
   }
 }
 
 export class IndexingProviderContractError extends IndexingProviderError {
-  constructor(message: string) {
-    super(message, new EmbeddingError("invalid-response"));
+  constructor(message: string, rejectedBatch?: SemanticRejectedBatchDiagnostic) {
+    super(message, new EmbeddingError("invalid-response"), rejectedBatch);
     this.name = "IndexingProviderContractError";
   }
 }

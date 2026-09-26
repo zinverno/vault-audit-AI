@@ -304,7 +304,7 @@ describe("Markdown syntax preservation", () => {
     ["callout", "> [!note] A long title\n> long quoted content\n> more quoted content"],
     ["table", "| Name | Value |\n| --- | --- |\n| Alpha | Long value |\n| Beta | Long value |"],
     ["HTML", "<div>\nA deliberately long HTML block that stays atomic.\n</div>"],
-  ])("does not split an oversized atomic %s block", (_name, block) => {
+  ])("bounds an oversized atomic %s block", (_name, block) => {
     const chunker = new MarkdownChunker({
       targetChars: 50,
       maxChars: 60,
@@ -314,9 +314,9 @@ describe("Markdown syntax preservation", () => {
       path: "Atomic.md",
       content: `# Atomic\n${block}`,
     });
-    expect(chunks).toHaveLength(1);
-    expect(chunks[0].oversized).toBe(true);
-    expect(chunks[0].text).toContain(block);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((chunk) => chunk.text.length <= 60 && !chunk.oversized)).toBe(true);
+    expect(chunks.map((chunk) => chunkBody(chunk.text)).join("").replace(/\s/g, "")).toBe(block.replace(/\s/g, ""));
   });
 
   it("does not mistake a horizontal rule in the body for frontmatter", () => {
@@ -436,15 +436,15 @@ describe("loose and nested lists", () => {
     expect(chunks[0].text).not.toContain("Next");
   });
 
-  it("keeps one oversized loose list intact", () => {
+  it("bounds an oversized loose list without losing items", () => {
     const list = `- ${words("first", 8)}\n\n- ${words("second", 8)}`;
-    const [chunk] = new MarkdownChunker({
+    const chunks = new MarkdownChunker({
       targetChars: 45,
       maxChars: 60,
       overlapChars: 10,
     }).chunk({ path: "List.md", content: `# List\n${list}` });
-    expect(chunk.oversized).toBe(true);
-    expect(chunkBody(chunk.text)).toBe(list);
+    expect(chunks.every((chunk) => chunk.text.length <= 60)).toBe(true);
+    expect(chunks.map((chunk) => chunkBody(chunk.text)).join("").replace(/\s/g, "")).toBe(list.replace(/\s/g, ""));
   });
 });
 
@@ -480,19 +480,19 @@ describe("long sections, atomic blocks and overlap", () => {
     expect(containingFence[0].text).toContain(code);
   });
 
-  it("marks one huge code block oversized and keeps it intact", () => {
+  it("splits huge code without dropping body content", () => {
     const chunker = new MarkdownChunker({
       targetChars: 100,
       maxChars: 160,
       overlapChars: 20,
     });
     const code = "```txt\n" + "x".repeat(300) + "\n```";
-    const [chunk] = chunker.chunk({
+    const chunks = chunker.chunk({
       path: "Huge code.md",
       content: `# Code\n${code}`,
     });
-    expect(chunk.oversized).toBe(true);
-    expect(chunk.text).toContain(code);
+    expect(chunks.every((chunk) => chunk.text.length <= 160 && !chunk.oversized)).toBe(true);
+    expect(chunks.map((chunk) => chunkBody(chunk.text)).join("")).toBe(code);
   });
 
   it("adds overlap only after the first chunk of a section", () => {
@@ -542,7 +542,7 @@ describe("long sections, atomic blocks and overlap", () => {
     }
   });
 
-  it("allows only minimal oversized overflow for one indivisible emoji", () => {
+  it("omits the breadcrumb when a tiny budget must preserve an indivisible emoji", () => {
     const content = "# H\n😀";
     const chunker = new MarkdownChunker({
       targetChars: 4,
@@ -555,10 +555,10 @@ describe("long sections, atomic blocks and overlap", () => {
 
     expect(first).toEqual(second);
     expect(first).toHaveLength(1);
-    expect(first[0].text).toBe("H\n\n😀");
-    expect(first[0].text).toHaveLength(5);
-    expect(first[0].text.length - 4).toBe(1);
-    expect(first[0].oversized).toBe(true);
+    expect(first[0].text).toBe("😀");
+    expect(first[0].text.length).toBeLessThanOrEqual(4);
+    expect(first[0].headingPath).toEqual(["H"]);
+    expect(first[0].oversized).toBeUndefined();
     expect(hasLoneSurrogate(first[0].text)).toBe(false);
     expect(first[0].source).toEqual({
       startOffset: content.indexOf("😀"),
@@ -1092,4 +1092,93 @@ describe("configuration", () => {
     ).toThrow(RangeError);
     expect(() => new MarkdownChunker({ overlapChars: -1 })).toThrow(RangeError);
   });
+});
+
+describe("hard bounds for every Markdown embedding input", () => {
+  const rows = Array.from({ length: 1400 }, (_, i) => `row_${i} ${"value ".repeat(8)}`);
+  const bodies = [
+    ["code", "```sql\n" + rows.map(row => `SELECT '${row}';`).join("\n") + "\n```"],
+    ["table", "| Key | Value |\n| --- | --- |\n" + rows.map(row => `| key | ${row} |`).join("\n")],
+    ["list", rows.map((row, i) => `${i % 2 ? "  " : ""}- ${row}`).join("\n")],
+    ["quote", rows.map(row => `> ${row}`).join("\n")],
+    ["HTML", "<div>\n" + rows.map(row => `<span>${row}</span>`).join("\n") + "\n</div>"],
+    ["single code line", "```txt\n" + "😀e\u0301🧪".repeat(10000) + "\n```"],
+    ["single paragraph line", "😀e\u0301🧪".repeat(10000)],
+  ];
+  it.each(bodies)("bounds oversized %s with deterministic IDs and truthful complete ranges", (_name, body) => {
+    expect(body.length).toBeGreaterThan(50000);
+    const content = `# Section\n${body}`;
+    const chunker = new MarkdownChunker({ overlapChars: 0 });
+    const chunks = chunker.chunk({ path: "Synthetic.md", content });
+    expect(chunks).toEqual(chunker.chunk({ path: "Synthetic.md", content }));
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(new Set(chunks.map(c => c.id)).size).toBe(chunks.length);
+    let end = content.indexOf(body);
+    for (const [ordinal, chunk] of chunks.entries()) {
+      expect(chunk.ordinal).toBe(ordinal);
+      expect(chunk.headingPath).toEqual(["Section"]);
+      expect(chunk.text.length).toBeLessThanOrEqual(1800);
+      expect(chunkBody(chunk.text).trim()).not.toBe("");
+      expect(chunk.contentHash).toBe(stableHash(chunk.text));
+      expect(chunk.oversized).toBeUndefined();
+      expect(hasLoneSurrogate(chunk.text)).toBe(false);
+      expect(chunk.source.startOffset).toBeGreaterThanOrEqual(end);
+      expect(content.slice(end, chunk.source.startOffset).trim()).toBe("");
+      expect(chunk.source.startLine).toBe(locationAt(content, chunk.source.startOffset).line);
+      expect(chunk.source.endLine).toBe(locationAt(content, chunk.source.endOffset - 1).line);
+      expect(isInsideSurrogatePair(content, chunk.source.startOffset)).toBe(false);
+      expect(isInsideSurrogatePair(content, chunk.source.endOffset)).toBe(false);
+      expect(content.slice(chunk.source.startOffset, chunk.source.endOffset).replace(/\s/g, ""))
+        .toBe(chunkBody(chunk.text).replace(/\s/g, ""));
+      end = chunk.source.endOffset;
+    }
+    expect(content.slice(end).trim()).toBe("");
+    expect(chunks.map(c => chunkBody(c.text)).join("").replace(/\s/g, "")).toBe(body.replace(/\s/g, ""));
+  });
+
+  it("prefers row boundaries and adds no overlap around hard-split atomic pieces", () => {
+    const body = bodies[1][1];
+    const content = `# Table\nBefore.\n\n${body}\n\nAfter.`;
+    const chunks = defaultChunker.chunk({ path: "Table.md", content });
+    for (let i = 1; i < chunks.length; i++) {
+      expect(chunks[i].source.startOffset).toBeGreaterThanOrEqual(chunks[i - 1].source.endOffset);
+      expect(content[chunks[i].source.startOffset - 1]).toBe("\n");
+    }
+    expect(chunks.map(c => chunkBody(c.text)).join("").replace(/\s/g, ""))
+      .toBe(("Before." + body + "After.").replace(/\s/g, ""));
+  });
+
+  it.each([2, 4, 9, 24, 60, 1800])("enforces maxChars=%i across adversarial constructs and huge breadcrumbs", (maxChars) => {
+    const heading = "😀Heading".repeat(300);
+    const content = `# ${heading}\n## ${heading}\n` + [
+      "😀e\u0301".repeat(120), "```sql\n" + "😀SELECT ".repeat(120) + "\n```",
+      "| A | B |\n| --- | --- |\n" + "| x | 😀 |\n".repeat(120),
+      "- item 😀\n  - nested\n".repeat(120), "> quoted 😀\n".repeat(120),
+      "<div>\n" + "<p>😀</p>\n".repeat(120) + "</div>",
+    ].join("\n\n");
+    const chunker = new MarkdownChunker({ targetChars: Math.max(1, maxChars - 2), maxChars, overlapChars: Math.floor(maxChars / 3) });
+    const chunks = chunker.chunk({ path: "Adversarial.md", content });
+    expect(chunks.length).toBeGreaterThan(0);
+    for (const chunk of chunks) {
+      expect(chunk.text.length).toBeLessThanOrEqual(maxChars);
+      expect(hasLoneSurrogate(chunk.text)).toBe(false);
+      expect(chunk.headingPath).toEqual([heading, heading]);
+    }
+    expect(chunks).toEqual(chunker.chunk({ path: "Adversarial.md", content }));
+  });
+  it("requires room for one Unicode code point", () => {
+    expect(() => new MarkdownChunker({ targetChars: 1, maxChars: 1, overlapChars: 0 })).toThrow(RangeError);
+  });
+});
+
+it.each([
+  "```txt\n" + " ".repeat(60) + "x\n```",
+  "```txt\r\n" + "a".repeat(12) + "\r\nb\r\n```",
+  "```txt\r\n" + "😀 ".repeat(40) + "\r\n\t\t\r\n```",
+])("preserves code whitespace and normalizes CRLF once across hard splits", (body) => {
+  const content = `# H\n${body}`;
+  const chunks = new MarkdownChunker({ targetChars: 12, maxChars: 16, overlapChars: 0 }).chunk({ path: "Code.md", content });
+  expect(chunks.map(c => chunkBody(c.text)).join("")).toBe(body.replace(/\r\n?/g, "\n"));
+  expect(chunks.map(c => content.slice(c.source.startOffset, c.source.endOffset)).join("")).toBe(body);
+  for (const chunk of chunks) { expect(chunk.text.length).toBeLessThanOrEqual(16); expect(chunk.text.trim()).not.toBe(""); }
 });
