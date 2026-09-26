@@ -478,13 +478,12 @@ function createHarness(
   };
 }
 
-beforeAll(() => {
-  vi.stubGlobal("window", {
-    setTimeout: (callback: () => void, delayMs: number) =>
-      setTimeout(callback, delayMs) as unknown as number,
-    clearTimeout: (timer: number) => clearTimeout(timer),
-  });
-});
+const testWindow = {
+  setTimeout: (callback: () => void, delayMs: number) =>
+    setTimeout(callback, delayMs) as unknown as number,
+  clearTimeout: (timer: number) => clearTimeout(timer),
+};
+beforeAll(() => { vi.stubGlobal("window", testWindow); });
 
 afterAll(() => {
   vi.unstubAllGlobals();
@@ -505,7 +504,6 @@ describe("semantic read/write barrier with real services and store", () => {
     await harness.controller.indexVault();
     const port = new SemanticNeighborhoodController(harness.controller);
     const embed = vi.spyOn(BaseEmbeddingProvider.prototype, "embed");
-    const previousFetch = fetch; const previousXHR = typeof XMLHttpRequest === "undefined" ? undefined : XMLHttpRequest;
     const fetchSpy = vi.fn(); const xhr = vi.fn(); vi.stubGlobal("fetch", fetchSpy); vi.stubGlobal("XMLHttpRequest", xhr);
     const read = vi.fn(); Object.assign(harness.plugin.app.vault, { read });
     harness.plugin.app.vault.cachedRead.mockClear(); harness.plugin.app.vault.getMarkdownFiles.mockClear();
@@ -518,7 +516,7 @@ describe("semantic read/write barrier with real services and store", () => {
       await port.refresh(); await port.load("Near.md"); expect(port.getSnapshot().map?.source.path).toBe("Near.md");
       for (const spy of [embed, fetchSpy, xhr, obsidianMocks.requestUrl, read, harness.plugin.app.vault.cachedRead,
         harness.plugin.app.vault.getMarkdownFiles, write, writeBinary, save]) expect(spy).not.toHaveBeenCalled();
-    } finally { port.dispose(); embed.mockRestore(); vi.stubGlobal("fetch", previousFetch); vi.stubGlobal("XMLHttpRequest", previousXHR); }
+    } finally { port.dispose(); embed.mockRestore(); vi.unstubAllGlobals(); vi.stubGlobal("window", testWindow); }
   });
 
   it("holds the shared lease for indexed-path reads while Clear waits", async () => {

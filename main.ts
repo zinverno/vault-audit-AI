@@ -64,6 +64,7 @@ import { HealthPreferencesController, mergeHealthPreferences } from "./health/pr
 import type { HealthPreferences } from "./health/preferences";
 import type { VeynrelToolsPort } from "./health/toolsPort";
 import { SemanticIntelligenceController } from "./semantic/product/semanticIntelligenceController";
+import { SemanticNeighborhoodController } from "./semantic/product/semanticNeighborhoodController";
 import { SemanticHealthAnalysisAdapter } from "./semantic/health/semanticHealthAnalysisAdapter";
 import type { SemanticSettingsPort } from "./semantic/product/semanticSettingsPort";
 import { DeepIntelligenceController } from "./deep/product/deepIntelligenceController";
@@ -180,7 +181,7 @@ export default class AIHubPlugin extends Plugin {
           this.recallAuthoring = authoring;
           this.register(() => authoring.dispose());
           return authoring;
-        }, connect);
+        }, connect, new SemanticNeighborhoodController(this.semanticController));
 
       this.addCommand({
         id: "ai-hub-open-panel",

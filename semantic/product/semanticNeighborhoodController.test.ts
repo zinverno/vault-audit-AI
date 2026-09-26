@@ -78,6 +78,18 @@ describe("Semantic Neighborhood session controller", () => {
     f.port.dispose(); const snapshot = f.port.getSnapshot(); const count = listener.mock.calls.length;
     held.resolve(["A.md"]); await pending; expect(f.port.getSnapshot()).toBe(snapshot); expect(listener).toHaveBeenCalledTimes(count); expect(f.listeners.size).toBe(0);
   });
+  it("rejects a catalog revision race and a similarity result that finishes after disposal", async () => {
+    const f = fixture(); const catalog = deferred<readonly string[]>();
+    f.engine.listIndexedPaths.mockReturnValueOnce(catalog.promise);
+    const preparing = f.port.prepare(); await Promise.resolve(); f.update({ vectorGeneration: 2 });
+    catalog.resolve(["A.md", "B.md"]); await preparing;
+    expect(f.port.getSnapshot()).toMatchObject({ state: "stale", reason: "changed" });
+    expect(f.port.searchSources("").paths).toEqual([]);
+    await f.port.prepare();
+    const result = deferred<SemanticDocumentSimilarity[]>(); f.engine.findSimilarNotes.mockReturnValueOnce(result.promise);
+    const pending = f.port.load("A.md"); await Promise.resolve(); f.port.dispose(); const before = f.port.getSnapshot();
+    result.resolve([]); await pending; expect(f.port.getSnapshot()).toBe(before); expect(before.map).toBeUndefined();
+  });
   it("allows one explicit recenter, handles empty neighborhoods and removed sources", async () => {
     const f = fixture(); await f.port.load("A.md");
     f.engine.findSimilarNotes.mockResolvedValueOnce([]); await f.port.load("B.md");

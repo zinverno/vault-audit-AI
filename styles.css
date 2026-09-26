@@ -2258,3 +2258,70 @@
   .veynrel-topology-detail *,
   .veynrel-findings-navigation button { animation: none; transition: none; }
 }
+
+/* Discover: a single semantic center. Fixed radial distance encodes cosine. */
+.veynrel-neighborhood-card {
+  margin-block: 28px;
+  padding: clamp(18px, 3vw, 32px);
+  border: 1px solid var(--background-modifier-border);
+  border-inline-start: 3px solid var(--interactive-accent);
+  border-radius: var(--radius-l);
+  background: var(--background-secondary);
+}
+.veynrel-neighborhood-card h2 { margin-block-start: 0; }
+.veynrel-neighborhood-card-lead { font-size: var(--font-ui-large); color: var(--text-normal); }
+.veynrel-neighborhood { min-width: 0; }
+.veynrel-neighborhood p { max-width: 80ch; }
+.veynrel-neighborhood-header { margin-block: 22px; }
+.veynrel-neighborhood-header h1 { margin-block-end: 8px; }
+.veynrel-neighborhood-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 16px; }
+.veynrel-neighborhood button { white-space: normal; height: auto; min-height: 36px; overflow-wrap: anywhere; }
+.veynrel-neighborhood-status { padding: 12px 16px; border-inline-start: 3px solid var(--interactive-accent); background: var(--background-secondary); }
+.veynrel-neighborhood-search { display: grid; gap: 8px; max-width: 640px; margin-block: 24px 12px; }
+.veynrel-neighborhood-search input { width: 100%; min-height: 40px; }
+.veynrel-neighborhood-sources { display: grid; max-width: 800px; gap: 6px; }
+.veynrel-neighborhood-sources button { justify-content: flex-start; text-align: start; padding: 10px 12px; }
+.veynrel-neighborhood-path { color: var(--text-muted); overflow-wrap: anywhere; }
+.veynrel-neighborhood-metrics { display: flex; flex-wrap: wrap; gap: 36px; margin-block: 24px; padding-block: 16px; border-block: 1px solid var(--background-modifier-border); }
+.veynrel-neighborhood-metrics dt { color: var(--text-muted); font-size: var(--font-ui-small); }
+.veynrel-neighborhood-metrics dd { margin: 4px 0 0; font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.veynrel-neighborhood-composition { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr); gap: 28px; align-items: start; }
+.veynrel-neighborhood-visual, .veynrel-neighborhood-inspector { min-width: 0; }
+.veynrel-neighborhood-svg { width: 100%; max-height: 620px; display: block; background: var(--background-secondary); border-radius: var(--radius-l); }
+.veynrel-neighborhood-guide { fill: none; stroke: var(--background-modifier-border); stroke-width: 1; stroke-dasharray: 3 9; }
+.veynrel-neighborhood-edge { stroke: var(--text-faint); stroke-width: 1.5; opacity: 0.5; }
+.veynrel-neighborhood-node { cursor: pointer; }
+.veynrel-neighborhood-hit { fill: transparent; }
+.veynrel-neighborhood-dot { fill: var(--text-muted); stroke: var(--background-primary); stroke-width: 5; }
+.veynrel-neighborhood-source-ring { fill: none; stroke: var(--text-normal); stroke-width: 3; }
+.veynrel-neighborhood-node:is([data-selected="true"], :hover) .veynrel-neighborhood-dot { fill: var(--interactive-accent); stroke: var(--text-normal); }
+.veynrel-neighborhood-label { fill: var(--text-normal); font-size: 24px; pointer-events: none; }
+.veynrel-neighborhood-legend { text-align: center; color: var(--text-muted); font-size: var(--font-ui-small); }
+.veynrel-neighborhood-list { display: grid; gap: 5px; margin-block: 20px; }
+.veynrel-neighborhood-list button { display: flex; justify-content: space-between; gap: 12px; text-align: start; padding: 10px 12px; min-width: 0; }
+.veynrel-neighborhood-list button span:last-child { flex-shrink: 0; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.veynrel-neighborhood-list button[aria-pressed="true"] { border-color: var(--interactive-accent); box-shadow: inset 3px 0 var(--interactive-accent); }
+.veynrel-neighborhood-inspector { border: 1px solid var(--background-modifier-border); border-radius: var(--radius-l); padding: 20px; overflow-wrap: anywhere; }
+.veynrel-neighborhood-inspector h2 { margin-block: 8px; }
+.veynrel-neighborhood-inspector h3 { margin-block-start: 24px; }
+.veynrel-neighborhood-score { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-block: 20px; }
+.veynrel-neighborhood-score strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+.veynrel-neighborhood-evidence { border-top: 1px solid var(--background-modifier-border); margin-block: 16px; padding-block-start: 8px; }
+.veynrel-neighborhood-evidence h4 { margin-block: 10px; }
+.veynrel-neighborhood-evidence p { white-space: pre-wrap; }
+.veynrel-neighborhood-empty { padding: 32px 16px; background: var(--background-secondary); border-radius: var(--radius-l); }
+.veynrel-neighborhood :is(button, input):focus-visible { outline: 2px solid var(--text-normal); outline-offset: 3px; }
+.veynrel-neighborhood h1[tabindex="-1"]:focus { outline: none; }
+@container (max-width: 850px) {
+  .veynrel-neighborhood-composition { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 400px) {
+  .veynrel-neighborhood-inspector { padding: 14px; }
+  .veynrel-neighborhood-list button { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .veynrel-neighborhood-list button { transition: border-color 120ms ease-out; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .veynrel-neighborhood *, .veynrel-neighborhood-card * { animation: none !important; transition: none !important; }
+}

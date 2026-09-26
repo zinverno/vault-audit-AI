@@ -18,9 +18,8 @@ export interface SemanticSearchModalDelegate {
   errorMessage(error: unknown): string;
 }
 
-export function formatSemanticScore(score: number): string {
-  return Number.isFinite(score) ? score.toFixed(3) : "—";
-}
+export { formatSemanticScore } from "../utils/semanticPresentation";
+import { formatSemanticScore } from "../utils/semanticPresentation";
 
 export function semanticBreadcrumb(headings: readonly string[]): string {
   return headings.filter((heading) => heading.trim()).join(" › ");
