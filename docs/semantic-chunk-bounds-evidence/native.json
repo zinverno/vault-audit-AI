@@ -1,0 +1,551 @@
+{
+  "scenarios": [
+    {
+      "name": "success",
+      "language": "en",
+      "chunksTotal": 194,
+      "batchTotal": 7,
+      "calls": [
+        {
+          "probe": true,
+          "batch": 0,
+          "inputCount": 1,
+          "largestInputChars": 29,
+          "totalInputChars": 29,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 1,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 55813,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 2,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 54297,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 3,
+          "inputCount": 32,
+          "largestInputChars": 1795,
+          "totalInputChars": 50947,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 4,
+          "inputCount": 32,
+          "largestInputChars": 1773,
+          "totalInputChars": 56000,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 5,
+          "inputCount": 32,
+          "largestInputChars": 1795,
+          "totalInputChars": 55816,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 6,
+          "inputCount": 32,
+          "largestInputChars": 1774,
+          "totalInputChars": 56291,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 7,
+          "inputCount": 2,
+          "largestInputChars": 1774,
+          "totalInputChars": 3072,
+          "oversizedInputCount": 0
+        }
+      ],
+      "status": {
+        "kind": "ready",
+        "vectorCount": 194,
+        "vectorGeneration": 1,
+        "dimensions": 3,
+        "providerLabel": "OpenAI-compatible",
+        "model": "synthetic-chunk-bounds"
+      },
+      "io": {
+        "read": 9,
+        "build": 1,
+        "commit": 1
+      },
+      "progress": [
+        {
+          "phase": "reading"
+        },
+        {
+          "phase": "preparing",
+          "documentsTotal": 6
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 1,
+          "chunksCompleted": 0,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 2,
+          "chunksCompleted": 32,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 3,
+          "chunksCompleted": 64,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 4,
+          "chunksCompleted": 96,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 5,
+          "chunksCompleted": 128,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 6,
+          "chunksCompleted": 160,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 7,
+          "chunksCompleted": 192,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 7,
+          "chunksCompleted": 194,
+          "phase": "embedding"
+        },
+        {
+          "phase": "committing",
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "chunksCompleted": 194
+        }
+      ],
+      "text": "Discover\n\nFind knowledge by meaning, not only by explicit links.\n\nSemantic Neighborhood\n\nExplore meaning around a note.\n\nSee nearby notes in your existing semantic index and inspect why they are related.\n\nOpen semantic map\n\nUses the existing semantic index · no new embedding request\n\nExplore\nSearch by meaning\nSearch your vault using concepts and meaning.\nRelated notes\nFind notes related to the note you are currently viewing.\nPotential duplicates\nReview notes whose meaning is unusually similar.\nSemantic Health\n\nTurn highly similar note pairs into reviewable Findings.\n\nCheck semantic duplicates\nSemantic Intelligence\n\nSemantic Intelligence ready\n\nSearch by meaning and find related notes.\n\nCustom · synthetic-chunk-bounds\n\n194 vectors",
+      "notices": [
+        "Updating the semantic index...",
+        "Semantic index updated: documents 6, changed 6, deleted 0; chunks embedded 194, deleted 0; generation 0 → 1."
+      ],
+      "bar": false
+    },
+    {
+      "name": "request",
+      "language": "en",
+      "chunksTotal": 194,
+      "batchTotal": 7,
+      "calls": [
+        {
+          "probe": true,
+          "batch": 0,
+          "inputCount": 1,
+          "largestInputChars": 29,
+          "totalInputChars": 29,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 1,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 55813,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 2,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 54297,
+          "oversizedInputCount": 0
+        }
+      ],
+      "status": {
+        "kind": "error",
+        "vectorCount": 0,
+        "vectorGeneration": 0,
+        "dimensions": 0,
+        "providerLabel": "OpenAI-compatible",
+        "model": "synthetic-chunk-bounds",
+        "failure": "provider-request",
+        "rejectedBatch": {
+          "batchCurrent": 2,
+          "batchTotal": 7,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 54297,
+          "oversizedInputCount": 0
+        }
+      },
+      "io": {
+        "read": 9,
+        "build": 1,
+        "commit": 0
+      },
+      "progress": [
+        {
+          "phase": "reading"
+        },
+        {
+          "phase": "preparing",
+          "documentsTotal": 6
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 1,
+          "chunksCompleted": 0,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 2,
+          "chunksCompleted": 32,
+          "phase": "embedding"
+        }
+      ],
+      "text": "Discover\n\nFind knowledge by meaning, not only by explicit links.\n\nSemantic Intelligence\n\nSemantic Intelligence needs attention\n\nEmbedding provider rejected the request. Check the model and connection settings.\n\nBatch 2 / 7\n\nInputs: 32\n\nLargest input: 1800 characters\n\nTotal input: 54297 characters\n\nThese counts can help diagnose an input-specific provider rejection.\n\nCustom · synthetic-chunk-bounds\n\nCheck setup\nChange setup",
+      "notices": [
+        "Semantic index updated: documents 6, changed 6, deleted 0; chunks embedded 194, deleted 0; generation 0 → 1.",
+        "Updating the semantic index...",
+        "Embedding provider rejected the request. Check the model and connection settings."
+      ],
+      "bar": false
+    },
+    {
+      "name": "request",
+      "language": "ru",
+      "chunksTotal": 194,
+      "batchTotal": 7,
+      "calls": [
+        {
+          "probe": true,
+          "batch": 0,
+          "inputCount": 1,
+          "largestInputChars": 29,
+          "totalInputChars": 29,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 1,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 55813,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 2,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 54297,
+          "oversizedInputCount": 0
+        }
+      ],
+      "status": {
+        "kind": "error",
+        "vectorCount": 0,
+        "vectorGeneration": 0,
+        "dimensions": 0,
+        "providerLabel": "OpenAI-compatible",
+        "model": "synthetic-chunk-bounds",
+        "failure": "provider-request",
+        "rejectedBatch": {
+          "batchCurrent": 2,
+          "batchTotal": 7,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 54297,
+          "oversizedInputCount": 0
+        }
+      },
+      "io": {
+        "read": 9,
+        "build": 1,
+        "commit": 0
+      },
+      "progress": [
+        {
+          "phase": "reading"
+        },
+        {
+          "phase": "preparing",
+          "documentsTotal": 6
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 1,
+          "chunksCompleted": 0,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 2,
+          "chunksCompleted": 32,
+          "phase": "embedding"
+        }
+      ],
+      "text": "Открытия\n\nНаходите знания по смыслу, даже если заметки не связаны ссылками.\n\nСемантические возможности\n\nСемантические возможности требуют внимания\n\nEmbedding-провайдер отклонил запрос. Проверьте модель и настройки подключения.\n\nПакет 2 / 7\n\nВходных фрагментов: 32\n\nСамый большой фрагмент: 1800 символов\n\nВсего символов: 54297\n\nЭти числа могут помочь разобраться в отклонении запроса, связанном с конкретными входными данными.\n\nСвой сервер · synthetic-chunk-bounds\n\nПроверить подключение и индекс\nИзменить подключение",
+      "notices": [
+        "Semantic index updated: documents 6, changed 6, deleted 0; chunks embedded 194, deleted 0; generation 0 → 1.",
+        "Embedding provider rejected the request. Check the model and connection settings.",
+        "Обновляю семантический индекс...",
+        "Embedding-провайдер отклонил запрос. Проверьте модель и настройки подключения."
+      ],
+      "bar": false
+    },
+    {
+      "name": "success",
+      "language": "ru",
+      "chunksTotal": 194,
+      "batchTotal": 7,
+      "calls": [
+        {
+          "probe": false,
+          "batch": 1,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 55813,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 2,
+          "inputCount": 32,
+          "largestInputChars": 1800,
+          "totalInputChars": 54297,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 3,
+          "inputCount": 32,
+          "largestInputChars": 1795,
+          "totalInputChars": 50947,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 4,
+          "inputCount": 32,
+          "largestInputChars": 1773,
+          "totalInputChars": 56000,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 5,
+          "inputCount": 32,
+          "largestInputChars": 1795,
+          "totalInputChars": 55816,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 6,
+          "inputCount": 32,
+          "largestInputChars": 1774,
+          "totalInputChars": 56291,
+          "oversizedInputCount": 0
+        },
+        {
+          "probe": false,
+          "batch": 7,
+          "inputCount": 2,
+          "largestInputChars": 1774,
+          "totalInputChars": 3072,
+          "oversizedInputCount": 0
+        }
+      ],
+      "status": {
+        "kind": "ready",
+        "vectorCount": 194,
+        "vectorGeneration": 1,
+        "dimensions": 3,
+        "providerLabel": "OpenAI-compatible",
+        "model": "synthetic-chunk-bounds"
+      },
+      "io": {
+        "read": 18,
+        "build": 2,
+        "commit": 1
+      },
+      "progress": [
+        {
+          "phase": "reading"
+        },
+        {
+          "phase": "preparing",
+          "documentsTotal": 6
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 1,
+          "chunksCompleted": 0,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 2,
+          "chunksCompleted": 32,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 3,
+          "chunksCompleted": 64,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 4,
+          "chunksCompleted": 96,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 5,
+          "chunksCompleted": 128,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 6,
+          "chunksCompleted": 160,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 7,
+          "chunksCompleted": 192,
+          "phase": "embedding"
+        },
+        {
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "batchTotal": 7,
+          "batchCurrent": 7,
+          "chunksCompleted": 194,
+          "phase": "embedding"
+        },
+        {
+          "phase": "committing",
+          "documentsTotal": 6,
+          "chunksTotal": 194,
+          "chunksCompleted": 194
+        }
+      ],
+      "text": "Открытия\n\nНаходите знания по смыслу, даже если заметки не связаны ссылками.\n\nСемантическое окружение\n\nИсследуйте смысловое окружение заметки.\n\nНаходите близкие по смыслу заметки в семантическом индексе и изучайте похожие фрагменты.\n\nОткрыть семантическую карту\n\nИспользует существующий семантический индекс · без новых запросов эмбеддингов\n\nИсследование\nПоиск по смыслу\nИщите в хранилище по понятиям и смыслу.\nСвязанные заметки\nНайдите заметки, связанные по смыслу с текущей заметкой.\nВозможные дубликаты\nПросмотрите заметки с необычно близким смыслом.\nСемантическая проверка\n\nСохраняйте пары заметок с очень близким смыслом как находки для последующего разбора.\n\nПроверить смысловые дубликаты\nСемантические возможности\n\nСемантические возможности готовы\n\nИщите по смыслу и находите связанные заметки.\n\nСвой сервер · synthetic-chunk-bounds\n\nВекторов: 194",
+      "notices": [
+        "Semantic index updated: documents 6, changed 6, deleted 0; chunks embedded 194, deleted 0; generation 0 → 1.",
+        "Embedding provider rejected the request. Check the model and connection settings.",
+        "Embedding-провайдер отклонил запрос. Проверьте модель и настройки подключения.",
+        "Обновляю семантический индекс...",
+        "Semantic index обновлён: документов 6, изменено 6, удалено 0; chunks embedded 194, deleted 0; generation 0 → 1."
+      ],
+      "bar": false
+    }
+  ],
+  "passive": [
+    {
+      "language": "en",
+      "read": 0,
+      "build": 0,
+      "commit": 0,
+      "provider": 0
+    },
+    {
+      "language": "en",
+      "read": 0,
+      "build": 0,
+      "commit": 0,
+      "provider": 0
+    },
+    {
+      "language": "ru",
+      "read": 0,
+      "build": 0,
+      "commit": 0,
+      "provider": 0
+    }
+  ],
+  "screenshots": [
+    "building-en.png",
+    "building-en.png",
+    "rejected-en.png",
+    "building-ru.png",
+    "rejected-ru.png",
+    "building-ru.png"
+  ],
+  "limitations": [
+    "Synthetic local HTTP provider only; no user vault or credits. Linux desktop only; mobile, popout, screen reader, custom themes and live providers untested."
+  ],
+  "runtime": {
+    "obsidian": "Veynrel Health - vault - Obsidian 1.12.7",
+    "electron": "39.8.10"
+  },
+  "artifactSha256": "2ac3db36ae79a4bac32ef590623f94f8d5166946b836a1286a5ee87d53870d40"
+}

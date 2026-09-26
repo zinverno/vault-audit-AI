@@ -9,6 +9,10 @@ failure was **not reproduced or diagnosed**: timeout, rate limit, server/network
 failure, or an invalid response remain possibilities. This change makes the next
 failure diagnosable without logging provider payloads or vault content.
 
+Subsequent HTTP 400 observations and hard character bounds are documented in
+[Semantic chunk bounds](semantic-chunk-bounds.md), including transient failed-batch
+shape diagnostics. The original incident cause remains unproven.
+
 ## Failure boundary
 
 `embeddings/errors.ts` defines `EmbeddingError`. It carries a fixed localized
