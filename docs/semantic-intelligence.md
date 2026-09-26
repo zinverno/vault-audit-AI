@@ -2,6 +2,8 @@
 
 This is the implementation record for setup. The current integrated product and
 passive-IO contract are documented in [MVP hardening](mvp-hardening.md).
+Full-build progress, transient failure reasons, timeout/retry policy and atomicity
+are documented in [Semantic index reliability](semantic-index-reliability.md).
 
 Baseline: clean, fast-forwarded `main` at
 `7acc6f99bd9ee385955777691f5acbdcc664988b`, the actual PR #32 merge commit.
