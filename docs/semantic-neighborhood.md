@@ -77,10 +77,26 @@ stale/unavailable/error message.
 
 ## Map, evidence and interaction
 
-The transient `{ page: "semantic-neighborhood" }` child route keeps **Discover**
+The transient `{ page: "semantic-neighborhood", returnTo?: "discover" | "semantic-map" }`
+child route keeps **Discover**
 current in the unchanged seven-tab primary navigation. Search, Related Notes,
 Potential Duplicates, Semantic Duplicate Health, and setup controls remain.
 `SemanticSimilarNotesModal` remains the fast list workflow.
+
+Discover entry sets `returnTo: "discover"` (also the default). **Explore neighborhood**
+from Global Semantic Map sets `returnTo: "semantic-map"`. The EN/RU Back button
+reflects that origin. Explore from this note, Choose another note, Refresh and
+neighbor selection do not change the route, so A → B → C exploration retains
+the original return target. No browser history or persistent navigation is used.
+Back to Global Map reuses its session controller and the same view-local selected
+node, query, pan and zoom, with no global analysis, provider/network call, Markdown
+read or write. Focus mode also survives this trip. Index changes during local
+exploration leave the returned global map/focus visibly stale, until explicit
+Refresh (which resets global radial focus to Vault core).
+
+Global **Center map on this note** changes selected-to-all radial distances while
+retaining the whole global graph and its angles. Local **Explore from this note**
+uses the existing 10-neighbor graph. These remain distinct actions and algorithms.
 
 The source chooser searches only the prepared indexed catalog. Trimmed,
 case-insensitive substrings match basename or full vault-relative path in

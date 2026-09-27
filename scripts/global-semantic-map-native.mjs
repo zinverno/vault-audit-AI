@@ -44,9 +44,9 @@ const setup = async (count, language = 'en', disabled = false) => {
     window.hv=app.workspace.getLeavesOfType('veynrel-health')[0].view; await hv.controller.getHealthService();
     window.np=hv.neighborhood; window.gp=hv.globalMap; window.store=engine.runtimeSlot?.runtime.components?.vectorStore;
     await new Promise(r=>setTimeout(r,180));
-    window.io={global:0,catalog:0,similarity:0,snapshot:0,embed:0,fetch:0,xhr:0,read:0,cachedRead:0,write:0,writeBinary:0,saveData:0,mutate:0};
+    window.io={focus:0,global:0,catalog:0,similarity:0,snapshot:0,embed:0,fetch:0,xhr:0,read:0,cachedRead:0,write:0,writeBinary:0,saveData:0,mutate:0};
     const restores=[]; const wrap=(obj,key,counter)=>{if(!obj||typeof obj[key]!=='function')return;const original=obj[key];obj[key]=function(...args){io[counter]++;return original.apply(this,args)};restores.push(()=>obj[key]=original)};
-    wrap(engine,'analyzeGlobalSemanticMap','global');wrap(engine,'listIndexedPaths','catalog');wrap(engine,'findSimilarNotes','similarity');wrap(store,'readSnapshot','snapshot');wrap(store,'applyChanges','mutate');
+    wrap(engine,'analyzeSemanticFocus','focus');wrap(engine,'analyzeGlobalSemanticMap','global');wrap(engine,'listIndexedPaths','catalog');wrap(engine,'findSimilarNotes','similarity');wrap(store,'readSnapshot','snapshot');wrap(store,'applyChanges','mutate');
     wrap(engine.runtimeSlot?.runtime.components?.searchService.provider,'embed','embed');
     wrap(window,'fetch','fetch');wrap(XMLHttpRequest.prototype,'open','xhr');
     wrap(app.vault,'read','read');wrap(app.vault,'cachedRead','cachedRead');wrap(plugin,'saveData','saveData');
@@ -77,10 +77,10 @@ try {
   assert.equal(await evaluate('app.vault.adapter.getBasePath()'),vault);
   report.environment=await evaluate('({obsidian:document.title,version:app.appVersion??app.version??null,electron:process.versions.electron,platform:process.platform})');
   report.artifactSha256=crypto.createHash('sha256').update(await fs.readFile('main.js')).digest('hex');
-  for(const language of ['en','ru']) for(const scenario of ['overview','selected','stale','single','too-large','disabled','absent']){
+  for(const language of ['en','ru']) for(const scenario of ['overview','selected','stale','single','too-large','disabled','absent','focus','focus-selected','focus-stale']){
     const count=scenario==='too-large'?501:scenario==='single'?1:scenario==='absent'?0:150;
     await setup(count,language,scenario==='disabled'); await resetIO(); await click('nav-discover');
-    const passive=await io();noIO(passive);for(const key of ['global','snapshot','catalog','similarity'])assert.equal(passive[key],0);
+    const passive=await io();noIO(passive);for(const key of ['focus','global','snapshot','catalog','similarity'])assert.equal(passive[key],0);
     const before=await digestPlugin();
     if(['disabled','absent'].includes(scenario))assert.equal(await evaluate(`!!hv.contentEl.querySelector('[data-health-action="global-map-open"]')`),false);
     else{
@@ -89,14 +89,20 @@ try {
       else{
         assert.equal(await evaluate('gp.getSnapshot().map.mappedNoteCount'),count);
         assert.equal(await evaluate(`hv.contentEl.querySelectorAll('[data-global-map-node]').length`),count);
-        if(scenario==='selected')await searchSelect('Hash Join');
-        if(scenario==='stale'){
+        if(scenario==='selected'||scenario.startsWith('focus'))await searchSelect('Hash Join');
+        if(scenario.startsWith('focus')){
+          await click('global-map-focus');await evaluate('gp.pending');
+          assert.equal(await evaluate('gp.getSnapshot().focus.path'),'Databases/Hash Join.md');
+          assert.equal((await io()).focus,1);assert.equal((await io()).global,1);
+          if(scenario==='focus-selected')await click('global-map-neighbor-0');
+        }
+        if(scenario==='stale'||scenario==='focus-stale'){
           noIO(await io());assert.deepEqual(await digestPlugin(),before);
           await evaluate('store.applyChanges({})');await evaluate('engine.getCachedIndexState()');await evaluate('Promise.resolve()');
           assert.equal(await evaluate('gp.getSnapshot().state'),'stale');await resetIO();
         }
       }
-      noIO(await io());if(scenario!=='stale')assert.deepEqual(await digestPlugin(),before);
+      noIO(await io());if(!scenario.endsWith('stale'))assert.deepEqual(await digestPlugin(),before);
     }
     report.boundaries.push({scenario,language,passive,after:await io()});
     for(const color of ['dark','light','yellow'])for(const width of [320,390,768,1024,1280,1440,1600]){
@@ -105,13 +111,14 @@ try {
       assert(result.scroll<=result.width+1&&result.sectionScroll<=result.section+1,JSON.stringify({scenario,language,color,width,...result}));
       assert(!result.rawKeys);assert.equal(result.tabs,7);assert.equal(result.current,'nav-discover');assert.equal(result.svgTabs,0);
       if(scenario==='overview')assert.equal(result.labels,width<=390?3:5);
-      if(['overview','selected','stale','single'].includes(scenario)){
+      if(['overview','selected','stale','single'].includes(scenario)||scenario.startsWith('focus')){
         const presentation=await evaluate(`(()=>{
           const r=hv.contentEl,svg=r.querySelector('.veynrel-global-map-svg'),map=gp.getSnapshot().map;
           const labels=[...svg.querySelectorAll('.veynrel-global-map-label')].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.getBBox());
           const overlaps=labels.flatMap((a,i)=>labels.slice(i+1).filter(b=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y));
           const summary=[...r.querySelectorAll('.veynrel-global-map-summary dd')].map(e=>e.innerText);
-          const scores=[map.nodes.map(n=>n.coreSimilarity),map.nodes.map(n=>n.semanticConnectedness).filter(n=>n!==null)].map(a=>a.sort((x,y)=>x-y));
+          const focus=gp.getSnapshot().focus;
+          const scores=[focus?focus.scores.filter(n=>n.path!==focus.path).map(n=>n.score):map.nodes.map(n=>n.coreSimilarity),map.nodes.map(n=>n.semanticConnectedness).filter(n=>n!==null)].map(a=>a.sort((x,y)=>x-y));
           return {overlaps:overlaps.length,rings:[...svg.querySelectorAll('.veynrel-global-map-ring-label')].map(e=>e.textContent),
             scale:r.querySelector('.veynrel-global-map-scale').innerText,summary,
             values:scores.map(a=>a.length?[a[0],a[a.length-1],a.length%2?a[Math.floor(a.length/2)]:(a[a.length/2-1]+a[a.length/2])/2].map(n=>n.toFixed(3)):[]),
@@ -124,6 +131,17 @@ try {
         assert(presentation.sizes.every(radius=>radius>=4&&radius<=14));
         result.presentation=presentation;
       }
+      if(scenario.startsWith('focus')){
+        const centered=await evaluate(`(()=>{const r=hv.contentEl,svg=r.querySelector('.veynrel-global-map-svg'),focus=gp.getSnapshot().focus;
+          const dot=[...svg.querySelectorAll('[data-global-map-node]')].find(n=>n.getAttribute('data-global-map-node')===focus.path).querySelector('.veynrel-global-map-dot');
+          return {x:+dot.getAttribute('cx'),y:+dot.getAttribute('cy'),virtualCore:!!svg.querySelector('.veynrel-global-map-core'),visible:r.querySelector('.veynrel-global-map-focus').innerText,
+            centerLabel:svg.querySelector('.veynrel-global-map-focused-center').textContent,selfMetric:r.querySelector('.veynrel-global-map-facts').innerText.includes('1.000'),scale:r.querySelector('.veynrel-global-map-scale').innerText};})()`);
+        assert.equal(centered.x,500);assert.equal(centered.y,500);assert(!centered.virtualCore);assert(centered.visible.includes('Hash Join'));
+        assert(centered.centerLabel.includes(language==='en'?'Focused note':'Заметка в центре'));
+        assert(centered.scale.includes(language==='en'?'selected note':'выбранной заметкой'));
+        if(scenario!=='focus-selected')assert(!centered.selfMetric);
+        result.centered=centered;
+      }
       report.matrix.push({scenario,language,theme:color,viewport:width,...result});
     }
     if(language==='en'){
@@ -131,6 +149,8 @@ try {
       if(scenario==='overview')await screenshot('global-semantic-map-desktop',1600);
       if(scenario==='selected'){await screenshot('global-semantic-map-selected',1440,true);await screenshot('global-semantic-map-390',390,true);await theme('yellow');await screenshot('global-semantic-map-yellow',1280,true);}
       if(scenario==='stale')await screenshot('global-semantic-map-stale',1280);
+      if(scenario==='focus'){await screenshot('semantic-map-focus',1600);await screenshot('semantic-map-focus-390',390);await theme('yellow');await screenshot('semantic-map-focus-yellow',1280);}
+      if(scenario==='focus-stale')await screenshot('semantic-map-focus-stale',1280);
     }
     await fs.writeFile(root+'/native-progress.json',JSON.stringify(report,null,2));
   }
@@ -169,7 +189,7 @@ try {
     assert.equal(labels.length,width===390?4:5);assert(labels.some(n=>n.role==='source'));assert(labels.some(n=>n.selected==='true'));
   }
   await screenshot('semantic-neighborhood-top-labels',1440,true);report.interactions.push('Explore reuses existing Neighborhood: 10 neighbors, source + selected + top3 labels; top2 at 390px');
-  await click('neighborhood-back');await load();await searchSelect('Hash Join');await resetIO();
+  await click('neighborhood-back');assert.equal(await evaluate('hv.route.page'),'semantic-map');await searchSelect('Hash Join');await resetIO();
   await click('global-map-open-note');await evaluate('new Promise(r=>setTimeout(r,100))');assert.equal(await evaluate('app.workspace.getActiveFile()?.path'),'Databases/Hash Join.md');
   report.interactions.push('Open note uses the existing safe Obsidian note-opening boundary');
   await evaluate('app.workspace.setActiveLeaf(hv.leaf)');
@@ -181,6 +201,57 @@ try {
     const measurement=await evaluate(`(()=>{const values=[];for(let i=0;i<7;i++){const start=performance.now();hv.render();values.push(performance.now()-start)}const svg=hv.contentEl.querySelector('.veynrel-global-map-svg');return {documents:gp.getSnapshot().map.mappedNoteCount,domRenderMs:values,domMedianMs:[...values].sort((a,b)=>a-b)[3],layoutMs:+svg.getAttribute('data-layout-ms'),svgRenderMs:+svg.getAttribute('data-render-ms')}})()`);
     const refreshStart=performance.now();await evaluate('gp.refresh()');const refreshWallMs=performance.now()-refreshStart;
     report.performance.push({...measurement,loadWallMs:elapsed,refreshWallMs});noIO(await io());
+  }
+  // Exact child-route return ownership and focus boundaries, through real controls.
+  for(const language of ['en','ru']){
+    await setup(150,language);await click('nav-discover');await click('neighborhood-open');await evaluate('np.pending');
+    assert.equal(await evaluate(`hv.contentEl.querySelector('[data-health-action="neighborhood-back"]').innerText`),language==='en'?'Back to Discover':'Назад к исследованию');
+    await click('neighborhood-back');assert.equal(await evaluate('hv.route.page'),'discover');
+    await load();await searchSelect('Hash Join');
+    await evaluate('window.savedMap=gp.getSnapshot().map;window.savedCore=[...hv.contentEl.querySelectorAll(".veynrel-global-map-dot")].map(e=>[+e.getAttribute("cx"),+e.getAttribute("cy"),+e.getAttribute("r")])');
+    await resetIO();await click('global-map-focus');await evaluate('gp.pending');
+    assert.equal((await io()).focus,1);assert.equal((await io()).global,0);assert.equal((await io()).snapshot,1);noIO(await io());
+    assert(await evaluate('savedMap===gp.getSnapshot().map'));
+    const geometry=await evaluate(`(()=>{const focus=gp.getSnapshot().focus,map=gp.getSnapshot().map,scores=new Map(focus.scores.map(n=>[n.path,n.score]));
+      return [...hv.contentEl.querySelectorAll('[data-global-map-node]')].map((g,i)=>{const d=g.querySelector('.veynrel-global-map-dot'),x=+d.getAttribute('cx')-500,y=+d.getAttribute('cy')-500;
+        const path=g.getAttribute('data-global-map-node'),old=savedCore[i],cross=(old[0]-500)*y-(old[1]-500)*x;
+        return {path,cross,radius:+d.getAttribute('r'),oldRadius:old[2],distance:Math.hypot(x,y),expected:path===focus.path?0:120+(1-(scores.get(path)+1)/2)*290};});})()`);
+    for(const p of geometry){assert(Math.abs(p.cross)<1e-7);assert.equal(p.radius,p.oldRadius);assert(Math.abs(p.distance-p.expected)<1e-9);}
+    // Pan/zoom with native input before entering the local Neighborhood.
+    await send('Emulation.setDeviceMetricsOverride',{width:1280,height:1100,deviceScaleFactor:1,mobile:false});
+    const point=await evaluate(`(()=>{const svg=hv.contentEl.querySelector('.veynrel-global-map-svg');svg.scrollIntoView({block:'center'});const r=svg.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+    await send('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
+    await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x+55,y:point.y+25,button:'left',buttons:1});
+    await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x+55,y:point.y+25,button:'left',clickCount:1});
+    await send('Input.dispatchMouseEvent',{type:'mouseWheel',...point,deltaY:-150,deltaX:0});await new Promise(r=>setTimeout(r,60));
+    assert((await evaluate('hv.globalMapView.viewport.zoom'))>1);
+    await evaluate('window.savedFocus=gp.getSnapshot().focus;window.savedView=JSON.stringify({query:hv.globalMapView.query,selected:hv.globalMapView.selected,viewport:hv.globalMapView.viewport})');
+    await click('global-map-explore');await evaluate('np.pending');
+    assert.equal(await evaluate(`hv.contentEl.querySelector('[data-health-action="neighborhood-back"]').innerText`),language==='en'?'Back to Global Semantic Map':'Назад к глобальной семантической карте');
+    await resetIO();await click('neighborhood-back');assert.equal(await evaluate('hv.route.page'),'semantic-map');
+    assert(await evaluate('gp.getSnapshot().map===savedMap&&gp.getSnapshot().focus===savedFocus&&savedView===JSON.stringify({query:hv.globalMapView.query,selected:hv.globalMapView.selected,viewport:hv.globalMapView.viewport})'));
+    assert(Object.values(await io()).every(v=>v===0));
+    await click('global-map-explore');await evaluate('np.pending');
+    const sources=[await evaluate('np.getSnapshot().map.source.path')];
+    for(const index of [1,2]){await click('neighborhood-select-'+index);await click('neighborhood-explore');await evaluate('np.pending');sources.push(await evaluate('np.getSnapshot().map.source.path'));}
+    assert.equal(new Set(sources).size,3);
+    await click('neighborhood-choose');await click('neighborhood-source-3');await evaluate('np.pending');await click('neighborhood-refresh');await evaluate('np.pending');
+    noIO(await io());await resetIO();await click('neighborhood-back');
+    assert.equal(await evaluate('hv.route.page'),'semantic-map');
+    assert(await evaluate('gp.getSnapshot().map===savedMap&&gp.getSnapshot().focus===savedFocus&&savedView===JSON.stringify({query:hv.globalMapView.query,selected:hv.globalMapView.selected,viewport:hv.globalMapView.viewport})'));
+    assert(Object.values(await io()).every(v=>v===0));
+    await evaluate(`hv.contentEl.querySelector('[data-health-action="global-map-reset-focus"]').focus()`);
+    await click('global-map-reset-focus');assert.equal(await evaluate('!!gp.getSnapshot().focus'),false);
+    assert.equal(await evaluate('document.activeElement.getAttribute("data-health-action")'),'global-map-focus');
+    assert(await evaluate('JSON.stringify(savedCore)===JSON.stringify([...hv.contentEl.querySelectorAll(".veynrel-global-map-dot")].map(e=>[+e.getAttribute("cx"),+e.getAttribute("cy"),+e.getAttribute("r")]))'));
+    assert(Object.values(await io()).every(v=>v===0));
+    await click('global-map-focus');await evaluate('gp.pending');await click('global-map-explore');await evaluate('np.pending');
+    await evaluate('store.applyChanges({})');await evaluate('engine.getCachedIndexState()');await evaluate('Promise.resolve()');await resetIO();await click('neighborhood-back');
+    assert.equal(await evaluate('gp.getSnapshot().state'),'stale');assert(await evaluate('!!gp.getSnapshot().focus'));
+    assert(Object.values(await io()).every(v=>v===0));
+    await click('global-map-refresh');await evaluate('gp.pending');assert.equal(await evaluate('gp.getSnapshot().state'),'ready');assert.equal(await evaluate('!!gp.getSnapshot().focus'),false);
+    assert.equal((await io()).global,1);assert.equal((await io()).focus,0);noIO(await io());
+    report.interactions.push(language+': Discover return; Global return; A/B/C recenter, choose and refresh preserve origin; map/focus/query/selection/native pan+zoom preserved; exact angles/sizes; local reset; stale return and explicit refresh reset');
   }
   // Guard the extracted shared viewport's existing topology ID-to-path contract.
   await setup(150);await click('nav-health');await click('topology-refresh');await evaluate('hv.topology.load()');await click('topology-open');
