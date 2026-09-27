@@ -36,3 +36,10 @@ export interface SemanticHealthAnalysisPort {
   analyzeDuplicates(signal: AbortSignal): Promise<SemanticDuplicateAnalysis>;
   verifyCurrent(revision: SemanticIndexRevision, signal: AbortSignal): Promise<void>;
 }
+
+/** Shared seven-field identity for read-only semantic product consumers. */
+export function sameSemanticIndexRevision(a: SemanticIndexRevision | undefined, b: SemanticIndexRevision | undefined): boolean {
+  return Boolean(a && b && a.vectorGeneration === b.vectorGeneration && a.vectorCount === b.vectorCount &&
+    a.dimensions === b.dimensions && a.provider === b.provider && a.model === b.model &&
+    a.configurationRevision === b.configurationRevision && a.runtimeRevision === b.runtimeRevision);
+}

@@ -10,8 +10,4 @@ export function semanticIndexRevision(state: SemanticIndexState): SemanticIndexR
   return Object.freeze({ vectorGeneration: state.vectorGeneration, vectorCount: state.vectorCount, dimensions: state.dimensions,
     provider: state.provider, model: state.model, configurationRevision: state.configurationRevision, runtimeRevision: state.runtimeRevision });
 }
-export function sameSemanticIndexRevision(a: SemanticIndexRevision | undefined, b: SemanticIndexRevision | undefined): boolean {
-  return Boolean(a && b && a.vectorGeneration === b.vectorGeneration && a.vectorCount === b.vectorCount &&
-    a.dimensions === b.dimensions && a.provider === b.provider && a.model === b.model &&
-    a.configurationRevision === b.configurationRevision && a.runtimeRevision === b.runtimeRevision);
-}
+export { sameSemanticIndexRevision } from "../health/semanticHealthAnalysisPort";
