@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "generation": 1,
+  "dimensions": 3,
+  "embeddingSpaceId": "embedding-space:v1|provider=openai-compatible|model=release-embedding|endpoint=https%3A%2F%2Frelease-embedding.invalid%2Fv1|dimensions=3",
+  "normalized": true,
+  "count": 8,
+  "binaryFile": "vector-index.bin",
+  "records": [
+    {
+      "id": "chunk-08fc30ae2109433f",
+      "path": "Archive/Бета.md",
+      "headingPath": [
+        "Бета"
+      ],
+      "ordinal": 0,
+      "contentHash": "120edaa303bc19e7",
+      "source": {
+        "startOffset": 8,
+        "endOffset": 88,
+        "startLine": 2,
+        "endLine": 2
+      },
+      "preview": "Бета Изолированная синтетическая заметка для проверки обновления и сохранения данных."
+    },
+    {
+      "id": "chunk-0a1590e1a80c52f2",
+      "path": "Projects/Beta.md",
+      "headingPath": [
+        "Beta",
+        "Flashcards"
+      ],
+      "ordinal": 1,
+      "contentHash": "6cae9107cb035e87",
+      "source": {
+        "startOffset": 94,
+        "endOffset": 130,
+        "startLine": 6,
+        "endLine": 6
+      },
+      "preview": "Beta > Flashcards What do plants need::Water and light"
+    },
+    {
+      "id": "chunk-57f335bcda4e090a",
+      "path": "Orphan.md",
+      "headingPath": [
+        "Orphan"
+      ],
+      "ordinal": 0,
+      "contentHash": "6a18950b00fcfee1",
+      "source": {
+        "startOffset": 10,
+        "endOffset": 111,
+        "startLine": 2,
+        "endLine": 2
+      },
+      "preview": "Orphan This synthetic isolated note has no connections and enough readable content for semantic exploration."
+    },
+    {
+      "id": "chunk-ba435e53ef2c8aea",
+      "path": "Projects/Alpha.md",
+      "headingPath": [
+        "Alpha"
+      ],
+      "ordinal": 0,
+      "contentHash": "dd754eb5ab6e10a8",
+      "source": {
+        "startOffset": 9,
+        "endOffset": 95,
+        "startLine": 2,
+        "endLine": 2
+      },
+      "preview": "Alpha Synthetic release fixture about learning and connected knowledge. [[Beta]] [[Missing]]"
+    },
+    {
+      "id": "chunk-c91d16b8c1050060",
+      "path": "Projects/Alpha.md",
+      "headingPath": [
+        "Alpha",
+        "Flashcards"
+      ],
+      "ordinal": 1,
+      "contentHash": "31fa0a7a74f228ef",
+      "source": {
+        "startOffset": 112,
+        "endOffset": 189,
+        "startLine": 6,
+        "endLine": 7
+      },
+      "preview": "Alpha > Flashcards What supports learning::Repeated retrieval Why use notes::To preserve context"
+    },
+    {
+      "id": "chunk-ca4de23f180f1898",
+      "path": "Source.md",
+      "headingPath": [
+        "Source"
+      ],
+      "ordinal": 0,
+      "contentHash": "b491eb97b7f0dadf",
+      "source": {
+        "startOffset": 10,
+        "endOffset": 111,
+        "startLine": 2,
+        "endLine": 2
+      },
+      "preview": "Source Neurons carry signals between connected cells through synapses. This note tests semantic exploration."
+    },
+    {
+      "id": "chunk-d2d3dc1c21020fd0",
+      "path": "Projects/Beta.md",
+      "headingPath": [
+        "Beta"
+      ],
+      "ordinal": 0,
+      "contentHash": "d73101c9a6417693",
+      "source": {
+        "startOffset": 8,
+        "endOffset": 77,
+        "startLine": 2,
+        "endLine": 2
+      },
+      "preview": "Beta Synthetic release fixture about gardens and growing plants. [[Alpha]]"
+    },
+    {
+      "id": "chunk-e1cbf7ec12d88b53",
+      "path": "Archive/Бета.md",
+      "headingPath": [
+        "Бета",
+        "Flashcards"
+      ],
+      "ordinal": 1,
+      "contentHash": "fc2eb08341296113",
+      "source": {
+        "startOffset": 105,
+        "endOffset": 118,
+        "startLine": 6,
+        "endLine": 6
+      },
+      "preview": "Бета > Flashcards Вопрос::Ответ"
+    }
+  ]
+}

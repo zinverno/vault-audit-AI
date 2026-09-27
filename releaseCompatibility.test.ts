@@ -11,6 +11,7 @@ import oldManifest from "./tests/fixtures/upgrade-1.7.0/manifest.json";
 import oldCommands from "./tests/fixtures/upgrade-1.7.0/commands.json";
 import descriptor from "./tests/fixtures/upgrade-1.7.0/semantic-index/vector-manifest.json";
 import publishedCommands from "./tests/fixtures/upgrade-1.8.0/commands.json";
+import release19Commands from "./tests/fixtures/upgrade-1.9.0/commands.json";
 
 vi.mock("obsidian", () => ({
   Plugin: class { constructor(public app: App, public manifest: PluginManifest) {} },
@@ -83,13 +84,14 @@ it("retains every published command ID used by hotkeys and automation", () => {
   }
   expect(commands).toEqual(expect.arrayContaining(oldCommands));
   expect(commands).toEqual(expect.arrayContaining(publishedCommands));
+  expect(commands).toEqual(expect.arrayContaining(release19Commands));
   expect(commands).toContain("ai-knowledge-hub:review-ai-change-proposals");
   expect(commands).toContain("ai-knowledge-hub:veynrel-open-health");
   expect(new Set(commands).size).toBe(commands.length);
 });
 
-it("loads the actual published 1.8.0 fixture without rewriting settings or a compatible index", async () => {
-  const fixture = new URL("./tests/fixtures/upgrade-1.8.0/", import.meta.url);
+it.each(["1.8.0", "1.9.0"])("loads the actual published %s fixture without rewriting settings or a compatible index", async (version) => {
+  const fixture = new URL(`./tests/fixtures/upgrade-${version}/`, import.meta.url);
   const stored = JSON.parse(readFileSync(new URL("data.json", fixture), "utf8")) as AIHubSettings;
   const { default: Plugin } = await vi.importActual<typeof import("./main")>("./main.ts");
   const plugin = new Plugin({} as App, currentManifest);
@@ -98,7 +100,7 @@ it("loads the actual published 1.8.0 fixture without rewriting settings or a com
   plugin.saveData = saveData;
   await plugin.loadSettings();
   expect(plugin.settings).toMatchObject(stored);
-  expect(plugin.settings.health).toMatchObject({ profileChosen: false, onboardingCompleted: false });
+  expect(plugin.settings.health).toMatchObject(stored.health ?? { profileChosen: false, onboardingCompleted: false });
   expect(saveData).not.toHaveBeenCalled();
 
   const basePath = semanticIndexBasePath(".obsidian", currentManifest.id);
@@ -118,10 +120,12 @@ it("loads the actual published 1.8.0 fixture without rewriting settings or a com
   expect(files).toEqual(unchanged); expect(mutate).not.toHaveBeenCalled();
 });
 
-it("prepares a consistent 1.9.0 candidate with the existing plugin identity and minimum", () => {
+it("prepares a consistent 2.0.0 candidate with the existing plugin identity and minimum", () => {
   const pkg = JSON.parse(readFileSync(new URL("package.json", import.meta.url), "utf8")) as { version: string };
+  const lock = JSON.parse(readFileSync(new URL("package-lock.json", import.meta.url), "utf8")) as { version: string; packages: { "": { version: string } } };
   const versions = JSON.parse(readFileSync(new URL("versions.json", import.meta.url), "utf8")) as Record<string, string>;
-  expect(pkg.version).toBe("1.9.0"); expect(currentManifest.version).toBe(pkg.version);
+  expect(pkg.version).toBe("2.0.0"); expect(currentManifest.version).toBe(pkg.version);
+  expect(lock.version).toBe(pkg.version); expect(lock.packages[""].version).toBe(pkg.version);
   expect(versions[pkg.version]).toBe("1.8.7"); expect(currentManifest.minAppVersion).toBe("1.8.7");
   expect(currentManifest).toMatchObject({ id: "ai-knowledge-hub", name: "Veynrel", isDesktopOnly: false });
 });

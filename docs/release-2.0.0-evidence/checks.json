@@ -1,0 +1,49 @@
+{
+  "checks": [
+    {
+      "command": "npm ci",
+      "result": "PASS; 356 packages installed; existing 7 development advisories"
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "npm test -- health",
+      "result": "986 tests / 47 files"
+    },
+    {
+      "command": "npm test -- semantic",
+      "result": "484 tests / 21 files"
+    },
+    {
+      "command": "npm test -- recall",
+      "result": "557 tests / 20 files"
+    },
+    {
+      "command": "npm test -- releaseCompatibility",
+      "result": "7 tests / 1 file after adding the frozen 1.9.0 fixture"
+    },
+    {
+      "command": "npm test",
+      "result": "2681 tests / 109 files, rerun after fixture/test changes"
+    },
+    {
+      "command": "npx eslint health semantic recall",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run lint",
+      "result": "PASS; rerun after fixture/test changes; existing api.ts:402 streaming fetch warning only"
+    },
+    {
+      "command": "npm run audit:proposals",
+      "result": "PASS; 5/5 mutants killed"
+    },
+    {
+      "command": "npm run build",
+      "result": "PASS"
+    }
+  ],
+  "productFilesUnchangedAfterNativeChecks": true
+}

@@ -1,0 +1,260 @@
+{
+  "findings": {
+    "finding-2e7ba3355100d4c2": {
+      "actions": [
+        {
+          "kind": "open-note",
+          "path": "Projects/Alpha.md"
+        }
+      ],
+      "analyzerId": "broken-links",
+      "confidence": "deterministic",
+      "dimension": "structure",
+      "evidence": [
+        {
+          "kind": "source-path",
+          "path": "Projects/Alpha.md"
+        },
+        {
+          "kind": "target",
+          "value": "Missing"
+        },
+        {
+          "kind": "target-length",
+          "value": 7
+        },
+        {
+          "kind": "target-truncated",
+          "value": false
+        },
+        {
+          "kind": "occurrence-count",
+          "value": 1
+        }
+      ],
+      "explanation": "Obsidian could not resolve this internal link to a vault file.",
+      "fingerprint": "v1:[\"local\",\"broken-links\",\"structure\",\"broken-link\",[\"Projects/Alpha.md\"],\"Missing\"]",
+      "firstSeenAt": 1790551952100,
+      "id": "finding-2e7ba3355100d4c2",
+      "impact": "attention",
+      "lastSeenAt": 1790551952100,
+      "notePaths": [
+        "Projects/Alpha.md"
+      ],
+      "source": "local",
+      "state": "open",
+      "title": "Unresolved internal link",
+      "type": "broken-link"
+    },
+    "finding-521f91b67aa29a96": {
+      "actions": [
+        {
+          "kind": "open-note",
+          "path": "Orphan.md"
+        },
+        {
+          "kind": "find-connections",
+          "path": "Orphan.md"
+        }
+      ],
+      "analyzerId": "orphans",
+      "confidence": "deterministic",
+      "dimension": "structure",
+      "evidence": [
+        {
+          "kind": "incoming-count",
+          "value": 0
+        },
+        {
+          "kind": "incoming-count-complete",
+          "value": true
+        },
+        {
+          "kind": "outgoing-count",
+          "value": 0
+        }
+      ],
+      "explanation": "No other in-scope Markdown note links to this note, and it links to no other in-scope note.",
+      "fingerprint": "v1:[\"local\",\"orphans\",\"structure\",\"orphan-note\",[\"Orphan.md\"],null]",
+      "firstSeenAt": 1790551952100,
+      "id": "finding-521f91b67aa29a96",
+      "impact": "review",
+      "lastSeenAt": 1790551952100,
+      "notePaths": [
+        "Orphan.md"
+      ],
+      "source": "local",
+      "state": "open",
+      "title": "Note without connections",
+      "type": "orphan-note"
+    },
+    "finding-701b5d338d452854": {
+      "actions": [
+        {
+          "kind": "open-note",
+          "path": "Empty.md"
+        }
+      ],
+      "analyzerId": "note-shape",
+      "confidence": "deterministic",
+      "dimension": "structure",
+      "evidence": [
+        {
+          "kind": "meaningful-character-count",
+          "value": 0
+        }
+      ],
+      "explanation": "The body has fewer than 32 Unicode letters or numbers after leading frontmatter is excluded.",
+      "fingerprint": "v1:[\"local\",\"note-shape\",\"structure\",\"empty-note\",[\"Empty.md\"],null]",
+      "firstSeenAt": 1790551952100,
+      "id": "finding-701b5d338d452854",
+      "impact": "review",
+      "lastSeenAt": 1790551952100,
+      "notePaths": [
+        "Empty.md"
+      ],
+      "source": "local",
+      "state": "open",
+      "title": "Empty note body",
+      "type": "empty-note"
+    },
+    "finding-70f8ccc1b870d44a": {
+      "actions": [
+        {
+          "kind": "open-note",
+          "path": "Archive/Бета.md"
+        },
+        {
+          "kind": "find-connections",
+          "path": "Archive/Бета.md"
+        }
+      ],
+      "analyzerId": "orphans",
+      "confidence": "deterministic",
+      "dimension": "structure",
+      "evidence": [
+        {
+          "kind": "incoming-count",
+          "value": 0
+        },
+        {
+          "kind": "incoming-count-complete",
+          "value": true
+        },
+        {
+          "kind": "outgoing-count",
+          "value": 0
+        }
+      ],
+      "explanation": "No other in-scope Markdown note links to this note, and it links to no other in-scope note.",
+      "fingerprint": "v1:[\"local\",\"orphans\",\"structure\",\"orphan-note\",[\"Archive/Бета.md\"],null]",
+      "firstSeenAt": 1790551952100,
+      "id": "finding-70f8ccc1b870d44a",
+      "impact": "review",
+      "lastSeenAt": 1790551952100,
+      "notePaths": [
+        "Archive/Бета.md"
+      ],
+      "source": "local",
+      "state": "open",
+      "title": "Note without connections",
+      "type": "orphan-note"
+    },
+    "finding-930517aff5ed12a0": {
+      "actions": [
+        {
+          "kind": "open-note",
+          "path": "Empty.md"
+        },
+        {
+          "kind": "find-connections",
+          "path": "Empty.md"
+        }
+      ],
+      "analyzerId": "orphans",
+      "confidence": "deterministic",
+      "dimension": "structure",
+      "evidence": [
+        {
+          "kind": "incoming-count",
+          "value": 0
+        },
+        {
+          "kind": "incoming-count-complete",
+          "value": true
+        },
+        {
+          "kind": "outgoing-count",
+          "value": 0
+        }
+      ],
+      "explanation": "No other in-scope Markdown note links to this note, and it links to no other in-scope note.",
+      "fingerprint": "v1:[\"local\",\"orphans\",\"structure\",\"orphan-note\",[\"Empty.md\"],null]",
+      "firstSeenAt": 1790551952100,
+      "id": "finding-930517aff5ed12a0",
+      "impact": "review",
+      "lastSeenAt": 1790551952100,
+      "notePaths": [
+        "Empty.md"
+      ],
+      "source": "local",
+      "state": "open",
+      "title": "Note without connections",
+      "type": "orphan-note"
+    },
+    "finding-c2c91757a5b55e3b": {
+      "actions": [
+        {
+          "kind": "open-note",
+          "path": "Source.md"
+        },
+        {
+          "kind": "find-connections",
+          "path": "Source.md"
+        }
+      ],
+      "analyzerId": "orphans",
+      "confidence": "deterministic",
+      "dimension": "structure",
+      "evidence": [
+        {
+          "kind": "incoming-count",
+          "value": 0
+        },
+        {
+          "kind": "incoming-count-complete",
+          "value": true
+        },
+        {
+          "kind": "outgoing-count",
+          "value": 0
+        }
+      ],
+      "explanation": "No other in-scope Markdown note links to this note, and it links to no other in-scope note.",
+      "fingerprint": "v1:[\"local\",\"orphans\",\"structure\",\"orphan-note\",[\"Source.md\"],null]",
+      "firstSeenAt": 1790551952100,
+      "id": "finding-c2c91757a5b55e3b",
+      "impact": "review",
+      "lastSeenAt": 1790551952100,
+      "notePaths": [
+        "Source.md"
+      ],
+      "source": "local",
+      "state": "open",
+      "title": "Note without connections",
+      "type": "orphan-note"
+    }
+  },
+  "reconciliationReceipts": {
+    "local:broken-links": 1790551952247,
+    "local:duplicate-titles": 1790551952247,
+    "local:exact-duplicates": 1790551952247,
+    "local:graph-components": 1790551952247,
+    "local:no-incoming-links": 1790551952247,
+    "local:no-outgoing-links": 1790551952247,
+    "local:note-shape": 1790551952247,
+    "local:orphans": 1790551952247
+  },
+  "updatedAt": 1790551952247,
+  "version": 2
+}
