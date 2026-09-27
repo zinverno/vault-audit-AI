@@ -9,9 +9,12 @@ await build({entryPoints:['scripts/connection-opportunities-fixture.ts'],bundle:
 const {connectionFixture}=createRequire(import.meta.url)(root+'/fixture.cjs');
 for(const count of [150,300,500]){
   const f=await connectionFixture(count);
+  for(const [path,value] of f.files) await fs.writeFile(root+'/fixtures/'+count+'/'+path.split('/').pop(),typeof value==='string'?value:Buffer.from(value));
+  await fs.writeFile(root+'/fixtures/'+count+'/paths.json',JSON.stringify(f.paths));
   await fs.writeFile(root+'/fixtures/'+count+'/comparison-plan.json',JSON.stringify(f.plan));
   await fs.writeFile(root+'/fixtures/'+count+'/comparison-input.json',JSON.stringify({semantic:f.semantic,topology:f.topology}));
   if(count!==150)continue;
+  for(const [oldPath] of f.plan.renamedPaths) await fs.rm(root+'/vault/'+oldPath,{force:true});
   for(const path of [...f.paths,f.plan.topologyOnly]){
     const full=root+'/vault/'+path;await fs.mkdir(full.slice(0,full.lastIndexOf('/')),{recursive:true});
     await fs.writeFile(full,'# Synthetic comparison note\n\n'+f.plan.edges.filter(e=>e.source===path).map(e=>'[['+e.target+']]').join('\n')+'\n');

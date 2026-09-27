@@ -2,14 +2,10 @@ import { t } from "../../i18n";
 import { formatSemanticScore } from "../../utils/semanticPresentation";
 import type { ConnectionComparisonCategory, ConnectionComparisonPair, ConnectionComparisonPort, ConnectionComparisonProductSnapshot } from "../connectionComparisonPort";
 import { healthButton } from "../ui/renderHealthHome";
+import { candidateReviewSummary, filteredConnectionPairs, isExcalidrawPair, reviewCandidate, syncConnectionComparison } from "./connectionComparisonViewState";
+import type { ConnectionComparisonViewState } from "./connectionComparisonViewState";
+export { newConnectionComparisonViewState } from "./connectionComparisonViewState";
 
-export interface ConnectionComparisonViewState {
-  category: ConnectionComparisonCategory;
-  query: string;
-  selectedPair?: string;
-  visibleLimit: number;
-}
-export function newConnectionComparisonViewState(): ConnectionComparisonViewState { return { category: "candidate", query: "", visibleLimit: 50 }; }
 export function connectionComparisonStatus(snapshot: ConnectionComparisonProductSnapshot): string | undefined {
   if (snapshot.state === "loading") return t("@connections.loading");
   if (snapshot.reason) return t(`@connections.${snapshot.reason}`);
@@ -23,13 +19,19 @@ function markdownText(pair: ConnectionComparisonPair): string {
 }
 function rankingText(pair: ConnectionComparisonPair): string {
   if (!pair.semantic) return t("@connections.outside-top-five");
-  return pair.semantic.mutualTopK ? t("@connections.mutual") : t("@connections.top-for", { note: pair.semantic.leftRank ? pair.leftBasename : pair.rightBasename });
+  return t(`@connections.${pair.semantic.rankClass}`);
+}
+function rankDetails(pair: ConnectionComparisonPair): string[] {
+  if (!pair.semantic) return [];
+  return ([[pair.leftBasename, pair.semantic.leftRank], [pair.rightBasename, pair.semantic.rightRank]] as const).map(([note, rank]) =>
+    rank === undefined ? t("@connections.not-ranked", { note }) : t("@connections.rank", { note, rank }));
 }
 
 /** Local filters and selection only. Note names/paths always use native text sinks. */
 export function renderConnectionComparison(parent: HTMLElement, port: ConnectionComparisonPort, state: ConnectionComparisonViewState,
-  actions: { back(): void; openNote(path: string): void; explore(path: string): void }): void {
+  actions: { back(): void; openNote(path: string): void; openPair?(left: string, right: string): void; explore(path: string): void }): void {
   const snapshot = port.getSnapshot(), comparison = snapshot.comparison;
+  syncConnectionComparison(state, comparison);
   const section = parent.createEl("section", { cls: "veynrel-connections", attr: { "aria-label": t("@connections.title"), "aria-busy": String(snapshot.state === "loading") } });
   healthButton(section, t("@global-map.back"), () => actions.back(), "connections-back");
   section.createEl("h1", { text: t("@connections.title"), attr: { tabindex: "-1", "data-health-heading": "true" } });
@@ -69,6 +71,29 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
     }, `connections-${category}`);
     filterButtons.set(category, button);
   }
+  const rankFilters = section.createDiv({ cls: "veynrel-connections-filters veynrel-connections-secondary", attr: { role: "group", "aria-label": t("@connections.rank-filter") } });
+  rankFilters.createSpan({ text: t("@connections.rank-filter") });
+  const rankButtons = new Map<ConnectionComparisonViewState["rankFilter"], HTMLButtonElement>();
+  for (const rank of ["all", "mutual-top-3", "mutual-top-5", "one-sided-top-5"] as const) {
+    rankButtons.set(rank, healthButton(rankFilters, t(`@connections.${rank}`), () => {
+      state.rankFilter = rank; state.visibleLimit = 50; update();
+    }, `connections-rank-${rank}`));
+  }
+  const reviewSummary = section.createEl("p", { cls: "veynrel-health-muted veynrel-connections-review-summary", attr: { role: "status", "aria-live": "polite" } });
+  const reviewFilters = section.createDiv({ cls: "veynrel-connections-filters veynrel-connections-secondary", attr: { role: "group", "aria-label": t("@connections.review-filter") } });
+  reviewFilters.createSpan({ text: t("@connections.review-filter") });
+  const reviewFilterButtons = new Map<ConnectionComparisonViewState["reviewFilter"], HTMLButtonElement>();
+  for (const review of ["all", "unreviewed", "useful", "not-useful", "unsure"] as const) {
+    reviewFilterButtons.set(review, healthButton(reviewFilters, t(`@connections.${review}`), () => {
+      state.reviewFilter = review; state.visibleLimit = 50; update();
+    }, `connections-review-filter-${review}`));
+  }
+  const specialFormat = section.createEl("label", { cls: "veynrel-connections-special-format" });
+  const hideExcalidraw = specialFormat.createEl("input", { type: "checkbox", attr: { "data-health-action": "connections-hide-excalidraw" } });
+  hideExcalidraw.checked = state.hideExcalidraw;
+  specialFormat.createSpan({ text: t("@connections.hide-excalidraw") });
+  const hiddenCount = specialFormat.createSpan({ cls: "veynrel-health-muted" });
+  hideExcalidraw.addEventListener("change", () => { state.hideExcalidraw = hideExcalidraw.checked; state.visibleLimit = 50; update(); });
   const search = section.createEl("label", { cls: "veynrel-connections-search" });
   search.createSpan({ text: t("@connections.search") });
   const input = search.createEl("input", { type: "search", attr: { "data-health-action": "connections-search" } }); input.value = state.query;
@@ -91,14 +116,29 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
     inspector.createEl("h3", { text: t("@connections.semantic") });
     if (pair.semantic) {
       inspector.createEl("p", { text: `${t("@connections.similarity")} ${formatSemanticScore(pair.semantic.score)}` });
-      for (const [note, rank] of [[pair.leftBasename, pair.semantic.leftRank], [pair.rightBasename, pair.semantic.rightRank]] as const) {
-        inspector.createEl("p", { text: rank === undefined ? t("@connections.not-ranked", { note }) : t("@connections.rank", { note, rank }) });
-      }
+      for (const text of rankDetails(pair)) inspector.createEl("p", { text });
+      inspector.createEl("p", { text: t("@connections.shared-neighbors", { count: pair.semantic.sharedNeighborPaths.length }) });
+      const neighbors = inspector.createEl("ul");
+      for (const path of pair.semantic.sharedNeighborPaths) neighbors.createEl("li", { text: path.split("/").pop()!.replace(/\.md$/i, ""), attr: { title: path } });
     }
     inspector.createEl("p", { text: rankingText(pair) });
     inspector.createEl("h3", { text: t("@connections.markdown-relationship") });
     inspector.createEl("p", { text: markdownText(pair) });
+    if (pair.category === "candidate") {
+      inspector.createEl("h3", { text: t("@connections.session-review") });
+      const reviews = inspector.createDiv({ cls: "veynrel-connections-actions", attr: { role: "group", "aria-label": t("@connections.session-review") } });
+      const setReview = (verdict?: "useful" | "not-useful" | "unsure"): void => {
+        reviewCandidate(state, pair.id, verdict); update();
+        inspector.querySelector<HTMLButtonElement>(`[data-health-action="connections-review-${verdict ?? "useful"}"]`)?.focus({ preventScroll: true });
+      };
+      for (const verdict of ["useful", "not-useful", "unsure"] as const) {
+        const button = healthButton(reviews, t(`@connections.${verdict}`), () => setReview(verdict), `connections-review-${verdict}`);
+        button.setAttribute("aria-pressed", String(state.reviewByPairId.get(pair.id) === verdict));
+      }
+      healthButton(reviews, t("@connections.clear-review"), () => setReview(), "connections-review-clear", !state.reviewByPairId.has(pair.id));
+    }
     const buttons = inspector.createDiv({ cls: "veynrel-connections-actions" });
+    if (actions.openPair) healthButton(buttons, t("@connections.open-pair"), () => actions.openPair!(pair.leftPath, pair.rightPath), "connections-open-pair");
     for (const [side, path] of [["left", pair.leftPath], ["right", pair.rightPath]] as const) {
       healthButton(buttons, t(`@connections.open-${side}`), () => actions.openNote(path), `connections-open-${side}`);
       healthButton(buttons, t(`@connections.explore-${side}`), () => actions.explore(path), `connections-explore-${side}`, snapshot.state !== "ready");
@@ -106,9 +146,19 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
   };
   const update = (): void => {
     for (const [category, button] of filterButtons) button.setAttribute("aria-pressed", String(category === state.category));
-    const needle = state.query.trim().toLowerCase();
-    const matches = comparison.pairs.filter(pair => pair.category === state.category &&
-      [pair.leftBasename, pair.leftPath, pair.rightBasename, pair.rightPath].some(text => text.toLowerCase().includes(needle)));
+    rankFilters.hidden = state.category === "explicit-only";
+    reviewFilters.hidden = specialFormat.hidden = state.category !== "candidate";
+    for (const [rank, button] of rankButtons) {
+      button.setAttribute("aria-pressed", String(rank === state.rankFilter));
+      const count = comparison.pairs.filter(pair => pair.category === state.category && (rank === "all" || pair.semantic?.rankClass === rank)).length;
+      button.setText(`${t(`@connections.${rank}`)} (${count})`);
+    }
+    for (const [review, button] of reviewFilterButtons) button.setAttribute("aria-pressed", String(review === state.reviewFilter));
+    const counts = candidateReviewSummary(state);
+    reviewSummary.setText(`${t("@connections.session-review")}: ` + (["reviewed", "useful", "not-useful", "unsure"] as const)
+      .map(key => `${t(`@connections.${key}`)} ${counts[key]}`).join(" · "));
+    hiddenCount.setText(t("@connections.excalidraw-hidden", { count: state.hideExcalidraw ? comparison.pairs.filter(pair => pair.category === "candidate" && isExcalidrawPair(pair)).length : 0 }));
+    const matches = filteredConnectionPairs(state);
     const visible = matches.slice(0, state.visibleLimit);
     showing.setText(t("@connections.showing", { shown: visible.length, total: matches.length }));
     list.empty(); rowButtons.clear();
@@ -116,8 +166,18 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
       const button = healthButton(list, "", () => { state.selectedPair = pair.id; inspect(); inspector.focus(); }, `connections-pair-${index}`);
       button.setAttribute("title", `${pair.leftPath} ↔ ${pair.rightPath}`);
       button.createEl("strong", { text: `${pair.leftBasename} ↔ ${pair.rightBasename}` });
-      if (pair.semantic) button.createSpan({ text: `${t("@connections.similarity")} ${formatSemanticScore(pair.semantic.score)}` });
-      button.createSpan({ text: rankingText(pair) }); button.createSpan({ text: markdownText(pair) });
+      if (pair.semantic) {
+        const ranks = pair.semantic.mutualTopK ? `#${pair.semantic.leftRank} ↔ #${pair.semantic.rightRank}` : rankDetails(pair).join(" · ");
+        button.createSpan({ text: `${t("@connections.similarity")} ${formatSemanticScore(pair.semantic.score)} · ${ranks}` });
+        button.createSpan({ text: `${rankingText(pair)} · ${t("@connections.shared-neighbors", { count: pair.semantic.sharedNeighborPaths.length })}` });
+      } else button.createSpan({ text: rankingText(pair) });
+      button.createSpan({ text: markdownText(pair) });
+      const review = state.reviewByPairId.get(pair.id);
+      if (pair.category === "candidate" && review) button.createSpan({ text: t(`@connections.${review}`), cls: "veynrel-connections-review-marker" });
+      button.setAttribute("aria-label", [`${pair.leftBasename} ↔ ${pair.rightBasename}`,
+        ...(pair.semantic ? [`${t("@connections.similarity")} ${formatSemanticScore(pair.semantic.score)}`, ...rankDetails(pair),
+          t("@connections.shared-neighbors", { count: pair.semantic.sharedNeighborPaths.length })] : []),
+        rankingText(pair), markdownText(pair), pair.category === "candidate" && review ? t(`@connections.${review}`) : ""].filter(Boolean).join(" · "));
       rowButtons.set(pair.id, button);
     });
     more.hidden = visible.length >= matches.length;

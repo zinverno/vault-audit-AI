@@ -18,3 +18,18 @@ export async function openHealthNote(app: App, path: string | undefined): Promis
     return true;
   } catch { return false; }
 }
+
+/** Public typed split API; only creates leaves, never replaces or closes unrelated ones. */
+export async function openHealthNotePair(app: App, leftPath: string, rightPath: string): Promise<boolean> {
+  try {
+    const left = resolveHealthNote(app, leftPath), right = resolveHealthNote(app, rightPath);
+    if (!left || !right) return false;
+    const first = app.workspace.getLeaf("tab");
+    await first.openFile(left);
+    // Opening the first note yields to the host; resolve the second again before navigation.
+    const currentRight = resolveHealthNote(app, rightPath);
+    if (!currentRight) return false;
+    await app.workspace.createLeafBySplit(first, "vertical").openFile(currentRight);
+    return true;
+  } catch { return false; }
+}

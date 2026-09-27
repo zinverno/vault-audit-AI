@@ -30,3 +30,20 @@ export async function topologyMap() {
     note("E.md", { linksAvailable: false }), note("F.md"), note("X.md"),
   ]), 1, new AbortController().signal);
 }
+
+/** Explicit ordered neighbor lists, with sparse edges reconstructed only for test input. */
+export function rankedSemanticMap(lists: Record<string, readonly (readonly [string, number])[]>): SemanticGlobalMap {
+  const paths = [...new Set([...Object.keys(lists), ...Object.values(lists).flatMap(list => list.map(([path]) => path))])];
+  const nodes = paths.map(path => ({ id: path, path, basename: path.replace(/\.md$/, ""), coreSimilarity: 0.8, semanticConnectedness: null,
+    neighbors: (lists[path] ?? []).map(([path, score]) => ({ path, score })) }));
+  const edges = new Map<string, SemanticGlobalMap["edges"][number]>();
+  for (const node of nodes) for (const neighbor of node.neighbors) {
+    const [left, right] = [node.path, neighbor.path].sort();
+    edges.set(JSON.stringify([left, right]), { left, right, score: neighbor.score,
+      mutual: Boolean(lists[neighbor.path]?.some(([path]) => path === node.path)) });
+  }
+  return { ...semanticMap(), nodes, edges: [...edges.values()], mappedNoteCount: nodes.length, indexedNoteCount: nodes.length };
+}
+export function knownTopology(map: SemanticGlobalMap) {
+  return deriveTopology(snapshot(map.nodes.map(n => note(n.path))), 1, new AbortController().signal);
+}

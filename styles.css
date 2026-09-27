@@ -2420,6 +2420,14 @@
 .veynrel-connections-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
 .veynrel-connections-filters button { background: transparent; box-shadow: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; min-height: 40px; white-space: normal; height: auto; }
 .veynrel-connections-filters button[aria-pressed="true"] { color: var(--text-normal); border-bottom-color: var(--interactive-accent); font-weight: 600; }
+.veynrel-connections-secondary { margin-top: 8px; align-items: center; font-size: var(--font-ui-small); }
+.veynrel-connections-secondary > span { color: var(--text-muted); }
+.veynrel-connections-review-summary { font-size: var(--font-ui-small); margin-block: 16px 8px; }
+.veynrel-connections-special-format { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-size: var(--font-ui-small); }
+.veynrel-connections-special-format input { flex: 0 0 auto; }
+.veynrel-connections [hidden] { display: none; }
+.veynrel-connections-actions button[aria-pressed="true"] { border-color: var(--interactive-accent); font-weight: 600; }
+.veynrel-connections-list .veynrel-connections-review-marker { color: var(--text-normal); }
 .veynrel-connections-search { display: grid; gap: 8px; max-width: 640px; margin-block: 20px; }
 .veynrel-connections-search input { width: 100%; min-width: 0; min-height: 40px; }
 .veynrel-connections-composition { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.6fr); gap: 32px; align-items: start; }

@@ -1,5 +1,6 @@
 import type { ConnectionComparisonPort } from "../connectionComparisonPort";
 import { renderConnectionComparison, newConnectionComparisonViewState, connectionComparisonStatus } from "../connections/renderConnectionComparison";
+import { syncConnectionComparison } from "../connections/connectionComparisonViewState";
 import type { SemanticGlobalMapPort } from "../semanticGlobalMapPort";
 import { renderSemanticGlobalMap, globalSemanticMapStatus } from "./renderSemanticGlobalMap";
 import { newSemanticGlobalMapViewState } from "./renderSemanticGlobalMapGraph";
@@ -8,7 +9,7 @@ import type { WorkspaceLeaf } from "obsidian";
 import { t } from "../../i18n";
 import type { HealthPluginController } from "../obsidian/healthPluginController";
 import { VEYNREL_HEALTH_VIEW_TYPE } from "../obsidian/openHealthView";
-import { openHealthNote, resolveHealthNote } from "../obsidian/openHealthNote";
+import { openHealthNote, openHealthNotePair, resolveHealthNote } from "../obsidian/openHealthNote";
 import { healthHomeViewModel } from "./healthHomeViewModel";
 import { healthButton, renderHealthHome } from "./renderHealthHome";
 import { HealthRecoveryModal } from "./healthRecoveryModal";
@@ -123,7 +124,10 @@ export class VeynrelHealthView extends ItemView {
       this.unsubscribeConnect?.();
       this.unsubscribeConnect = this.connect?.subscribe(() => { this.connectResult = undefined; this.render(); });
       this.unsubscribeComparison?.();
-      this.unsubscribeComparison = this.comparison?.subscribe(() => { if (this.route.page === "connection-opportunities") this.render(); });
+      this.unsubscribeComparison = this.comparison?.subscribe(() => {
+        syncConnectionComparison(this.comparisonView, this.comparison?.getSnapshot().comparison);
+        if (this.route.page === "connection-opportunities") this.render();
+      });
       this.unsubscribeGlobalMap?.();
       let globalSnapshot = this.globalMap?.getSnapshot();
       this.unsubscribeGlobalMap = this.globalMap?.subscribe(() => {
@@ -229,6 +233,7 @@ export class VeynrelHealthView extends ItemView {
     if (normal && this.route.page === "connection-opportunities" && this.comparison) {
       renderConnectionComparison(surface, this.comparison, this.comparisonView, {
         back: () => this.navigate({ page: "discover" }), openNote: (path) => { void this.openNote(path); },
+        openPair: (left, right) => { void this.openPair(left, right); },
         explore: (path) => { if (this.neighborhood) { this.navigate({ page: "semantic-neighborhood", returnTo: "connection-opportunities" }); void this.neighborhood.load(path); } },
       });
     } else if (normal && this.route.page === "semantic-map" && this.globalMap) {
@@ -656,5 +661,9 @@ export class VeynrelHealthView extends ItemView {
     const epoch = this.epoch;
     const opened = await openHealthNote(this.app, path);
     if (!opened && epoch === this.epoch) { this.navigationMessage = t("@health.note-unavailable"); this.render(); }
+  }
+  private async openPair(left: string, right: string): Promise<void> {
+    const epoch = this.epoch;
+    if (!await openHealthNotePair(this.app, left, right) && epoch === this.epoch) { this.navigationMessage = t("@health.note-unavailable"); this.render(); }
   }
 }

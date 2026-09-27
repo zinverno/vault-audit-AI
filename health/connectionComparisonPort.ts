@@ -3,6 +3,7 @@ import type { SemanticIndexRevision } from "./semanticHealthAnalysisPort";
 
 export type MarkdownLinkDirection = "left-to-right" | "right-to-left" | "reciprocal";
 export type ConnectionComparisonCategory = "candidate" | "aligned" | "explicit-only";
+export type CandidateRankClass = "mutual-top-3" | "mutual-top-5" | "one-sided-top-5";
 export interface ConnectionComparisonPair {
   readonly id: string;
   readonly leftPath: string;
@@ -10,7 +11,12 @@ export interface ConnectionComparisonPair {
   readonly leftBasename: string;
   readonly rightBasename: string;
   readonly category: ConnectionComparisonCategory;
-  readonly semantic?: Readonly<{ score: number; mutualTopK: boolean; leftRank?: number; rightRank?: number }>;
+  readonly semantic?: Readonly<{
+    score: number; mutualTopK: boolean; leftRank?: number; rightRank?: number;
+    rankClass: CandidateRankClass;
+    /** Canonical paths from the existing top-five intersection, excluding both endpoints. */
+    sharedNeighborPaths: readonly string[];
+  }>;
   readonly markdown?: Readonly<{ direction: MarkdownLinkDirection }>;
 }
 export interface ConnectionComparisonSnapshot {
