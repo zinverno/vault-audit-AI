@@ -4,7 +4,8 @@ The visible primary navigation is **Health | Findings | Discover | Recall |
 Connect | Tools | Settings** (Recall and Connect appear when their ports are available).
 Tools is a primary workspace tab: its existing `{ page: "tools" }` route selects
 **Tools**. The Topology child route keeps **Health** selected. The [Semantic Neighborhood](semantic-neighborhood.md)
-child route keeps **Discover** selected; its explicit source chooser and semantic map
+and [Global Semantic Map](global-semantic-map.md)
+child routes keep **Discover** selected; the explicit source chooser and whole-index map
 use the existing index without replacing Discover’s search or list workflows. All surfaces render in the existing
 `VeynrelHealthView` (`veynrel-health`). Routes and setup drafts are view-local and
 transient. Reopening starts on Health; no route is saved. Onboarding and Health

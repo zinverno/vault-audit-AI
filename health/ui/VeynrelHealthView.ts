@@ -1,3 +1,6 @@
+import type { SemanticGlobalMapPort } from "../semanticGlobalMapPort";
+import { renderSemanticGlobalMap, globalSemanticMapStatus } from "./renderSemanticGlobalMap";
+import { newSemanticGlobalMapViewState } from "./renderSemanticGlobalMapGraph";
 import { ItemView } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import { t } from "../../i18n";
@@ -59,6 +62,9 @@ export class VeynrelHealthView extends ItemView {
   private unsubscribeDeep?: () => void;
   private unsubscribeAuthoring?: () => void;
   private unsubscribeConnect?: () => void;
+  private globalMapView = newSemanticGlobalMapViewState();
+  private unsubscribeGlobalMap?: () => void;
+  private cleanupGlobalMap?: () => void;
   private neighborhoodView: SemanticNeighborhoodViewState = { query: "" };
   private unsubscribeNeighborhood?: () => void;
   private unsubscribeTopology?: () => void;
@@ -87,7 +93,7 @@ export class VeynrelHealthView extends ItemView {
   constructor(leaf: WorkspaceLeaf, private readonly controller: HealthPluginController, private readonly tools: VeynrelToolsPort,
     private readonly semantic?: SemanticIntelligencePort, private readonly recall?: RecallProductPort,
     private readonly deep?: DeepIntelligencePort, private readonly authoring?: RecallAuthoringPort, private readonly connect?: ConnectPort,
-    private readonly topology?: VaultTopologyPort, private readonly neighborhood?: SemanticNeighborhoodPort) { super(leaf); }
+    private readonly topology?: VaultTopologyPort, private readonly neighborhood?: SemanticNeighborhoodPort, private readonly globalMap?: SemanticGlobalMapPort) { super(leaf); }
   getViewType(): string { return VEYNREL_HEALTH_VIEW_TYPE; }
   getDisplayText(): string { return t("@health.title"); }
   getIcon(): string { return "activity"; }
@@ -112,6 +118,19 @@ export class VeynrelHealthView extends ItemView {
       this.unsubscribeAuthoring = this.authoring?.subscribe(() => this.render());
       this.unsubscribeConnect?.();
       this.unsubscribeConnect = this.connect?.subscribe(() => { this.connectResult = undefined; this.render(); });
+      this.unsubscribeGlobalMap?.();
+      let globalSnapshot = this.globalMap?.getSnapshot();
+      this.unsubscribeGlobalMap = this.globalMap?.subscribe(() => {
+        const next = this.globalMap!.getSnapshot();
+        const progressOnly = globalSnapshot?.state === "loading" && next.state === "loading" && next.map === globalSnapshot.map;
+        globalSnapshot = next;
+        if (this.route.page !== "semantic-map") return;
+        if (progressOnly) {
+          const message = globalSemanticMapStatus(next) ?? "";
+          this.status?.setText(message);
+          this.body?.querySelector<HTMLElement>(".veynrel-global-map-status")?.setText(message);
+        } else this.render();
+      });
       this.unsubscribeNeighborhood?.();
       this.unsubscribeNeighborhood = this.neighborhood?.subscribe(() => this.render());
       this.unsubscribeTopology?.();
@@ -126,6 +145,8 @@ export class VeynrelHealthView extends ItemView {
   }
 
   async onClose(): Promise<void> {
+    this.unsubscribeGlobalMap?.(); this.unsubscribeGlobalMap = undefined;
+    this.cleanupGlobalMap?.(); this.cleanupGlobalMap = undefined; this.globalMapView = newSemanticGlobalMapViewState();
     this.unsubscribeNeighborhood?.(); this.unsubscribeNeighborhood = undefined;
     this.neighborhoodView = { query: "" };
     this.epoch++; this.unsubscribe?.(); this.unsubscribe = undefined;
@@ -165,6 +186,7 @@ export class VeynrelHealthView extends ItemView {
     if (!normal) { this.connectSetup = undefined; this.connectConfirmation = undefined; this.semanticSetup = undefined; this.deepSetup = undefined; this.knowledgeConfirmation = undefined; }
     // A newer scan/mutation or a dominant recovery/onboarding surface ends the failed interaction.
     if (state.busy || !normal) this.findingMutationErrorRoute = undefined;
+    this.cleanupGlobalMap?.(); this.cleanupGlobalMap = undefined;
     this.cleanupRecall?.(); this.cleanupRecall = undefined;
     this.cleanupTopology?.(); this.cleanupTopology = undefined;
     if (this.dueWakeup !== undefined) window.clearTimeout(this.dueWakeup);
@@ -176,12 +198,12 @@ export class VeynrelHealthView extends ItemView {
     this.body.empty();
     if (normal) {
       const nav = this.body.createEl("nav", { cls: "veynrel-findings-navigation", attr: { "aria-label": t("@findings.navigation") } });
-      const pages: Array<Exclude<VeynrelHealthRoute["page"], "topology" | "semantic-neighborhood">> = ["health", "findings", "discover", ...(this.recall ? ["recall" as const] : []), ...(this.connect ? ["connect" as const] : []), "tools", "settings"];
+      const pages: Array<Exclude<VeynrelHealthRoute["page"], "topology" | "semantic-neighborhood" | "semantic-map">> = ["health", "findings", "discover", ...(this.recall ? ["recall" as const] : []), ...(this.connect ? ["connect" as const] : []), "tools", "settings"];
       const labels = { health: "@findings.health", findings: "@findings.title", discover: "@discover.title", recall: "@recall.title", connect: "@connect.nav", tools: "@health.tools", settings: "@settings.title" };
       for (const page of pages) {
         const button = healthButton(nav, t(labels[page]),
           () => this.navigate(page === "findings" ? findingsRoute() : { page }), `nav-${page}`);
-        const current = this.route.page === page || this.route.page === "topology" && page === "health" || this.route.page === "semantic-neighborhood" && page === "discover";
+        const current = this.route.page === page || this.route.page === "topology" && page === "health" || (this.route.page === "semantic-neighborhood" || this.route.page === "semantic-map") && page === "discover";
         button.setAttribute("aria-pressed", String(current));
         if (current) button.setAttribute("aria-current", "page");
       }
@@ -195,7 +217,12 @@ export class VeynrelHealthView extends ItemView {
     const recall = recallSnapshot ? recallViewModel(recallSnapshot) : undefined;
     const authoring = recall && !recallSnapshot?.session ? this.authoring?.getSnapshot() : undefined;
     const connectSnapshot = normal && this.route.page === "connect" ? this.connect?.getSnapshot() : undefined;
-    if (normal && this.route.page === "semantic-neighborhood" && this.neighborhood) {
+    if (normal && this.route.page === "semantic-map" && this.globalMap) {
+      this.cleanupGlobalMap = renderSemanticGlobalMap(surface, this.globalMap, this.globalMapView, {
+        back: () => this.navigate({ page: "discover" }), openNote: (path) => { void this.openNote(path); },
+        explore: (path) => { if (this.neighborhood) { this.navigate({ page: "semantic-neighborhood" }); void this.neighborhood.load(path); } },
+      });
+    } else if (normal && this.route.page === "semantic-neighborhood" && this.neighborhood) {
       renderSemanticNeighborhood(surface, this.neighborhood, this.neighborhoodView, {
         back: () => this.navigate({ page: "discover" }), openNote: (path) => { void this.openNote(path); },
       });
@@ -239,7 +266,7 @@ export class VeynrelHealthView extends ItemView {
     } else if (discover) {
       renderDiscover(surface, discover, (action) => this.semanticAction(action), this.neighborhood ? () => {
         this.navigate({ page: "semantic-neighborhood" }); void this.neighborhood!.prepare();
-      } : undefined);
+      } : undefined, this.globalMap ? () => { this.navigate({ page: "semantic-map" }); void this.globalMap!.load(); } : undefined);
     } else if (normal && this.route.page === "findings") {
       const route = this.route;
       const inbox = findingsInboxViewModel({ findings: this.controller.listFindings(), route,
@@ -306,7 +333,8 @@ export class VeynrelHealthView extends ItemView {
     // A connection result must not hide a later Health scan, recovery or navigation message.
     const mapStatus = normal && (this.route.page === "health" || this.route.page === "topology") && this.topology ? topologyStatus(this.topology.getSnapshot()) : undefined;
     const neighborhoodMessage = this.route.page === "semantic-neighborhood" && this.neighborhood ? neighborhoodStatus(this.neighborhood.getSnapshot()) : undefined;
-    this.status.setText([this.route.page === "semantic-neighborhood" ? neighborhoodMessage ?? this.navigationMessage : this.route.page === "topology" ? this.navigationMessage : primaryStatus, deepError ?? (deepSnapshot ? knowledgeScanStatus(state) ?? deepStatus : undefined), mapStatus].filter(Boolean).join(" · "));
+    const globalMessage = this.route.page === "semantic-map" && this.globalMap ? globalSemanticMapStatus(this.globalMap.getSnapshot()) : undefined;
+    this.status.setText([this.route.page === "semantic-map" ? globalMessage ?? this.navigationMessage : this.route.page === "semantic-neighborhood" ? neighborhoodMessage ?? this.navigationMessage : this.route.page === "topology" ? this.navigationMessage : primaryStatus, deepError ?? (deepSnapshot ? knowledgeScanStatus(state) ?? deepStatus : undefined), mapStatus].filter(Boolean).join(" · "));
     // Routine state and setup errors already belong to their page sections. Keep
     // otherwise unrepresented failures/results visible below the rail as well.
     const healthNotice = model.statusError || state.outcome?.freshness === "stale" ||

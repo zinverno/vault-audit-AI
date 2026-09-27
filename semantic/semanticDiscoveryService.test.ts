@@ -704,3 +704,77 @@ describe("indexed document catalog", () => {
     expect(() => service.findSimilarNotes("A.md")).toThrow("invalid discovery snapshot");
   });
 });
+
+describe("Global Semantic Map exact analysis", () => {
+  it("uses the known normalized mean direction and identical Neighborhood centroids/scores", async () => {
+    const f = similarHarness([entry("a", "A.md", [1, 0]), entry("b", "B.md", [0, 1]), entry("c", "C.md", [1, 0]),
+      entry("empty", "Empty.md", [1, 0], 0, "short"), entry("cancel1", "Cancel.md", [1, 0]), entry("cancel2", "Cancel.md", [-1, 0], 1)]);
+    const result = await f.service.analyzeGlobalSemanticMap();
+    expect(result.state).toBe("ready"); if (result.state !== "ready") throw Error("Expected map");
+    expect(result.indexedNoteCount).toBe(5); expect(result.mappedNoteCount).toBe(3);
+    expect(result.nodes.map((node) => node.coreSimilarity)).toEqual([2 / Math.sqrt(5), 1 / Math.sqrt(5), 2 / Math.sqrt(5)]);
+    expect(f.store.snapshotReads).toBe(1); expect(f.store.mutations).toBe(0);
+    for (const node of result.nodes) {
+      const neighbors = f.service.findSimilarNotes(node.path).map(({ path, score }) => ({ path, score }));
+      expect(node.neighbors).toEqual(neighbors);
+      expect(node.semanticConnectedness).toBe(neighbors.reduce((sum, item) => sum + item.score, 0) / neighbors.length);
+    }
+    expect(result.nodes[0].semanticConnectedness).toBe(0.5);
+    expect(result.edges).toEqual([{ left: "A.md", right: "B.md", score: 0, mutual: true },
+      { left: "A.md", right: "C.md", score: 1, mutual: true }, { left: "B.md", right: "C.md", score: 0, mutual: true }]);
+    expect(await f.service.analyzeGlobalSemanticMap()).toEqual(result);
+  });
+  it("keeps exact available top-5, canonical ties, negative scores and union/mutual edges without thresholds", async () => {
+    const entries = Array.from({ length: 9 }, (_, i) => entry(String(i), `${i}.md`, unitVector([Math.cos(i), Math.sin(i), 0.15])));
+    entries.push(entry("tie", "Tie.md", [...entries[0].vector]));
+    const f = similarHarness(entries); const progress = vi.fn();
+    const result = await f.service.analyzeGlobalSemanticMap({ onProgress: progress });
+    if (result.state !== "ready") throw Error("Expected map");
+    for (const node of result.nodes) {
+      expect(node.neighbors).toEqual(f.service.findSimilarNotes(node.path, { limit: 5 }).map(({ path, score }) => ({ path, score })));
+      expect(node.neighbors).toHaveLength(5); expect(node.neighbors.some((n) => n.path === node.path)).toBe(false);
+      expect(node.semanticConnectedness).toBeCloseTo(node.neighbors.reduce((sum, n) => sum + n.score, 0) / 5, 12);
+    }
+    const ranks = new Map(result.nodes.map((node) => [node.path, node.neighbors]));
+    for (const edge of result.edges) {
+      const a = ranks.get(edge.left)!.some((n) => n.path === edge.right), b = ranks.get(edge.right)!.some((n) => n.path === edge.left);
+      expect(a || b).toBe(true); expect(edge.mutual).toBe(a && b); expect(edge.left < edge.right).toBe(true);
+    }
+    expect(result.edges.some((edge) => !edge.mutual)).toBe(true);
+    expect(new Set(result.edges.map((e) => JSON.stringify([e.left, e.right]))).size).toBe(result.edges.length);
+    expect(result.edges.length).toBeLessThanOrEqual(result.nodes.length * 5);
+    expect(progress).toHaveBeenLastCalledWith({ completedPairs: 45, totalPairs: 45 });
+    expect(JSON.stringify(result)).not.toMatch(/vectors|preview|headingPath|contentHash/);
+    const tied = similarHarness(Array.from({ length: 8 }, (_, i) => entry(String(i), `${i}.md`, [1, 0])));
+    const ties = await tied.service.analyzeGlobalSemanticMap(); if (ties.state !== "ready") throw Error();
+    expect(ties.nodes[7].neighbors.map((n) => n.path)).toEqual(["0.md", "1.md", "2.md", "3.md", "4.md"]);
+  });
+  it("normalizes multichunk centroids using the existing definition", async () => {
+    const f = similarHarness([entry("a0", "A.md", [1, 0]), entry("a1", "A.md", [0, 1], 1), entry("b", "B.md", [-1, 0])]);
+    const result = await f.service.analyzeGlobalSemanticMap(); if (result.state !== "ready") throw Error();
+    expect(result.nodes[0].neighbors[0].score).toBeCloseTo(-Math.SQRT1_2);
+    expect(result.nodes[0].neighbors[0].score).toBe(f.service.findSimilarNotes("A.md")[0].score);
+  });
+  it("handles ill-conditioned cores and singletons without fabricated values", async () => {
+    const cancelled = similarHarness([entry("a", "A.md", [1, 0]), entry("b", "B.md", [-1, 0])]);
+    expect(await cancelled.service.analyzeGlobalSemanticMap()).toEqual({ state: "core-unavailable", indexedNoteCount: 2, mappedNoteCount: 2 });
+    const one = await similarHarness([entry("a", "A.md", [1, 0])]).service.analyzeGlobalSemanticMap();
+    if (one.state !== "ready") throw Error();
+    expect(one.nodes[0]).toMatchObject({ coreSimilarity: 1, semanticConnectedness: null, neighbors: [] }); expect(one.edges).toEqual([]);
+    expect(await similarHarness([]).service.analyzeGlobalSemanticMap()).toEqual({ state: "core-unavailable", indexedNoteCount: 0, mappedNoteCount: 0 });
+  });
+  it("supports the exact cap, refuses cap+1 without comparing or sampling, and supports cancellation", async () => {
+    const { GLOBAL_SEMANTIC_DOCUMENT_CAP: cap } = await import("./globalSemanticMap");
+    const rows = Array.from({ length: cap + 1 }, (_, i) => entry(String(i), `${String(i).padStart(4, "0")}.md`, [1, 0]));
+    const progress = vi.fn(); const f = similarHarness(rows.slice(0, cap));
+    const result = await f.service.analyzeGlobalSemanticMap({ onProgress: progress });
+    expect(result.state).toBe("ready"); expect(result.mappedNoteCount).toBe(cap);
+    expect(progress).toHaveBeenLastCalledWith({ completedPairs: cap * (cap - 1) / 2, totalPairs: cap * (cap - 1) / 2 });
+    progress.mockClear();
+    expect(await similarHarness(rows).service.analyzeGlobalSemanticMap({ onProgress: progress })).toEqual({ state: "too-large", indexedNoteCount: cap + 1, mappedNoteCount: cap + 1 });
+    expect(progress).not.toHaveBeenCalled();
+    const abort = new AbortController();
+    await expect(f.service.analyzeGlobalSemanticMap({ signal: abort.signal, onProgress: () => abort.abort() })).rejects.toThrow("cancelled");
+    expect(f.store.mutations).toBe(0);
+  });
+});

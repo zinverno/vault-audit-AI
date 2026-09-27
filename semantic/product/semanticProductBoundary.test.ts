@@ -7,10 +7,14 @@ describe("semantic product dependency boundary", () => {
     const allowed = new Set(["../../embeddings/factory", "../../embeddings/types", "../../health/semanticIntelligencePort",
       "../types", "./semanticSettingsPort"]);
     for (const file of readdirSync("semantic/product").filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))) {
-      const neighborhoodImports = new Set(file === "semanticNeighborhoodController.ts"
+      const neighborhoodImports = new Set(file === "semanticGlobalMapController.ts"
+        ? ["../../health/semanticHealthAnalysisPort", "../../health/semanticGlobalMapPort", "../globalSemanticMap", "../types", "../semanticIndexRevision", "./semanticGlobalMapModel"]
+        : file === "semanticGlobalMapModel.ts"
+          ? ["../../health/domain/validation", "../../health/semanticHealthAnalysisPort", "../../health/semanticGlobalMapPort", "../globalSemanticMap"]
+          : file === "semanticNeighborhoodController.ts"
         ? ["../../health/domain/validation", "../../health/semanticNeighborhoodPort", "../errors", "../types", "./semanticNeighborhoodModel"]
         : file === "semanticNeighborhoodModel.ts"
-          ? ["../../health/domain/validation", "../../health/semanticNeighborhoodPort", "../semanticDiscoveryService", "../types"] : []);
+          ? ["../../health/domain/validation", "../../health/semanticNeighborhoodPort", "../semanticDiscoveryService", "../types", "../semanticIndexRevision"] : []);
       const source = readFileSync(`semantic/product/${file}`, "utf8");
       const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
       function visit(node: ts.Node): void {

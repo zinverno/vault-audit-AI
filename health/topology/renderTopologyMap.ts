@@ -1,5 +1,6 @@
+import { bindGraphViewport } from "../ui/bindGraphViewport";
 import { t } from "../../i18n";
-import { fitTopology, layoutTopology, panTopology, zoomTopology } from "./topologyLayout";
+import { fitTopology, layoutTopology, panTopology } from "./topologyLayout";
 import type { TopologyLayout, Viewport } from "./topologyLayout";
 import { topologyRelationships } from "./topologyPresentation";
 import type { VaultTopologySnapshot } from "./types";
@@ -69,57 +70,9 @@ export function renderTopologyMap(parent: HTMLElement, map: VaultTopologySnapsho
   transform(); highlight(state?.selected);
   const notice = presentation.shown < presentation.total ? t("@topology.simplified") + " · " + t("@topology.showing-links", { shown: presentation.shown, total: presentation.total }) : undefined;
   if (notice) parent.createEl("p", { text: notice, cls: "veynrel-health-muted" });
-  let pointer: { id: number; startX: number; startY: number; lastX: number; lastY: number; dragged: boolean; node?: string } | undefined;
   const pathsById = new Map(map.nodes.map((node) => [node.id, node.path]));
-  const pointInSvg = (event: { clientX: number; clientY: number }): { x: number; y: number } | undefined => {
-    const matrix = svg.getScreenCTM();
-    if (!matrix) return undefined;
-    const point = svg.createSVGPoint(); point.x = event.clientX; point.y = event.clientY;
-    return point.matrixTransform(matrix.inverse());
-  };
-  const down = (event: PointerEvent): void => {
-    if (event.button !== 0 || pointer) return;
-    const point = pointInSvg(event); if (!point) return;
-    const target = event.target as Element | null;
-    pointer = { id: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: point.x, lastY: point.y, dragged: false,
-      node: pathsById.get(target?.closest("[data-topology-node]")?.getAttribute("data-topology-node") ?? "") };
-    svg.setPointerCapture(event.pointerId);
-  };
-  const move = (event: PointerEvent): void => {
-    if (!state || !pointer || pointer.id !== event.pointerId) return;
-    const point = pointInSvg(event); if (!point) return;
-    if (Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > 5) pointer.dragged = true;
-    if (pointer.dragged) {
-      state.viewport = panTopology(state.viewport, point.x - pointer.lastX, point.y - pointer.lastY); transform();
-      pointer.lastX = point.x; pointer.lastY = point.y;
-    }
-  };
-  const release = (): void => {
-    const id = pointer?.id; pointer = undefined;
-    if (id !== undefined && svg.hasPointerCapture(id)) svg.releasePointerCapture(id);
-  };
-  const up = (event: PointerEvent): void => {
-    if (!pointer || pointer.id !== event.pointerId) return;
-    const selected = !pointer.dragged ? pointer.node : undefined;
-    release(); if (selected) select(selected);
-  };
-  const cancel = (event: PointerEvent): void => { if (pointer?.id === event.pointerId) release(); };
-  const wheel = (event: WheelEvent): void => {
-    if (!state) return;
-    event.preventDefault(); const point = pointInSvg(event); if (!point) return;
-    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1);
-    state.viewport = zoomTopology(state.viewport, Math.exp(-Math.max(-300, Math.min(300, delta)) * 0.002), point.x, point.y); transform();
-  };
-  if (state) {
-    svg.addEventListener("pointerdown", down); svg.addEventListener("pointermove", move);
-    svg.addEventListener("pointerup", up); svg.addEventListener("pointercancel", cancel); svg.addEventListener("lostpointercapture", cancel);
-    svg.addEventListener("wheel", wheel, { passive: false });
-  }
+  const dispose = state ? bindGraphViewport(svg, state, transform, "data-topology-node", (id) => { const path = pathsById.get(id); if (path) select(path); }) : () => {};
   svg.setAttribute("data-layout-ms", String(laidOut - started));
   svg.setAttribute("data-render-ms", String(performance.now() - laidOut));
-  return { select, fit, dispose: () => {
-    release(); svg.removeEventListener("pointerdown", down); svg.removeEventListener("pointermove", move);
-    svg.removeEventListener("pointerup", up); svg.removeEventListener("pointercancel", cancel); svg.removeEventListener("lostpointercapture", cancel);
-    svg.removeEventListener("wheel", wheel);
-  } };
+  return { select, fit, dispose };
 }

@@ -2295,7 +2295,8 @@
 .veynrel-neighborhood-dot { fill: var(--text-muted); stroke: var(--background-primary); stroke-width: 5; }
 .veynrel-neighborhood-source-ring { fill: none; stroke: var(--text-normal); stroke-width: 3; }
 .veynrel-neighborhood-node:is([data-selected="true"], :hover) .veynrel-neighborhood-dot { fill: var(--interactive-accent); stroke: var(--text-normal); }
-.veynrel-neighborhood-label { fill: var(--text-normal); font-size: 24px; pointer-events: none; }
+.veynrel-neighborhood-label { display: none; fill: var(--text-normal); font-size: 24px; pointer-events: none; paint-order: stroke; stroke: var(--background-secondary); stroke-width: 5px; }
+.veynrel-neighborhood-node:is([data-role="source"], [data-selected="true"], [data-label-rank="1"], [data-label-rank="2"], [data-label-rank="3"], :hover) .veynrel-neighborhood-label { display: block; }
 .veynrel-neighborhood-legend { text-align: center; color: var(--text-muted); font-size: var(--font-ui-small); }
 .veynrel-neighborhood-list { display: grid; gap: 5px; margin-block: 20px; }
 .veynrel-neighborhood-list button { display: flex; justify-content: space-between; gap: 12px; text-align: start; padding: 10px 12px; min-width: 0; }
@@ -2329,4 +2330,63 @@
 .veynrel-semantic-progress progress {
   width: 100%;
   max-width: 32rem;
+}
+
+/* Both semantic surfaces share Discover; each retains its distinct relationship meaning. */
+.veynrel-semantic-exploration { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.veynrel-semantic-exploration .veynrel-neighborhood-card { margin: 0; }
+.veynrel-global-map { min-width: 0; container-type: inline-size; }
+.veynrel-global-map h1 { margin-block: 24px 8px; }
+.veynrel-global-map button { min-height: 36px; height: auto; white-space: normal; overflow-wrap: anywhere; }
+.veynrel-global-map-status { padding: 12px 16px; border-inline-start: 3px solid var(--text-normal); background: var(--background-secondary); }
+.veynrel-global-map-metrics { display: flex; flex-wrap: wrap; gap: 36px; margin-block: 20px; }
+.veynrel-global-map-metrics dt { color: var(--text-muted); font-size: var(--font-ui-small); }
+.veynrel-global-map-metrics dd { margin: 4px 0 0; font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.veynrel-global-map-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 16px; }
+.veynrel-global-map-search { display: grid; gap: 8px; max-width: 640px; margin-block: 16px; }
+.veynrel-global-map-search input { width: 100%; min-width: 0; min-height: 40px; }
+.veynrel-global-map-results { display: grid; gap: 6px; max-width: 640px; margin-block-end: 16px; }
+.veynrel-global-map-results button { text-align: start; justify-content: flex-start; padding: 10px 12px; }
+.veynrel-global-map-composition { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.45fr); gap: 24px; align-items: start; }
+.veynrel-global-map-visual, .veynrel-global-map-inspector { min-width: 0; }
+.veynrel-global-map-svg { display: block; width: 100%; max-height: 740px; background: var(--background-secondary); border-radius: var(--radius-l); touch-action: none; cursor: grab; }
+.veynrel-global-map-svg:active { cursor: grabbing; }
+.veynrel-global-map-guide { fill: none; stroke: var(--background-modifier-border); stroke-dasharray: 3 9; }
+.veynrel-global-map-edge { display: none; stroke: var(--text-muted); stroke-width: 1; opacity: 0.22; }
+.veynrel-global-map-edge[data-mutual="true"] { display: block; }
+.veynrel-global-map-edge[data-highlight="true"] { display: block; stroke: var(--text-normal); stroke-width: 2; opacity: 0.9; }
+.veynrel-global-map-node { cursor: pointer; }
+.veynrel-global-map-hit { fill: transparent; }
+.veynrel-global-map-dot { fill: var(--text-muted); stroke: var(--background-primary); stroke-width: 1.5; }
+.veynrel-global-map-node:is([data-selected="true"], :hover) .veynrel-global-map-dot { fill: var(--interactive-accent); stroke: var(--text-normal); stroke-width: 2.5; }
+.veynrel-global-map-core path { fill: none; stroke: var(--text-normal); stroke-width: 2; }
+.veynrel-global-map-core circle { fill: var(--text-faint); }
+.veynrel-global-map-core text { fill: var(--text-muted); font-size: 17px; }
+.veynrel-global-map-label { display: none; fill: var(--text-normal); font-size: 18px; pointer-events: none; paint-order: stroke; stroke: var(--background-secondary); stroke-width: 4px; }
+.veynrel-global-map-node:is([data-label-rank="1"], [data-label-rank="2"], [data-label-rank="3"], [data-label-rank="4"], [data-label-rank="5"], [data-selected="true"], :hover) .veynrel-global-map-label { display: block; }
+.veynrel-global-map-inspector { border: 1px solid var(--background-modifier-border); border-radius: var(--radius-l); padding: 20px; overflow-wrap: anywhere; }
+.veynrel-global-map-inspector h2 { margin-block: 0 8px; }
+.veynrel-global-map-path { color: var(--text-muted); overflow-wrap: anywhere; }
+.veynrel-global-map-facts > div { display: flex; justify-content: space-between; gap: 12px; margin-block: 16px; }
+.veynrel-global-map-facts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.veynrel-global-map-neighbors { display: grid; gap: 6px; }
+.veynrel-global-map-neighbors button { display: flex; justify-content: space-between; gap: 12px; text-align: start; padding: 8px; }
+.veynrel-global-map-neighbors button span:last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.veynrel-global-map-legend { margin-block: 16px; color: var(--text-muted); font-size: var(--font-ui-small); }
+.veynrel-global-map-legend summary { cursor: pointer; color: var(--text-normal); }
+.veynrel-global-map :is(button, input, summary):focus-visible { outline: 2px solid var(--text-normal); outline-offset: 3px; }
+.veynrel-global-map h1[tabindex="-1"]:focus { outline: none; }
+@container (max-width: 800px) {
+  .veynrel-global-map-composition { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 450px) {
+  .veynrel-global-map-node:is([data-label-rank="4"], [data-label-rank="5"]):not([data-selected="true"]):not(:hover) .veynrel-global-map-label { display: none; }
+  .veynrel-global-map-inspector { padding: 14px; }
+}
+@media (max-width: 600px) {
+  .veynrel-semantic-exploration { grid-template-columns: minmax(0, 1fr); }
+  .veynrel-neighborhood-node[data-label-rank="3"]:not([data-selected="true"]):not(:hover) .veynrel-neighborhood-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .veynrel-global-map * { animation: none !important; transition: none !important; }
 }

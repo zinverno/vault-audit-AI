@@ -14,6 +14,8 @@ import type {
   SemanticDuplicatePair,
   SemanticSimilarNotesOptions,
 } from "./types";
+import { GLOBAL_SEMANTIC_DOCUMENT_CAP, GLOBAL_SEMANTIC_NEIGHBORS } from "./globalSemanticMap";
+import type { GlobalSemanticAnalysis, GlobalSemanticNeighbor, GlobalSemanticOptions, GlobalSemanticRelationship } from "./globalSemanticMap";
 
 export const DEFAULT_SIMILAR_NOTES_LIMIT = 10;
 export const DEFAULT_DUPLICATE_PAIR_LIMIT = 100;
@@ -306,6 +308,12 @@ function copyMatch(
   return match;
 }
 
+function yieldGlobalAnalysis(): Promise<void> {
+  // Pure engine also runs outside Obsidian; no DOM/window owner or repeating timer.
+  const timerHost = typeof window === "undefined" ? { setTimeout } : window;
+  return new Promise((resolve) => timerHost.setTimeout(resolve, 0));
+}
+
 export class SemanticDiscoveryService {
   constructor(
     private readonly vectorStore: VectorStore,
@@ -333,6 +341,71 @@ export class SemanticDiscoveryService {
   /** Catalog of the same snapshot, without document-centroid computation. */
   listIndexedPaths(): readonly string[] {
     return Object.freeze([...new Set(this.validatedSnapshot().metadata.map((item) => validatePath(item.path)))].sort(compareStrings));
+  }
+
+  /** Exact, read-only analysis. Prepare the SAME document centroids once, retain only O(N*K) pairs.
+   * Yield every 2048 comparisons so loading/progress, cancellation and revision events can run. */
+  async analyzeGlobalSemanticMap(options: GlobalSemanticOptions = {}): Promise<GlobalSemanticAnalysis> {
+    const check = (): void => { if (options.signal?.aborted) throw new Error("Global semantic analysis cancelled"); };
+    check();
+    // Let the explicit local-loading state paint before preparing the snapshot.
+    await yieldGlobalAnalysis();
+    check();
+    const prepared = this.prepareSnapshot();
+    const documents = prepared.documents.filter((document) => this.eligible(document));
+    const counts = { indexedNoteCount: prepared.documents.length, mappedNoteCount: documents.length };
+    if (documents.length > GLOBAL_SEMANTIC_DOCUMENT_CAP) return { ...counts, state: "too-large" };
+    const core = new Float64Array(this.dimensions);
+    for (const document of documents) {
+      validatePath(document.path);
+      for (let column = 0; column < this.dimensions; column++) core[column] += document.vector![column];
+    }
+    const norm = stableNorm(core);
+    // Mean resultant length protects against cancellation noise, as for document centroids.
+    if (!documents.length || !Number.isFinite(norm) || norm / documents.length <= MIN_DOCUMENT_COHERENCE) {
+      return { ...counts, state: "core-unavailable" };
+    }
+    for (let column = 0; column < this.dimensions; column++) core[column] /= norm;
+    const neighbors: GlobalSemanticNeighbor[][] = documents.map(() => []);
+    const compare = (a: GlobalSemanticNeighbor, b: GlobalSemanticNeighbor): number => b.score - a.score || compareStrings(a.path, b.path);
+    const offer = (list: GlobalSemanticNeighbor[], path: string, score: number): void => {
+      const candidate = { path, score };
+      if (list.length === GLOBAL_SEMANTIC_NEIGHBORS && compare(candidate, list[list.length - 1]) >= 0) return;
+      list.push(candidate); list.sort(compare);
+      if (list.length > GLOBAL_SEMANTIC_NEIGHBORS) list.pop();
+    };
+    const totalPairs = documents.length * (documents.length - 1) / 2;
+    let completedPairs = 0;
+    const progress = (): void => {
+      try { options.onProgress?.({ completedPairs, totalPairs }); } catch { /* Observers cannot change analysis. */ }
+    };
+    progress();
+    for (let left = 0; left < documents.length; left++) {
+      for (let right = left + 1; right < documents.length; right++) {
+        const score = cosine(documents[left].vector!, documents[right].vector!);
+        offer(neighbors[left], documents[right].path, score);
+        offer(neighbors[right], documents[left].path, score);
+        if (++completedPairs % 2048 === 0) {
+          progress(); await yieldGlobalAnalysis(); check();
+        }
+      }
+    }
+    check(); progress();
+    const byPath = new Map(documents.map((document, index) => [document.path, neighbors[index]]));
+    const edges = new Map<string, GlobalSemanticRelationship>();
+    const nodes = documents.map((document, index) => {
+      const nearest = neighbors[index];
+      for (const neighbor of nearest) {
+        const [left, right] = [document.path, neighbor.path].sort(compareStrings);
+        const mutual = byPath.get(neighbor.path)!.some((item) => item.path === document.path);
+        edges.set(JSON.stringify([left, right]), { left, right, score: neighbor.score, mutual });
+      }
+      return { path: document.path, coreSimilarity: cosine(document.vector!, core),
+        semanticConnectedness: nearest.length ? nearest.reduce((sum, item) => sum + item.score, 0) / nearest.length : null,
+        neighbors: nearest };
+    });
+    return { ...counts, state: "ready", nodes,
+      edges: [...edges.values()].sort((a, b) => compareStrings(a.left, b.left) || compareStrings(a.right, b.right)) };
   }
 
   findSimilarNotes(

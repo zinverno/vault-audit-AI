@@ -1,3 +1,4 @@
+import { SemanticGlobalMapController } from "./semantic/product/semanticGlobalMapController";
 import { t as tr, tAll, setLanguage, dateLocale } from "./i18n";
 import {
   Plugin,
@@ -181,7 +182,7 @@ export default class AIHubPlugin extends Plugin {
           this.recallAuthoring = authoring;
           this.register(() => authoring.dispose());
           return authoring;
-        }, connect, new SemanticNeighborhoodController(this.semanticController));
+        }, connect, new SemanticNeighborhoodController(this.semanticController), new SemanticGlobalMapController(this.semanticController));
 
       this.addCommand({
         id: "ai-hub-open-panel",

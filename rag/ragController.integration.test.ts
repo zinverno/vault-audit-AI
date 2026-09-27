@@ -153,6 +153,7 @@ function fakeRuntime(initialContext = ragContext()) {
     }),
     search: vi.fn(async () => []),
     buildRagContext: vi.fn(async () => currentContext),
+    analyzeGlobalSemanticMap: vi.fn(async () => ({ state: "core-unavailable" as const, indexedNoteCount: 0, mappedNoteCount: 0 })),
     listIndexedPaths: vi.fn(async () => ["Alpha.md"]),
     findSimilarNotes: vi.fn(async () => []),
     findPotentialDuplicates: vi.fn(async () => []),
