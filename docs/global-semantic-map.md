@@ -287,7 +287,7 @@ Focus-mode and child-route regression results are recorded separately in
 - Exact global analysis is capped; no ANN/HNSW or silent sampling.
 - No AI-generated cluster labels or invented topic names.
 - No Markdown-link overlay or mixing of semantic and explicit relationships.
-- No missing-link recommendations, comparative map or new Findings.
+- No missing-link recommendations or new Findings.
 - Semantic proximity does not imply factual agreement.
 - Semantic connectedness does not imply importance.
 - Vault semantic core is a mean direction, not a best note.
@@ -297,3 +297,12 @@ Focus-mode and child-route regression results are recorded separately in
 - No persisted global-map layout; restarting may require an explicit rebuild
   from the existing index. Source embeddings may be stale relative to note edits;
   this map represents its captured semantic index, not freshly read text.
+
+## Compare semantic and explicit relationships
+
+[Connection Opportunities](connection-opportunities.md) consumes this published
+sparse top-five map and the existing Vault Topology. It does not recompute scores
+or change Global Map ownership. A cached ready map is reused, while stale inputs
+require an explicit comparison refresh. Focus changes with the same map/revision
+do not invalidate comparison. The three classes are candidate, aligned, and
+explicit-only; absence from top-five does not mean semantic distance.

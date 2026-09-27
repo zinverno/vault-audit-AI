@@ -198,3 +198,11 @@ Hidden Connections and Recall optimizer/history/decks remain outside this roadma
 completion and are not implemented here.
 
 Verification evidence and platform limits are in [product IA verification](product-ia-verification.md).
+
+## Connection comparison
+
+[Connection Opportunities](connection-opportunities.md) joins the existing Global
+Semantic Map and metadata-only Vault Topology after an explicit Discover action.
+It is a Discover child route, with no eighth primary tab. Category/search/selection
+and visible-row state survive Neighborhood exploration and return. It creates no
+Findings, links, settings, or persistence.

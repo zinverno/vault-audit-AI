@@ -1,0 +1,267 @@
+{
+  "boundaries": [
+    {
+      "language": "en",
+      "passive": {
+        "semanticLoad": 0,
+        "topologyLoad": 0,
+        "inventory": 0,
+        "metadata": 0,
+        "focus": 0,
+        "global": 0,
+        "catalog": 0,
+        "similarity": 0,
+        "snapshot": 0,
+        "embed": 0,
+        "fetch": 0,
+        "xhr": 0,
+        "read": 0,
+        "cachedRead": 0,
+        "write": 0,
+        "writeBinary": 0,
+        "saveData": 0,
+        "mutate": 0
+      },
+      "opened": {
+        "semanticLoad": 0,
+        "topologyLoad": 1,
+        "inventory": 2,
+        "metadata": 150,
+        "focus": 0,
+        "global": 0,
+        "catalog": 0,
+        "similarity": 0,
+        "snapshot": 0,
+        "embed": 0,
+        "fetch": 0,
+        "xhr": 0,
+        "read": 0,
+        "cachedRead": 0,
+        "write": 0,
+        "writeBinary": 0,
+        "saveData": 0,
+        "mutate": 0
+      },
+      "counts": {
+        "mapped": 150,
+        "topology": 150,
+        "comparable": 148,
+        "semantic": 593,
+        "candidate": 574,
+        "aligned": 2,
+        "explicitOnly": 1,
+        "unclassified": 17,
+        "outside": 1
+      }
+    },
+    {
+      "language": "ru",
+      "passive": {
+        "semanticLoad": 0,
+        "topologyLoad": 0,
+        "inventory": 0,
+        "metadata": 0,
+        "focus": 0,
+        "global": 0,
+        "catalog": 0,
+        "similarity": 0,
+        "snapshot": 0,
+        "embed": 0,
+        "fetch": 0,
+        "xhr": 0,
+        "read": 0,
+        "cachedRead": 0,
+        "write": 0,
+        "writeBinary": 0,
+        "saveData": 0,
+        "mutate": 0
+      },
+      "opened": {
+        "semanticLoad": 0,
+        "topologyLoad": 1,
+        "inventory": 2,
+        "metadata": 150,
+        "focus": 0,
+        "global": 0,
+        "catalog": 0,
+        "similarity": 0,
+        "snapshot": 0,
+        "embed": 0,
+        "fetch": 0,
+        "xhr": 0,
+        "read": 0,
+        "cachedRead": 0,
+        "write": 0,
+        "writeBinary": 0,
+        "saveData": 0,
+        "mutate": 0
+      },
+      "counts": {
+        "mapped": 150,
+        "topology": 150,
+        "comparable": 148,
+        "semantic": 593,
+        "candidate": 574,
+        "aligned": 2,
+        "explicitOnly": 1,
+        "unclassified": 17,
+        "outside": 1
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "language": "en",
+      "roundTrip": true,
+      "state": {
+        "category": "aligned",
+        "query": "join",
+        "visibleLimit": 100,
+        "selectedPair": "[\"Architecture/Processing.md\",\"Architecture/Query Planning.md\"]"
+      },
+      "focusPreserved": true,
+      "io": {
+        "semanticLoad": 0,
+        "topologyLoad": 1,
+        "inventory": 4,
+        "metadata": 300,
+        "focus": 1,
+        "global": 1,
+        "catalog": 1,
+        "similarity": 6,
+        "snapshot": 9,
+        "embed": 0,
+        "fetch": 0,
+        "xhr": 0,
+        "read": 0,
+        "cachedRead": 0,
+        "write": 0,
+        "writeBinary": 0,
+        "saveData": 0,
+        "mutate": 0
+      }
+    },
+    {
+      "language": "ru",
+      "roundTrip": true,
+      "state": {
+        "category": "aligned",
+        "query": "join",
+        "visibleLimit": 100,
+        "selectedPair": "[\"Architecture/Processing.md\",\"Architecture/Query Planning.md\"]"
+      },
+      "focusPreserved": true,
+      "io": {
+        "semanticLoad": 0,
+        "topologyLoad": 1,
+        "inventory": 4,
+        "metadata": 300,
+        "focus": 1,
+        "global": 1,
+        "catalog": 1,
+        "similarity": 6,
+        "snapshot": 9,
+        "embed": 0,
+        "fetch": 0,
+        "xhr": 0,
+        "read": 0,
+        "cachedRead": 0,
+        "write": 0,
+        "writeBinary": 0,
+        "saveData": 0,
+        "mutate": 0
+      }
+    }
+  ],
+  "performance": [
+    {
+      "notes": 150,
+      "pairs": 577,
+      "samples": [
+        26.400000005960464,
+        23.900000005960464,
+        20.80000001192093,
+        20.099999994039536,
+        28,
+        23.099999994039536,
+        22.69999998807907
+      ],
+      "medianMs": 23.099999994039536,
+      "rows": 50
+    },
+    {
+      "notes": 300,
+      "pairs": 1332,
+      "samples": [
+        19.400000005960464,
+        19.5,
+        19.599999994039536,
+        23.099999994039536,
+        25.099999994039536,
+        21.400000005960464,
+        20.30000001192093
+      ],
+      "medianMs": 20.30000001192093,
+      "rows": 50
+    },
+    {
+      "notes": 500,
+      "pairs": 2332,
+      "samples": [
+        19.200000017881393,
+        19.400000005960464,
+        19.200000017881393,
+        31.700000017881393,
+        29.400000005960464,
+        23.099999994039536,
+        20
+      ],
+      "medianMs": 20,
+      "rows": 50
+    }
+  ],
+  "exceptions": [],
+  "limitations": [
+    "Linux desktop only; narrow viewports are not mobile OS",
+    "No screen-reader speech, popout or third-party theme test",
+    "requestUrl is covered by the real-runtime integration test; native tracks embed/fetch/XHR"
+  ],
+  "environment": {
+    "electron": "39.8.10",
+    "platform": "linux",
+    "obsidian": "1.12.7",
+    "versionSource": "native navigator.userAgent"
+  },
+  "artifactSha256": "d7fd2fb4742fd997229a649ee6624d4956cdb91c9f42ea5cee7b6d7dd9304e57",
+  "stylesSha256": "45beeb9bb82b16c6efe8e474094a724aded5f2b21e033cd64b25049a06ac4b66",
+  "implementationCommit": "9719dc6",
+  "matrix": {
+    "passed": 168,
+    "languages": [
+      "en",
+      "ru"
+    ],
+    "themes": [
+      "dark",
+      "light",
+      "yellow"
+    ],
+    "viewports": [
+      320,
+      390,
+      768,
+      1024,
+      1280,
+      1440,
+      1600
+    ],
+    "scenarios": [
+      "aligned",
+      "candidate",
+      "explicit-only",
+      "stale"
+    ],
+    "pageOverflowCases": 0,
+    "rawTranslationKeyCases": 0
+  }
+}

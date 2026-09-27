@@ -259,3 +259,11 @@ Screenshots: [chooser](semantic-neighborhood-evidence/semantic-neighborhood-choo
 - No Findings, Health scores, recommendations or Topology data are changed.
 - Synchronous discovery can occupy the main thread for a large index; timings
   depend on corpus size, chunk count and vector dimensions.
+
+## Connection comparison origin
+
+[Connection Opportunities](connection-opportunities.md) can explore either note
+in a selected pair. Neighborhood carries `returnTo: "connection-opportunities"`
+through local recentering. Back restores the comparison category, search, pair
+selection and visible-row limit without reloading either comparison source. The
+existing Discover and Global Map return origins remain supported.
