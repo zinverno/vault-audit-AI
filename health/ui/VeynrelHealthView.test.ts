@@ -1438,8 +1438,8 @@ describe("Semantic Neighborhood Discover child surface", () => {
     expect(f.engine.listIndexedPaths).toHaveBeenCalledOnce(); expect(f.engine.findSimilarNotes).not.toHaveBeenCalled();
     await f.view.onClose(); f.neighborhood.dispose(); f.controller.dispose();
   });
-  it("opens Global Map explicitly as a Discover child, searches/selects locally, and reuses Neighborhood", async () => {
-    const f = await neighborhoodFixture();
+  it.each(["en", "ru"] as const)("renders map scale/summary and preserves local selection and Neighborhood integration in %s", async (lang) => {
+    setLanguage(lang); const f = await neighborhoodFixture();
     f.content.action("nav-discover").click(); expect(f.engine.analyzeGlobalSemanticMap).not.toHaveBeenCalled();
     f.vault.read.mockClear(); f.cachedRead.mockClear(); f.adapter.write.mockClear(); mocks.requestUrl.mockClear();
     f.content.action("global-map-open").click(); await f.globalMap.load();
@@ -1447,8 +1447,20 @@ describe("Semantic Neighborhood Discover child surface", () => {
     expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
     expect(f.content.all().filter(e => e.attrs["tabindex"] === "0")).toEqual([]);
     expect(f.content.action("global-map-open-note")).toBeUndefined();
+    expect(f.content.texts()).toContain(t("@global-map.radial-scale"));
+    expect(f.content.texts()).toContain(t("@global-map.score-summary", { min: "0.960", max: "0.960", median: "0.960" }));
+    expect(f.content.texts()).toContain(t("@global-map.score-summary", { min: "0.910", max: "0.910", median: "0.910" }));
+    const rings = f.content.all().filter(e => e.cls === "veynrel-global-map-guide");
+    const scale = f.content.all().filter(e => e.cls === "veynrel-global-map-ring-label");
+    expect(rings.map(e => Number(e.attrs.r))).toEqual([120, 265, 410]);
+    expect(scale.map(e => Number(e.attrs.y))).toEqual([368, 223, 78]);
+    const coordinates = () => f.content.all().filter(e => e.cls === "veynrel-global-map-dot").map(e => ({ ...e.attrs }));
+    const before = coordinates();
     f.content.action("global-map-search").input("B.md"); f.content.action("global-map-result-0").click();
     expect(f.content.texts()).toContain("B.md"); expect(f.content.texts()).toContain("0.910");
+    expect(coordinates()).toEqual(before);
+    expect(f.content.all().find(e => e.attrs["data-global-map-node"] === "B.md")?.attrs["data-selected"]).toBe("true");
+    expect(f.content.texts()).not.toContain("@global-map.");
     expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
     for (const spy of [f.vault.read, f.cachedRead, f.adapter.write, mocks.requestUrl]) expect(spy).not.toHaveBeenCalled();
     f.content.action("global-map-explore").click(); await f.neighborhood.load("B.md");
@@ -1465,6 +1477,8 @@ describe("Semantic Neighborhood Discover child surface", () => {
     f.content.action("neighborhood-source-0").focus(); f.content.action("neighborhood-source-0").click(); await f.neighborhood.load("A.md");
     expect(f.engine.findSimilarNotes).toHaveBeenCalledTimes(1);
     expect(f.content.ownerDocument.activeElement).toBe(f.content.action("neighborhood-select-0"));
+    expect(f.content.texts()).toContain(t("@neighborhood.legend"));
+    expect(f.content.action("neighborhood-select-0").attrs["aria-pressed"]).toBe("true");
     f.content.action("neighborhood-select-1").focus(); f.content.action("neighborhood-select-1").click();
     expect(f.engine.findSimilarNotes).toHaveBeenCalledTimes(1); expect(f.content.texts()).toContain("<img src=x onerror=alert(1)> literal preview");
     expect(f.content.all().filter((e) => e.tag === "img")).toEqual([]);

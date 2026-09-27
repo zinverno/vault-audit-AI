@@ -11,18 +11,22 @@ export const semanticGraphBasename = (basename: string, limit = 22): string => {
   return characters.length > limit ? characters.slice(0, limit - 1).join("") + "…" : basename;
 };
 
-/** At most six permanent global labels. Stagger text only; semantic node positions never move. */
-export function separateSemanticLabels(labels: readonly { path: string; text: string; x: number; y: number; anchor: string }[]) {
-  const boxes: Array<{ left: number; right: number; y: number }> = [];
+/** At most six permanent global labels. Try nearest free rows in both directions,
+ * including at map boundaries. Only text moves; node geometry is untouched. */
+export function separateSemanticLabels(labels: readonly { path: string; text: string; width?: number; x: number; y: number; anchor: string }[],
+  obstacles: readonly { left: number; right: number; top: number; bottom: number }[] = []) {
+  const boxes = [...obstacles];
   return labels.map((label) => {
-    const width = Array.from(label.text).length * 10;
+    const width = label.width || Array.from(label.text).length * 12;
     const left = Math.max(16, Math.min(984 - width, label.x - (label.anchor === "end" ? width : label.anchor === "middle" ? width / 2 : 0)));
-    let y = Math.max(20, Math.min(980, label.y));
+    const initialY = Math.max(20, Math.min(980, label.y));
+    let y = initialY;
     const direction = y < 500 ? -1 : 1;
-    for (let attempt = 0; attempt < 12 && boxes.some((box) => left < box.right + 8 && left + width + 8 > box.left && Math.abs(y - box.y) < 24); attempt++) {
-      y = Math.max(20, Math.min(980, label.y + direction * (attempt + 1) * 26));
+    for (let attempt = 0; attempt < 72; attempt++) {
+      y = Math.max(20, Math.min(980, initialY + Math.ceil(attempt / 2) * 28 * (attempt % 2 ? direction : -direction)));
+      if (!boxes.some((box) => left < box.right + 8 && left + width + 8 > box.left && y - 12 < box.bottom + 4 && y + 12 > box.top - 4)) break;
     }
-    boxes.push({ left, right: left + width, y });
-    return { path: label.path, x: left + (label.anchor === "end" ? width : label.anchor === "middle" ? width / 2 : 0), y };
+    boxes.push({ left, right: left + width, top: y - 12, bottom: y + 12 });
+    return { path: label.path, x: left + (label.anchor === "end" ? width : label.anchor === "middle" ? width / 2 : 0), y, left, right: left + width };
   });
 }

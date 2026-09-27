@@ -107,11 +107,15 @@ The pure deterministic layout centers the source at (500, 500) in a 1000 × 1000
 space. Neighbor radius is:
 
 ```
-normalized = (cosine + 1) / 2
-radius = 190 + (1 - normalized) * 220
+radius = 100 + 310 * sqrt((1 - cosine) / 2) // [100, 410]
 ```
 
-Higher cosine never places a node farther away. Angles distribute nodes in
+This fixed normalized chord-distance scale expands the high-similarity end without
+using neighbor ranks or the current result's score range. For example, cosine 0.9
+maps to radius 169.3 and 0.5 to 255.0. Even identical notes keep 100 units of
+clearance from the source. The on-screen legend explains that closer notes are
+more semantically similar to the source. Higher cosine never places a node farther
+away. Angles distribute nodes in
 score-descending, path-ascending order. The fixed guide rings are spatial guides,
 not semantic thresholds. Edges have a uniform quiet stroke, no arrows, and no
 redundant width encoding. There is no randomness, simulation or ongoing motion.
@@ -135,8 +139,9 @@ are avoided. Narrow screens retain source + selected and the top two neighbors.
 Other nodes reveal labels on hover/selection. Labels use basenames, truncate to
 the available visual space, and sit outside nodes in the radial direction with
 position-dependent text anchors. Full paths remain in native titles, the keyboard
-list's accessible names and inspector. Node radii, distance, evidence, controller,
-recenter and revision behavior are unchanged.
+list's accessible names and inspector. Node sizes, evidence, controller, recenter
+and revision behavior are unchanged; only the score-to-distance presentation scale
+has been expanded.
 
 Wide panes place map/list beside the inspector. At container widths ≤850px the
 inspector follows map/list. Long paths and previews wrap. Primary navigation keeps

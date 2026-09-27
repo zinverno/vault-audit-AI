@@ -5,7 +5,7 @@ import { bindGraphViewport } from "./bindGraphViewport";
 import { fitGraph, panGraph } from "./graphViewport";
 import type { Viewport } from "./graphViewport";
 import { semanticGraphBasename, semanticGraphLabel, separateSemanticLabels } from "./semanticGraphLabel";
-import { semanticGlobalMapLayout } from "./semanticGlobalMapLayout";
+import { semanticCoreRadius, semanticGlobalMapLayout } from "./semanticGlobalMapLayout";
 
 const layouts = new WeakMap<SemanticGlobalMap, ReturnType<typeof semanticGlobalMapLayout>>();
 export interface SemanticGlobalMapViewState { query: string; selected?: string; map?: SemanticGlobalMap; viewport: Viewport }
@@ -21,7 +21,13 @@ export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticG
   const labeled = [...map.nodes].sort((a, b) => (b.semanticConnectedness ?? -1) - (a.semanticConnectedness ?? -1) || compareStrings(a.path, b.path)).slice(0, 5).map((node) => node.path);
   const svg = parent.createSvg("svg", { cls: "veynrel-global-map-svg", attr: { viewBox: "0 0 1000 1000", "aria-hidden": "true", focusable: "false" } });
   const scene = svg.createSvg("g");
-  for (const radius of [120, 265, 410]) scene.createSvg("circle", { cls: "veynrel-global-map-guide", attr: { cx: "500", cy: "500", r: String(radius) } });
+  const labelObstacles = [{ left: 365, right: 635, top: 527, bottom: 557 }, { left: 474, right: 526, top: 474, bottom: 526 }];
+  for (const score of [1, 0, -1]) {
+    const radius = semanticCoreRadius(score), y = 500 - radius - 12;
+    scene.createSvg("circle", { cls: "veynrel-global-map-guide", attr: { cx: "500", cy: "500", r: String(radius) } });
+    scene.createSvg("text", { cls: "veynrel-global-map-ring-label", attr: { x: "500", y: String(y), "text-anchor": "middle", "dominant-baseline": "middle" } }).textContent = score > 0 ? "+1" : String(score);
+    labelObstacles.push({ left: 478, right: 522, top: y - 12, bottom: y + 12 });
+  }
   const lines = map.edges.map((edge) => {
     const a = positions.get(edge.left)!; const b = positions.get(edge.right)!;
     return { edge, element: scene.createSvg("line", { cls: "veynrel-global-map-edge", attr: {
@@ -37,13 +43,14 @@ export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticG
     const group = scene.createSvg("g", { cls: "veynrel-global-map-node", attr: {
       "data-global-map-node": node.path, "data-label-rank": String(labeled.indexOf(node.path) + 1) } });
     group.createSvg("title").textContent = node.path;
+    const connector = group.createSvg("line", { cls: "veynrel-global-map-label-link" });
     group.createSvg("circle", { cls: "veynrel-global-map-hit", attr: { cx: String(point.x), cy: String(point.y), r: String(point.radius + 5) } });
     group.createSvg("circle", { cls: "veynrel-global-map-dot", attr: { cx: String(point.x), cy: String(point.y), r: String(point.radius) } });
     const label = semanticGraphLabel(point, point.radius);
     const text = semanticGraphBasename(node.basename);
     const element = group.createSvg("text", { cls: "veynrel-global-map-label", attr: { x: String(label.x), y: String(label.y), "text-anchor": label.anchor,
       "dominant-baseline": "middle" } }); element.textContent = text;
-    return { path: node.path, group, label: { ...label, text, element } };
+    return { path: node.path, point, group, connector, label: { ...label, text, element } };
   });
   const update = (): void => { scene.setAttribute("transform", `translate(${state.viewport.x} ${state.viewport.y}) scale(${state.viewport.zoom})`); };
   const highlight = (): void => {
@@ -53,11 +60,24 @@ export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticG
       element.setAttribute("data-highlight", String(selected));
     }
     for (const { path, group } of groups) group.setAttribute("data-selected", String(path === state.selected));
-    for (const { label } of groups) { label.element.setAttribute("x", String(label.x)); label.element.setAttribute("y", String(label.y)); }
+    for (const { label, connector } of groups) { label.element.setAttribute("x", String(label.x)); label.element.setAttribute("y", String(label.y)); connector.setAttribute("data-linked", "false"); }
     const permanent = groups.filter((item) => labeled.includes(item.path) || item.path === state.selected)
       .sort((a, b) => Number(b.path === state.selected) - Number(a.path === state.selected) || labeled.indexOf(a.path) - labeled.indexOf(b.path));
-    const placement = separateSemanticLabels(permanent.map((item) => ({ path: item.path, ...item.label })));
-    placement.forEach((position, i) => { permanent[i].label.element.setAttribute("x", String(position.x)); permanent[i].label.element.setAttribute("y", String(position.y)); });
+    const placement = separateSemanticLabels(permanent.map((item) => ({ path: item.path, ...item.label,
+      width: item.label.element.getComputedTextLength?.() })), labelObstacles);
+    placement.forEach((position, i) => {
+      const { label, point, connector } = permanent[i];
+      label.element.setAttribute("x", String(position.x)); label.element.setAttribute("y", String(position.y));
+      const moved = Math.hypot(position.x - label.x, position.y - label.y) > 1;
+      connector.setAttribute("data-linked", String(moved));
+      // Finish at the nearest label edge; the text and leader never intercept input.
+      const x = Math.max(position.left - 6, Math.min(position.right + 6, point.x));
+      const y = Math.max(position.y - 12, Math.min(position.y + 12, point.y));
+      const distance = Math.hypot(x - point.x, y - point.y) || 1;
+      connector.setAttribute("x1", String(point.x + (x - point.x) * point.radius / distance));
+      connector.setAttribute("y1", String(point.y + (y - point.y) * point.radius / distance));
+      connector.setAttribute("x2", String(x)); connector.setAttribute("y2", String(y));
+    });
   };
   const select = (path: string, center = false): void => {
     const point = positions.get(path); if (!point) return;

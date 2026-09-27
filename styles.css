@@ -2339,9 +2339,12 @@
 .veynrel-global-map h1 { margin-block: 24px 8px; }
 .veynrel-global-map button { min-height: 36px; height: auto; white-space: normal; overflow-wrap: anywhere; }
 .veynrel-global-map-status { padding: 12px 16px; border-inline-start: 3px solid var(--text-normal); background: var(--background-secondary); }
-.veynrel-global-map-metrics { display: flex; flex-wrap: wrap; gap: 36px; margin-block: 20px; }
+.veynrel-global-map-metrics { display: flex; flex-wrap: wrap; gap: 16px 28px; margin-block: 20px; }
 .veynrel-global-map-metrics dt { color: var(--text-muted); font-size: var(--font-ui-small); }
-.veynrel-global-map-metrics dd { margin: 4px 0 0; font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.veynrel-global-map-metrics dd { margin: 4px 0 0; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.veynrel-global-map-summary { flex: 1 1 220px; max-width: 32ch; }
+.veynrel-global-map-summary dd { font-size: var(--font-ui-small); font-weight: 400; overflow-wrap: anywhere; }
+.veynrel-global-map-scale { margin: 0 0 10px; color: var(--text-muted); font-size: var(--font-ui-small); }
 .veynrel-global-map-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 16px; }
 .veynrel-global-map-search { display: grid; gap: 8px; max-width: 640px; margin-block: 16px; }
 .veynrel-global-map-search input { width: 100%; min-width: 0; min-height: 40px; }
@@ -2351,7 +2354,8 @@
 .veynrel-global-map-visual, .veynrel-global-map-inspector { min-width: 0; }
 .veynrel-global-map-svg { display: block; width: 100%; max-height: 740px; background: var(--background-secondary); border-radius: var(--radius-l); touch-action: none; cursor: grab; }
 .veynrel-global-map-svg:active { cursor: grabbing; }
-.veynrel-global-map-guide { fill: none; stroke: var(--background-modifier-border); stroke-dasharray: 3 9; }
+.veynrel-global-map-guide { fill: none; stroke: var(--text-faint); stroke-opacity: 0.65; stroke-width: 1.2; stroke-dasharray: 3 9; }
+.veynrel-global-map-ring-label { fill: var(--text-muted); font-size: 18px; pointer-events: none; paint-order: stroke; stroke: var(--background-secondary); stroke-width: 5px; }
 .veynrel-global-map-edge { display: none; stroke: var(--text-muted); stroke-width: 1; opacity: 0.22; }
 .veynrel-global-map-edge[data-mutual="true"] { display: block; }
 .veynrel-global-map-edge[data-highlight="true"] { display: block; stroke: var(--text-normal); stroke-width: 2; opacity: 0.9; }
@@ -2364,6 +2368,8 @@
 .veynrel-global-map-core text { fill: var(--text-muted); font-size: 17px; }
 .veynrel-global-map-label { display: none; fill: var(--text-normal); font-size: 18px; pointer-events: none; paint-order: stroke; stroke: var(--background-secondary); stroke-width: 4px; }
 .veynrel-global-map-node:is([data-label-rank="1"], [data-label-rank="2"], [data-label-rank="3"], [data-label-rank="4"], [data-label-rank="5"], [data-selected="true"], :hover) .veynrel-global-map-label { display: block; }
+.veynrel-global-map-label-link { display: none; stroke: var(--text-muted); stroke-width: 1; pointer-events: none; }
+.veynrel-global-map-node:is([data-label-rank="1"], [data-label-rank="2"], [data-label-rank="3"], [data-label-rank="4"], [data-label-rank="5"], [data-selected="true"]) .veynrel-global-map-label-link[data-linked="true"] { display: block; }
 .veynrel-global-map-inspector { border: 1px solid var(--background-modifier-border); border-radius: var(--radius-l); padding: 20px; overflow-wrap: anywhere; }
 .veynrel-global-map-inspector h2 { margin-block: 0 8px; }
 .veynrel-global-map-path { color: var(--text-muted); overflow-wrap: anywhere; }
@@ -2381,6 +2387,7 @@
 }
 @container (max-width: 450px) {
   .veynrel-global-map-node:is([data-label-rank="4"], [data-label-rank="5"]):not([data-selected="true"]):not(:hover) .veynrel-global-map-label { display: none; }
+  .veynrel-global-map-node:is([data-label-rank="4"], [data-label-rank="5"]):not([data-selected="true"]) .veynrel-global-map-label-link { display: none; }
   .veynrel-global-map-inspector { padding: 14px; }
 }
 @media (max-width: 600px) {
