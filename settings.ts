@@ -885,7 +885,7 @@ export class AIHubSettingTab extends PluginSettingTab {
       const freeRow = el.createDiv({ cls: "ai-hub-ollama-row" });
       const freeBtn = freeRow.createEl("button", { cls: "ai-hub-ollama-btn" });
       setIcon(freeBtn.createSpan(), "refresh-cw");
-      freeBtn.createSpan({ text: " Показать актуальные бесплатные модели" });
+      freeBtn.createSpan({ text: tr("Показать актуальные бесплатные модели") });
       const freeStatus = freeRow.createDiv({ cls: "ai-hub-ollama-status" });
 
       freeBtn.addEventListener("click", () => {

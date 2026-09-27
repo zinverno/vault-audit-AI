@@ -158,8 +158,9 @@ it("preserves baseline controls except the verified release and native markup fi
   }
   visit(source);
   expect(callbacks).toEqual({ ...baseline.controlCallbacks, ...releaseSafety,
-    // UI consolidation: native Setting headings and provider buttons; all durable callbacks remain frozen.
+    // UI consolidation: native headings/buttons and the existing free-model translation; durable callbacks stay frozen.
     "method:addHeading": "df027728a56e192c246af36f41a110d960275b1b72843329a5be90cff14e8e0c",
+    "method:renderModelOptions": "f40d324dcb6ecf783cec2013b750afae4acb38adade1a9a7cffd46ffa1379466",
     "method:renderProviderCards": "3b19426d826726e3317259123552832846115a9e20c38e61418cf8e7a059a0e5",
   });
 });
