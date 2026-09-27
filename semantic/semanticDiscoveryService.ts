@@ -15,7 +15,7 @@ import type {
   SemanticSimilarNotesOptions,
 } from "./types";
 import { GLOBAL_SEMANTIC_DOCUMENT_CAP, GLOBAL_SEMANTIC_NEIGHBORS } from "./globalSemanticMap";
-import type { GlobalSemanticAnalysis, GlobalSemanticNeighbor, GlobalSemanticOptions, GlobalSemanticRelationship } from "./globalSemanticMap";
+import type { GlobalSemanticAnalysis, GlobalSemanticNeighbor, GlobalSemanticOptions, GlobalSemanticRelationship, SemanticFocusAnalysis } from "./globalSemanticMap";
 
 export const DEFAULT_SIMILAR_NOTES_LIMIT = 10;
 export const DEFAULT_DUPLICATE_PAIR_LIMIT = 100;
@@ -406,6 +406,19 @@ export class SemanticDiscoveryService {
     });
     return { ...counts, state: "ready", nodes,
       edges: [...edges.values()].sort((a, b) => compareStrings(a.left, b.left) || compareStrings(a.right, b.right)) };
+  }
+
+  /** One validated snapshot, the same eligible centroids, then O(N*D) focus comparisons. */
+  analyzeSemanticFocus(rawSourcePath: string): SemanticFocusAnalysis | undefined {
+    const sourcePath = validatePath(rawSourcePath);
+    const prepared = this.prepareSnapshot();
+    const documents = prepared.documents.filter((document) => this.eligible(document));
+    if (documents.length > GLOBAL_SEMANTIC_DOCUMENT_CAP) return undefined;
+    const source = documents.find((document) => document.path === sourcePath);
+    if (!source) return undefined;
+    return { path: sourcePath, scores: documents.map((document) => ({
+      path: validatePath(document.path), score: cosine(source.vector!, document.vector!),
+    })) };
   }
 
   findSimilarNotes(

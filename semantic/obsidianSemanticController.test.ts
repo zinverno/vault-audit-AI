@@ -121,6 +121,7 @@ function fakeRuntime(overrides: Partial<SemanticRuntime> = {}): SemanticRuntime 
         generationAfter: generation,
       };
     }),
+    analyzeSemanticFocus: vi.fn(async () => undefined),
     analyzeGlobalSemanticMap: vi.fn(async () => ({ state: "core-unavailable" as const, indexedNoteCount: 0, mappedNoteCount: 0 })),
     listIndexedPaths: vi.fn(async () => ["Alpha.md"]),
     findSimilarNotes: vi.fn(async () => []),

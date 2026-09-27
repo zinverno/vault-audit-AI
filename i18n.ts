@@ -54,6 +54,18 @@ export function t(key: string, vars?: Record<string, string | number>, language 
 }
 
 const RU: Record<string, string> = {
+  "@global-map.focus": "Поместить эту заметку в центр карты",
+  "@global-map.reset-focus": "Вернуться к семантическому ядру",
+  "@global-map.focused-note": "Заметка в центре",
+  "@global-map.selected-similarity": "Сходство с выбранной заметкой",
+  "@global-map.focus-similarity": "Сходство с заметкой в центре",
+  "@global-map.centered": "В центре карты: {note}",
+  "@global-map.focus-failed": "Не удалось поместить эту заметку в центр карты.",
+  "@global-map.focusing": "Расчёт сходства с выбранной заметкой…",
+  "@global-map.focus-radial-scale": "Сходство с выбранной заметкой: +1 — внутреннее кольцо, 0 — среднее, −1 — внешнее.",
+  "@global-map.focus-distance-legend": "Чем ближе к центру, тем выше сходство с выбранной заметкой.",
+  "@global-map.focus-description": "Углы, связи и размеры узлов остаются глобальными. Диапазон сходства не включает саму заметку в центре. Обновление карты возвращает её к семантическому ядру. Связность не означает важность.",
+  "@neighborhood.back-global": "Назад к глобальной семантической карте",
   "@global-map.exploration": "Семантическое исследование",
   "@global-map.title": "Глобальная семантическая карта",
   "@global-map.tagline": "Увидьте, как устроено ваше семантическое пространство.",
@@ -784,6 +796,18 @@ const RU: Record<string, string> = {
 };
 
 const EN: Record<string, string> = {
+  "@global-map.focus": "Center map on this note",
+  "@global-map.reset-focus": "Reset to semantic core",
+  "@global-map.focused-note": "Focused note",
+  "@global-map.selected-similarity": "Similarity to selected note",
+  "@global-map.focus-similarity": "Similarity to focused note",
+  "@global-map.centered": "Map centered on {note}",
+  "@global-map.focus-failed": "Could not center map on this note.",
+  "@global-map.focusing": "Calculating similarity to selected note…",
+  "@global-map.focus-radial-scale": "Similarity to selected note: +1 inner ring, 0 middle, −1 outer.",
+  "@global-map.focus-distance-legend": "Notes closer to the center are more similar to the selected note.",
+  "@global-map.focus-description": "Angles, relationships and node sizes remain global. The similarity range excludes the focused note itself. Refreshing the map returns to the semantic core. Connectedness does not imply importance.",
+  "@neighborhood.back-global": "Back to Global Semantic Map",
   "@global-map.exploration": "Semantic exploration",
   "@global-map.title": "Global Semantic Map",
   "@global-map.tagline": "See the shape of your semantic space.",

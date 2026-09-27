@@ -2365,11 +2365,15 @@
 .veynrel-global-map-node:is([data-selected="true"], :hover) .veynrel-global-map-dot { fill: var(--interactive-accent); stroke: var(--text-normal); stroke-width: 2.5; }
 .veynrel-global-map-core path { fill: none; stroke: var(--text-normal); stroke-width: 2; }
 .veynrel-global-map-core circle { fill: var(--text-faint); }
+.veynrel-global-map-focused-center circle { fill: none; stroke: var(--text-normal); stroke-width: 2; }
+.veynrel-global-map-focused-center { pointer-events: none; }
+.veynrel-global-map-focused-center text,
 .veynrel-global-map-core text { fill: var(--text-muted); font-size: 17px; }
 .veynrel-global-map-label { display: none; fill: var(--text-normal); font-size: 18px; pointer-events: none; paint-order: stroke; stroke: var(--background-secondary); stroke-width: 4px; }
 .veynrel-global-map-node:is([data-label-rank="1"], [data-label-rank="2"], [data-label-rank="3"], [data-label-rank="4"], [data-label-rank="5"], [data-selected="true"], :hover) .veynrel-global-map-label { display: block; }
 .veynrel-global-map-label-link { display: none; stroke: var(--text-muted); stroke-width: 1; pointer-events: none; }
 .veynrel-global-map-node:is([data-label-rank="1"], [data-label-rank="2"], [data-label-rank="3"], [data-label-rank="4"], [data-label-rank="5"], [data-selected="true"]) .veynrel-global-map-label-link[data-linked="true"] { display: block; }
+.veynrel-global-map-node[data-focused="true"] :is(.veynrel-global-map-label, .veynrel-global-map-label-link) { display: none; }
 .veynrel-global-map-inspector { border: 1px solid var(--background-modifier-border); border-radius: var(--radius-l); padding: 20px; overflow-wrap: anywhere; }
 .veynrel-global-map-inspector h2 { margin-block: 0 8px; }
 .veynrel-global-map-path { color: var(--text-muted); overflow-wrap: anywhere; }

@@ -37,6 +37,12 @@ VectorStore mutations, index writes or plugin-data writes** on map operations.
 **Open note** is a separate explicit action through the existing safe
 `openHealthNote` boundary. **Explore neighborhood** loads the selected path using
 `SemanticNeighborhoodPort.load(path)` and opens the existing child surface.
+That route carries `returnTo: "semantic-map"`. Its Back button returns directly
+to this view's existing map, selected node, query, pan and zoom, without calling
+`load()` or global analysis. Local Neighborhood recentering, choosing a new source,
+refresh and neighbor selection preserve that origin. If the index changes while
+Neighborhood is open, Back shows the retained **stale** global map; Refresh remains
+explicit. A Neighborhood entered from Discover returns to Discover.
 No Findings, Health scores, settings fields, files or layout/cluster/centrality
 persistence are created. No dependency, version, tag or release is added.
 
@@ -125,6 +131,37 @@ Epoch ownership plus pre/post-analysis revision checks prevent R1 publication
 after R2, including missed status notifications during computation. Disposal
 aborts in-flight work and removes listeners; late results cannot publish.
 
+## Selected-note focus
+
+The default radial mode is **Vault core**. Selecting a node or search result changes
+only selection. The inspector's **Center map on this note** explicitly switches to
+**Selected note** mode: the chosen mapped note moves to (500, 500), with a distinct
+ring and **Focused note / basename** label in place of the virtual core glyph.
+The inspector also states **Map centered on {note}** outside SVG.
+
+`SemanticDiscoveryService.analyzeSemanticFocus(path)` reads one validated snapshot,
+reuses `prepareSnapshot`, `eligible` and the existing cosine calculation, and returns
+only the source path plus each eligible document's path and exact score. It compares
+the source with **all** eligible documents, including those outside its top five.
+After centroid preparation this is O(N·D), with O(N) result storage; it does not run
+the O(N²·D) global analysis. The same 500-document cap applies. The product operation
+requires a successfully loaded, current map and a mapped source. Missing/ineligible
+sources yield a controlled message. Projection requires exactly one finite [-1, 1]
+score for every mapped path and freezes all public fields, discarding extra payloads.
+
+`SemanticGlobalMapPort.focus(path)` goes through the existing runtime shared lease.
+The session controller owns focus scores against the **same map revision**, pending
+operation and epoch. Status changes mark both retained map and focus stale, with
+no automatic computation; late R1 results cannot publish after R2 or disposal.
+**Refresh map resets radial mode to Vault core** on successful publication.
+**Reset to semantic core** immediately reuses the captured core layout with zero
+engine work, including invalidating any still-pending focus result.
+
+Focus and reset perform zero embedding/provider/network calls, Markdown-body reads,
+VectorStore mutations, settings/data/layout writes or persistence. Focus adds no
+history. **Explore neighborhood** remains a separate action opening the local
+10-neighbor graph; focusing keeps the whole global map on screen.
+
 ## Geometry and interaction
 
 In a fixed 1000×1000 coordinate space centered at (500, 500):
@@ -135,6 +172,15 @@ radialDistance = 120 + (1 - normalizedCore) * 290       // [120, 410]
 nodeRadius = 4 + 10 * ((semanticConnectedness + 1) / 2)^3 // [4, 14]
 ```
 
+In Selected note mode, replace `coreSimilarity` with
+`cosine(documentCentroid, focusedDocumentCentroid)` for every other note, using
+the identical absolute radius scale. Only the focused note has distance zero.
+Higher similarity never places a note farther away; there is no rank normalization.
+The cached global angles/sectors are reused exactly; focus never rebuilds angular
+topology. Sparse global top-five relationships, connectedness and node radii remain
+unchanged. Reset restores the exact original core positions. Updates are immediate,
+including with reduced motion enabled; no animation is needed.
+
 These absolute monotonic mappings do not exaggerate tiny differences through
 rank scaling. Node size stays bounded. Layout never changes a node's semantic
 radius. The cubic size scale gives common positive connectedness scores more
@@ -142,6 +188,11 @@ visible differentiation. Pan/zoom applies only a shared view transform.
 
 Reference rings are labeled +1, 0 and −1 at the actual radii 120, 265 and 410.
 A visible EN/RU caption identifies these as similarity to the semantic core.
+In Selected note mode it says **Similarity to selected note**. The radial summary
+then reports min/max/median over the selected-to-all scores **excluding self**;
+the self cosine of 1 is not presented as a product metric. A focused singleton
+shows no semantic neighbors. The inspector labels other nodes **Similarity to
+focused note**, omitting the core metric. The connectedness summary stays global.
 The compact summary shows captured indexed/mapped counts plus the minimum,
 maximum and median of each metric across mapped notes. An even-length median
 averages the middle two values; undefined singleton connectedness is omitted and
@@ -227,6 +278,9 @@ yellow accent, stale state and updated Neighborhood labels. The native matrix
 covers EN/RU, dark/light/custom yellow accent, and 320/390/768/1024/1280/1440/1600px.
 Narrow Linux desktop emulation is not mobile OS testing; screen-reader speech,
 popout windows, third-party themes and live-provider behavior remain untested.
+
+Focus-mode and child-route regression results are recorded separately in
+[the focus evidence report](semantic-map-focus-evidence/verification.md).
 
 ## Known limitations and deferred work
 

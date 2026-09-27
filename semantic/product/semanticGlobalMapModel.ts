@@ -1,14 +1,27 @@
 import { compareStrings, isVaultPath } from "../../health/domain/validation";
 import type { SemanticIndexRevision } from "../../health/semanticHealthAnalysisPort";
-import type { SemanticGlobalMap, SemanticGlobalNode } from "../../health/semanticGlobalMapPort";
+import type { SemanticGlobalFocus, SemanticGlobalMap, SemanticGlobalNode } from "../../health/semanticGlobalMapPort";
 import { GLOBAL_SEMANTIC_DOCUMENT_CAP, GLOBAL_SEMANTIC_NEIGHBORS } from "../globalSemanticMap";
-import type { GlobalSemanticAnalysis, GlobalSemanticNeighbor, GlobalSemanticDocument, GlobalSemanticRelationship } from "../globalSemanticMap";
+import type { GlobalSemanticAnalysis, GlobalSemanticNeighbor, GlobalSemanticDocument, GlobalSemanticRelationship, SemanticFocusAnalysis } from "../globalSemanticMap";
 
 export class InvalidGlobalSemanticResult extends Error {}
 function requireValid(value: boolean): asserts value { if (!value) throw new InvalidGlobalSemanticResult(); }
 const score = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= -1 && value <= 1;
 const count = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 const edgeKey = (left: string, right: string): string => JSON.stringify([left, right].sort(compareStrings));
+
+/** Complete selected-to-all scores for this captured map, never top-five approximations. */
+export function projectSemanticFocus(result: SemanticFocusAnalysis | undefined, path: string, map: SemanticGlobalMap): SemanticGlobalFocus {
+  requireValid(Boolean(result) && result!.path === path && Array.isArray(result!.scores) && result!.scores.length === map.nodes.length);
+  const remaining = new Set(map.nodes.map((node) => node.path));
+  requireValid(remaining.has(path));
+  const scores = Array.from(result!.scores, (item: GlobalSemanticNeighbor) => {
+    requireValid(Boolean(item) && remaining.delete(item.path) && score(item.score));
+    if (item.path === path) requireValid(Math.abs(item.score - 1) < 1e-12);
+    return Object.freeze({ path: item.path, score: item.score });
+  }).sort((a, b) => compareStrings(a.path, b.path));
+  return Object.freeze({ path, scores: Object.freeze(scores) });
+}
 
 /** Reject the whole result on malformed counts/paths/ranks/relationships. Copy only public fields. */
 export function projectGlobalSemanticMap(result: GlobalSemanticAnalysis, revision: SemanticIndexRevision, capturedAt: number): SemanticGlobalMap | undefined {

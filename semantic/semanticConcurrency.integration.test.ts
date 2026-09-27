@@ -520,7 +520,7 @@ describe("semantic read/write barrier with real services and store", () => {
     } finally { port.dispose(); embed.mockRestore(); vi.unstubAllGlobals(); vi.stubGlobal("window", testWindow); }
   });
 
-  it("Global map loads, refreshes and searches through the real engine with zero external IO", async () => {
+  it("Global map loads, focuses, resets, refreshes and searches through the real engine with zero external IO", async () => {
     const harness = createHarness();
     harness.setContent("# Alpha\n\nalpha synthetic semantic content with enough meaningful characters for discovery");
     harness.createFile("Near.md", "# Near\n\nalpha synthetic semantic content with enough meaningful characters for discovery");
@@ -538,11 +538,27 @@ describe("semantic read/write barrier with real services and store", () => {
       const traversal = vi.spyOn(store, "readSnapshot"), mutate = vi.spyOn(store, "applyChanges");
       expect(traversal).not.toHaveBeenCalled(); expect(port.search("").total).toBe(0);
       await port.load(); expect(port.getSnapshot().map?.mappedNoteCount).toBe(2);
+      const map = port.getSnapshot().map;
+      const global = vi.spyOn(harness.controller, "analyzeGlobalSemanticMap"), focus = vi.spyOn(harness.controller, "analyzeSemanticFocus");
+      await port.focus("Alpha.md"); expect(port.getSnapshot().focus?.scores).toHaveLength(2);
+      expect(traversal).toHaveBeenCalledTimes(2); expect(focus).toHaveBeenCalledOnce();
+      port.resetFocus(); expect(port.getSnapshot().focus).toBeUndefined(); expect(port.getSnapshot().map).toBe(map);
+      expect(traversal).toHaveBeenCalledTimes(2); expect(focus).toHaveBeenCalledOnce(); expect(global).not.toHaveBeenCalled();
       await port.refresh(); expect(port.search("near").nodes[0].path).toBe("Near.md");
-      expect(mutate).not.toHaveBeenCalled(); expect(traversal).toHaveBeenCalledTimes(2);
+      expect(mutate).not.toHaveBeenCalled(); expect(traversal).toHaveBeenCalledTimes(3);
       for (const spy of [embed, fetchSpy, xhr, obsidianMocks.requestUrl, read, harness.plugin.app.vault.cachedRead,
         harness.plugin.app.vault.getMarkdownFiles, write, writeBinary, save]) expect(spy).not.toHaveBeenCalled();
     } finally { port.dispose(); embed.mockRestore(); vi.unstubAllGlobals(); vi.stubGlobal("window", testWindow); }
+  });
+
+  it("holds the shared lease for focus while Clear waits", async () => {
+    const harness = createHarness(); await harness.controller.indexVault();
+    const runtime = activeSlot(harness.controller).runtime;
+    const clearSpy = vi.spyOn(runtimeStore(runtime), "clear"), gate = manualGate();
+    vi.spyOn(runtime, "analyzeSemanticFocus").mockImplementationOnce(async () => { gate.markEntered(); await gate.wait; return undefined; });
+    const focus = harness.controller.analyzeSemanticFocus("Alpha.md"); await gate.entered;
+    const clear = harness.controller.clearIndex(); await flushTask(); expect(clearSpy).not.toHaveBeenCalled();
+    gate.release(); await focus; await clear; expect(clearSpy).toHaveBeenCalledOnce();
   });
 
   it("holds the shared lease for indexed-path reads while Clear waits", async () => {

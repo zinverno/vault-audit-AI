@@ -175,8 +175,10 @@ export class VeynrelHealthView extends ItemView {
     const active = this.contentEl.ownerDocument.activeElement;
     const hadFocus = active && this.contentEl.contains(active);
     const neighborhoodFocus = this.route.page === "semantic-neighborhood" ? this.neighborhoodView.focusAction : undefined;
+    const globalFocus = this.route.page === "semantic-map" ? this.globalMapView.focusAction : undefined;
+    this.globalMapView.focusAction = undefined;
     this.neighborhoodView.focusAction = undefined;
-    const focusKey = hadFocus ? neighborhoodFocus ?? active.getAttribute("data-health-action") ?? active.getAttribute("data-health-focus-action") : null;
+    const focusKey = hadFocus ? neighborhoodFocus ?? globalFocus ?? active.getAttribute("data-health-action") ?? active.getAttribute("data-health-focus-action") : null;
     const scan = (): void => { this.navigationMessage = undefined; if (!this.controller.getState().busy) void this.controller.runLocalScan(); };
     const openNote = (): void => { void this.openNote(this.controller.getRecommendationPath()); };
     const choose = (profile: VaultProfile): void => { void this.savePreferences({ profile, profileChosen: true }); };
@@ -220,11 +222,12 @@ export class VeynrelHealthView extends ItemView {
     if (normal && this.route.page === "semantic-map" && this.globalMap) {
       this.cleanupGlobalMap = renderSemanticGlobalMap(surface, this.globalMap, this.globalMapView, {
         back: () => this.navigate({ page: "discover" }), openNote: (path) => { void this.openNote(path); },
-        explore: (path) => { if (this.neighborhood) { this.navigate({ page: "semantic-neighborhood" }); void this.neighborhood.load(path); } },
+        explore: (path) => { if (this.neighborhood) { this.navigate({ page: "semantic-neighborhood", returnTo: "semantic-map" }); void this.neighborhood.load(path); } },
       });
     } else if (normal && this.route.page === "semantic-neighborhood" && this.neighborhood) {
+      const returnTo = this.route.returnTo ?? "discover";
       renderSemanticNeighborhood(surface, this.neighborhood, this.neighborhoodView, {
-        back: () => this.navigate({ page: "discover" }), openNote: (path) => { void this.openNote(path); },
+        returnTo, back: () => this.navigate({ page: returnTo }), openNote: (path) => { void this.openNote(path); },
       });
     } else if (normal && this.route.page === "topology" && this.topology) {
       this.cleanupTopology = renderTopology(surface, this.topology, this.topologyView, {
@@ -265,7 +268,7 @@ export class VeynrelHealthView extends ItemView {
       }
     } else if (discover) {
       renderDiscover(surface, discover, (action) => this.semanticAction(action), this.neighborhood ? () => {
-        this.navigate({ page: "semantic-neighborhood" }); void this.neighborhood!.prepare();
+        this.navigate({ page: "semantic-neighborhood", returnTo: "discover" }); void this.neighborhood!.prepare();
       } : undefined, this.globalMap ? () => { this.navigate({ page: "semantic-map" }); void this.globalMap!.load(); } : undefined);
     } else if (normal && this.route.page === "findings") {
       const route = this.route;

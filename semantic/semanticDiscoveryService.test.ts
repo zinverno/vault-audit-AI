@@ -705,6 +705,39 @@ describe("indexed document catalog", () => {
   });
 });
 
+describe("Semantic focus analysis", () => {
+  it("reads one snapshot and reuses multi-chunk centroids for exact selected-to-all scores, including beyond top five", () => {
+    const f = similarHarness([entry("a1", "A.md", [1, 0]), entry("a2", "A.md", [0, 1], 1),
+      entry("b", "B.md", [1, 0]), entry("c", "C.md", [-1, 0]),
+      ...Array.from({ length: 8 }, (_, i) => entry(`n${i}`, `N${i}.md`, [0, 1])),
+      entry("short", "Short.md", [1, 0], 0, "short"), entry("x1", "Cancelled.md", [1, 0]), entry("x2", "Cancelled.md", [-1, 0], 1)]);
+    const global = vi.spyOn(f.service, "analyzeGlobalSemanticMap"), nearby = vi.spyOn(f.service, "findSimilarNotes");
+    const focus = f.service.analyzeSemanticFocus("A.md")!;
+    expect(f.store.snapshotReads).toBe(1); expect(f.store.mutations).toBe(0);
+    expect(global).not.toHaveBeenCalled(); expect(nearby).not.toHaveBeenCalled();
+    expect(focus.scores).toHaveLength(11);
+    expect(focus.scores.find(n => n.path === "A.md")!.score).toBeCloseTo(1, 12);
+    expect(focus.scores.find(n => n.path === "B.md")!.score).toBeCloseTo(1 / Math.sqrt(2), 12);
+    expect(focus.scores.find(n => n.path === "C.md")!.score).toBeCloseTo(-1 / Math.sqrt(2), 12);
+    for (const neighbor of f.service.findSimilarNotes("A.md")) expect(focus.scores.find(n => n.path === neighbor.path)!.score).toBe(neighbor.score);
+    expect(Object.keys(focus)).toEqual(["path", "scores"]);
+    expect(Object.keys(focus.scores[0])).toEqual(["path", "score"]);
+    for (const path of ["Short.md", "Cancelled.md", "Missing.md"]) expect(f.service.analyzeSemanticFocus(path)).toBeUndefined();
+    expect(() => f.service.analyzeSemanticFocus("../bad.md")).toThrow();
+  });
+  it("keeps the exact 500-document cap", () => {
+    const rows = Array.from({ length: 501 }, (_, i) => entry(`n${i}`, `N${i}.md`, [1, 0]));
+    expect(similarHarness(rows.slice(0, 500)).service.analyzeSemanticFocus("N0.md")!.scores).toHaveLength(500);
+    expect(similarHarness(rows).service.analyzeSemanticFocus("N0.md")).toBeUndefined();
+  });
+  it("rejects an invalid vector snapshot", () => {
+    const f = similarHarness([entry("a", "A.md", [1, 0])]);
+    const snapshot = f.store.readSnapshot(); snapshot.vectors = new Float32Array(1);
+    vi.spyOn(f.store, "readSnapshot").mockReturnValue(snapshot);
+    expect(() => f.service.analyzeSemanticFocus("A.md")).toThrow("invalid discovery snapshot");
+  });
+});
+
 describe("Global Semantic Map exact analysis", () => {
   it("uses the known normalized mean direction and identical Neighborhood centroids/scores", async () => {
     const f = similarHarness([entry("a", "A.md", [1, 0]), entry("b", "B.md", [0, 1]), entry("c", "C.md", [1, 0]),

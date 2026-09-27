@@ -1402,6 +1402,7 @@ describe("Semantic Neighborhood Discover child surface", () => {
     const listeners = new Set<() => void>();
     const engine = { getCachedIndexState: () => index, getSemanticStatus: () => index,
       subscribeStatus: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+      analyzeSemanticFocus: vi.fn(async (path: string) => ({ path, scores: ["A.md", "B.md"].map((p) => ({ path: p, score: p === path ? 1 : 0.91 })) })),
       analyzeGlobalSemanticMap: vi.fn(async () => ({ state: "ready" as const, indexedNoteCount: 2, mappedNoteCount: 2,
         nodes: ["A.md", "B.md"].map((path, i) => ({ path, coreSimilarity: 0.96, semanticConnectedness: 0.91,
           neighbors: [{ path: i ? "A.md" : "B.md", score: 0.91 }] })), edges: [{ left: "A.md", right: "B.md", score: 0.91, mutual: true }] })),
@@ -1465,10 +1466,69 @@ describe("Semantic Neighborhood Discover child surface", () => {
     for (const spy of [f.vault.read, f.cachedRead, f.adapter.write, mocks.requestUrl]) expect(spy).not.toHaveBeenCalled();
     f.content.action("global-map-explore").click(); await f.neighborhood.load("B.md");
     expect(f.neighborhood.getSnapshot().map?.source.path).toBe("B.md");
-    f.content.action("neighborhood-back").click(); f.content.action("global-map-open").click(); await f.globalMap.load();
+    f.content.action("neighborhood-back").click();
+    expect(f.content.action("global-map-search").value).toBe("B.md");
+    expect(f.content.all().find(e => e.attrs["data-global-map-node"] === "B.md")?.attrs["data-selected"]).toBe("true");
     expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce(); f.change();
     expect(f.content.texts()).toContain(t("@global-map.stale"));
     f.content.action("global-map-refresh").click(); await f.globalMap.refresh(); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledTimes(2);
+    await f.view.onClose(); f.globalMap.dispose(); f.neighborhood.dispose(); f.controller.dispose();
+  });
+  it.each(["en", "ru"] as const)("preserves child-route origin and global map, selection, query and viewport across local exploration in %s", async lang => {
+    setLanguage(lang); const f = await neighborhoodFixture();
+    f.content.action("nav-discover").click(); f.content.action("neighborhood-open").click(); await f.neighborhood.prepare();
+    expect(f.content.action("neighborhood-back").text).toBe(t("@neighborhood.back"));
+    f.content.action("neighborhood-back").click(); expect(f.content.action("global-map-open")).toBeDefined();
+    f.content.action("global-map-open").click(); await f.globalMap.load();
+    f.content.action("global-map-search").input("A.md"); f.content.action("global-map-result-0").click();
+    // The native harness below exercises real drag/wheel input; here assert exact state ownership.
+    const local = (f.view as unknown as { globalMapView: { query: string; selected?: string; viewport: { x: number; y: number; zoom: number } } }).globalMapView;
+    local.viewport = { x: 137, y: -91, zoom: 1.7 };
+    const before = { ...local }, map = f.globalMap.getSnapshot().map;
+    f.content.action("global-map-explore").click(); await f.neighborhood.load("A.md");
+    for (const path of ["B.md", "A.md"]) {
+      f.content.action("neighborhood-select-1").click(); f.content.action("neighborhood-explore").click(); await f.neighborhood.load(path);
+      expect(f.content.action("neighborhood-back").text).toBe(t("@neighborhood.back-global"));
+    }
+    f.content.action("neighborhood-choose").click(); f.content.action("neighborhood-source-1").click(); await f.neighborhood.load("B.md");
+    f.content.action("neighborhood-refresh").click(); await f.neighborhood.refresh();
+    f.change(); expect(f.globalMap.getSnapshot().state).toBe("stale");
+    f.vault.read.mockClear(); f.cachedRead.mockClear(); f.adapter.write.mockClear(); mocks.requestUrl.mockClear();
+    const loads = vi.spyOn(f.globalMap, "load");
+    f.content.action("neighborhood-back").click();
+    expect(f.globalMap.getSnapshot().map).toBe(map); expect(local).toEqual(before);
+    expect(f.content.action("global-map-search").value).toBe("A.md");
+    expect(f.content.texts()).toContain(t("@global-map.stale"));
+    expect(f.content.action("nav-discover").attrs["aria-current"]).toBe("page");
+    expect(loads).not.toHaveBeenCalled(); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
+    for (const spy of [f.vault.read, f.cachedRead, f.adapter.write, mocks.requestUrl]) expect(spy).not.toHaveBeenCalled();
+    // A new Discover entry sets its own origin even after prior Global exploration.
+    f.content.action("global-map-back").click(); f.content.action("neighborhood-open").click(); await f.neighborhood.prepare();
+    expect(f.content.action("neighborhood-back").text).toBe(t("@neighborhood.back"));
+    f.content.action("neighborhood-back").click(); expect(f.content.action("global-map-open")).toBeDefined();
+    await f.view.onClose(); f.globalMap.dispose(); f.neighborhood.dispose(); f.controller.dispose();
+  });
+  it.each(["en", "ru"] as const)("focuses explicitly, updates captions/metrics, omits self-score, and resets locally in %s", async lang => {
+    setLanguage(lang); const f = await neighborhoodFixture();
+    f.content.action("nav-discover").click(); f.content.action("global-map-open").click(); await f.globalMap.load();
+    const dots = () => f.content.all().filter(e => e.cls === "veynrel-global-map-dot").map(e => ({ ...e.attrs }));
+    const core = dots();
+    f.content.action("global-map-search").input("A.md"); f.content.action("global-map-result-0").click();
+    expect(f.engine.analyzeSemanticFocus).not.toHaveBeenCalled(); expect(dots()).toEqual(core);
+    f.content.action("global-map-focus").focus(); f.content.action("global-map-focus").click(); await f.globalMap.focus("A.md");
+    expect(f.content.ownerDocument.activeElement).toBe(f.content.action("global-map-focus"));
+    expect(dots()[0]).toMatchObject({ cx: "500", cy: "500", r: core[0].r });
+    expect(dots().map(dot => dot.r)).toEqual(core.map(dot => dot.r));
+    expect(f.content.all().some(e => e.cls === "veynrel-global-map-core")).toBe(false);
+    for (const key of ["centered", "focus-radial-scale", "selected-similarity"]) expect(f.content.texts()).toContain(t(`@global-map.${key}`, { note: "A" }));
+    expect(f.content.texts()).not.toContain("1.000"); expect(f.content.texts()).not.toContain(t("@global-map.similarity"));
+    f.content.action("global-map-neighbor-0").click(); expect(f.content.texts()).toContain(t("@global-map.focus-similarity"));
+    expect(f.globalMap.getSnapshot().focus?.path).toBe("A.md"); expect(f.engine.analyzeSemanticFocus).toHaveBeenCalledOnce();
+    f.content.action("global-map-reset-focus").focus(); f.content.action("global-map-reset-focus").click(); expect(dots()).toEqual(core);
+    expect(f.content.ownerDocument.activeElement).toBe(f.content.action("global-map-focus"));
+    expect(f.content.texts()).toContain(t("@global-map.radial-scale"));
+    expect(f.engine.analyzeSemanticFocus).toHaveBeenCalledOnce(); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
+    expect(f.content.texts()).not.toMatch(/@(?:global-map|neighborhood)\./u);
     await f.view.onClose(); f.globalMap.dispose(); f.neighborhood.dispose(); f.controller.dispose();
   });
   it.each(["en", "ru"] as const)("selects without querying, recenters explicitly, preserves viewport, and renders literal evidence in %s", async (lang) => {

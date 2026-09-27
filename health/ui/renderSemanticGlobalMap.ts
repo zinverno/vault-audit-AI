@@ -11,6 +11,9 @@ export function globalSemanticMapStatus(snapshot: SemanticGlobalMapProductSnapsh
   if (snapshot.state === "loading") return snapshot.progress ? t("@global-map.comparing", { completed: snapshot.progress.completedPairs, total: snapshot.progress.totalPairs }) : t("@global-map.loading");
   if (snapshot.state === "stale") return t("@global-map.changed") + ". " + t("@global-map.stale");
   if (snapshot.reason) return t(`@global-map.${snapshot.reason}`, { n: snapshot.supportedNoteCount });
+  if (snapshot.focusError) return t("@global-map.focus-failed");
+  if (snapshot.focusing) return t("@global-map.focusing");
+  if (snapshot.focus) return t("@global-map.centered", { note: snapshot.map!.nodes.find((node) => node.path === snapshot.focus!.path)!.basename });
   return undefined;
 }
 export function renderSemanticGlobalMap(parent: HTMLElement, port: SemanticGlobalMapPort, state: SemanticGlobalMapViewState,
@@ -23,12 +26,14 @@ export function renderSemanticGlobalMap(parent: HTMLElement, port: SemanticGloba
   const status = globalSemanticMapStatus(snapshot);
   if (status) section.createEl("p", { text: status, cls: "veynrel-global-map-status" });
   const map = snapshot.map;
+  const focus = snapshot.focus;
+  const focusScores = new Map(focus?.scores.map((item) => [item.path, item.score]));
   const metrics = section.createEl("dl", { cls: "veynrel-global-map-metrics" });
   for (const [label, value] of [["indexed", map?.indexedNoteCount ?? snapshot.indexedNoteCount], ["mapped", map?.mappedNoteCount ?? snapshot.mappedNoteCount]] as const) {
     if (value === undefined) continue;
     const item = metrics.createDiv(); item.createEl("dt", { text: t(`@global-map.${label}`) }); item.createEl("dd", { text: String(value) });
   }
-  if (map) for (const [key, scores] of [["similarity", map.nodes.map((node) => node.coreSimilarity)], ["connectedness", map.nodes.map((node) => node.semanticConnectedness)]] as const) {
+  if (map) for (const [key, scores] of [[focus ? "selected-similarity" : "similarity", focus ? focus.scores.filter((item) => item.path !== focus.path).map((item) => item.score) : map.nodes.map((node) => node.coreSimilarity)], ["connectedness", map.nodes.map((node) => node.semanticConnectedness)]] as const) {
     const summary = semanticScoreSummary(scores);
     const item = metrics.createDiv({ cls: "veynrel-global-map-summary" });
     item.createEl("dt", { text: t(`@global-map.${key}`) });
@@ -44,18 +49,25 @@ export function renderSemanticGlobalMap(parent: HTMLElement, port: SemanticGloba
   const results = section.createDiv({ cls: "veynrel-global-map-results" });
   const composition = section.createDiv({ cls: "veynrel-global-map-composition" });
   const visual = composition.createDiv({ cls: "veynrel-global-map-visual" });
-  visual.createEl("p", { cls: "veynrel-global-map-scale", text: t("@global-map.radial-scale") });
+  visual.createEl("p", { cls: "veynrel-global-map-scale", text: t(focus ? "@global-map.focus-radial-scale" : "@global-map.radial-scale") });
   const inspector = composition.createEl("section", { cls: "veynrel-global-map-inspector", attr: { "aria-label": t("@global-map.selection"), tabindex: "-1" } });
   const nodes = new Map(map.nodes.map((node) => [node.path, node]));
   const inspect = (path?: string): void => {
     const heldFocus = inspector.contains(inspector.ownerDocument.activeElement);
     inspector.empty();
+    if (focus) {
+      inspector.createEl("p", { text: t("@global-map.centered", { note: nodes.get(focus.path)!.basename }), cls: "veynrel-global-map-focus" });
+      healthButton(inspector, t("@global-map.reset-focus"), () => {
+        state.focusAction = state.selected ? "global-map-focus" : "global-map-search"; port.resetFocus();
+      }, "global-map-reset-focus");
+    }
     const node = nodes.get(path ?? "");
     if (!node) { inspector.createEl("h2", { text: t("@global-map.selection") }); inspector.createEl("p", { text: t("@global-map.select") }); return; }
     inspector.createEl("h2", { text: node.basename });
     inspector.createEl("p", { text: node.path, cls: "veynrel-global-map-path" });
     const facts = inspector.createEl("dl", { cls: "veynrel-global-map-facts" });
-    for (const [key, score] of [["similarity", node.coreSimilarity], ["connectedness", node.semanticConnectedness]] as const) {
+    for (const [key, score] of [[focus ? "focus-similarity" : "similarity", focus ? focusScores.get(node.path)! : node.coreSimilarity], ["connectedness", node.semanticConnectedness]] as const) {
+      if (key === "focus-similarity" && node.path === focus?.path) continue;
       const item = facts.createDiv(); item.createEl("dt", { text: t(`@global-map.${key}`) });
       item.createEl("dd", { text: score === null ? t("@global-map.no-neighbors") : formatSemanticScore(score) });
     }
@@ -63,6 +75,7 @@ export function renderSemanticGlobalMap(parent: HTMLElement, port: SemanticGloba
     const buttons = inspector.createDiv({ cls: "veynrel-global-map-actions" });
     healthButton(buttons, t("@global-map.open-note"), () => actions.openNote(node.path), "global-map-open-note");
     healthButton(buttons, t("@global-map.explore"), () => actions.explore(node.path), "global-map-explore", snapshot.busy || snapshot.state !== "ready");
+    healthButton(buttons, t("@global-map.focus"), () => { void port.focus(node.path); }, "global-map-focus", snapshot.busy || snapshot.state !== "ready");
     inspector.createEl("h3", { text: t("@global-map.nearest") });
     const list = inspector.createDiv({ cls: "veynrel-global-map-neighbors" });
     node.neighbors.forEach((neighbor, i) => {
@@ -72,12 +85,12 @@ export function renderSemanticGlobalMap(parent: HTMLElement, port: SemanticGloba
     });
     if (heldFocus) inspector.focus({ preventScroll: true });
   };
-  const graph = renderSemanticGlobalMapGraph(visual, map, state, inspect);
+  const graph = renderSemanticGlobalMapGraph(visual, map, state, inspect, focus);
   healthButton(controls, t("@global-map.fit"), graph.fit, "global-map-fit");
   inspect(state.selected);
   const legend = visual.createEl("details", { cls: "veynrel-global-map-legend", attr: { open: "" } });
   legend.createEl("summary", { text: t("@global-map.relationships") });
-  for (const key of ["distance-legend", "size-legend", "edge-legend", "selected-legend", "core-description"]) legend.createEl("p", { text: t(`@global-map.${key}`) });
+  for (const key of [focus ? "focus-distance-legend" : "distance-legend", "size-legend", "edge-legend", "selected-legend", focus ? "focus-description" : "core-description"]) legend.createEl("p", { text: t(`@global-map.${key}`) });
   const showResults = (): void => {
     results.empty();
     if (!state.query.trim()) return;
