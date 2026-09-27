@@ -49,8 +49,8 @@ before publishing a primary-class pair.
 | Explicit-only | Absent | At least one direction, both endpoints mapped and known |
 
 **Explicit-only means linked outside both notes' semantic top-five lists. It does
-not mean semantically far, unrelated, a bad link, or low cosine.** V1 does not
-compute an exact score for explicit-only pairs and never displays a fabricated
+not mean semantically far, unrelated, a bad link, or low cosine.** The comparison
+does not compute an exact score for explicit-only pairs and never displays a fabricated
 zero. An explicit link may reflect chronology, contrast, prerequisites, or other
 intent that semantic ranking does not represent.
 
@@ -64,8 +64,10 @@ Semantic scores come directly from sparse edges, checked against their neighbor
 entries. Ranks are positions 1–5 in each note's already ordered neighbor list.
 An undefined rank means only the other endpoint contributed this union edge.
 `mutualTopK` requires both ranks; cosine symmetry does not establish mutual rank.
-Candidates and aligned pairs sort by mutual rank first, then score descending,
-then left/right paths. Explicit-only sorts by paths without semantic scoring.
+Candidates and aligned pairs sort by rank class (mutual top-3, mutual top-5
+with at least one rank 4–5, one-sided top-5), shared neighbor count descending,
+exact score descending, then canonical left/right paths. Explicit-only sorts by
+paths without semantic scoring.
 All displayed scores reuse `formatSemanticScore` (three decimals).
 
 ## Coverage
@@ -143,14 +145,29 @@ active category and search. Three compact count cards have no normalized score.
 Selecting a real pair button reflects `aria-pressed` and focuses the inspector,
 including when it follows the list in a narrow pane. The inspector shows both
 names/paths, category, exact stored semantic score when available, both ranks,
-mutual status, and Markdown direction. Its only actions open either note or
-explore either Neighborhood. These actions use native buttons and text sinks.
+rank class, shared neighbors, and Markdown direction. Its actions open either
+note, open the pair in a public native side-by-side split, explore either
+Neighborhood, or set/clear a candidate review verdict. These actions use native
+buttons and text sinks.
 No path is interpolated into a CSS selector or rendered as HTML/Markdown.
 
-Category, query, selected pair, and show-more limit remain in view memory during
+Category, rank/review filters, Excalidraw toggle, query, selected pair, session
+review verdicts, and show-more limit remain in view memory during
 Connection Opportunities → Neighborhood(A) → B → C → Back. Returning does not
 reload comparison. Closing the workspace clears view state; plugin restart clears
-comparison. No settings, dismissals, history, or persisted selection are added.
+comparison. A new comparison capture clears reviews; stale/loading/failed states
+that retain the old capture keep them. No settings, dismissals, history, or
+persisted selection/reviews are added.
+
+## Candidate quality V2
+
+Real-vault acceptance reported 313 candidates. V2 adds shared top-five neighbor
+context, mutually exclusive rank filters, transparent ordering, session-only
+human review, an optional Excalidraw presentation filter, and explicit pair
+opening. The original pair-level categories, coverage and source owners remain
+unchanged. See [candidate review and the first-20 acceptance plan](connection-candidate-quality.md)
+for exact definitions, review clearing semantics and limitations. There is no
+opaque score, cosine threshold, learned ranking, Finding or Markdown mutation.
 
 ## Verification
 
@@ -175,7 +192,8 @@ separately from derivation and underlying Global Map computation.
 ## Manual acceptance on the existing ~145-note map
 
 The implementation and automated checks do not inspect your personal vault.
-To collect real-vault false-positive evidence manually:
+For V2, use the [aggregate-count and first-20 mutual-top-3 acceptance plan](connection-candidate-quality.md#manual-real-vault-acceptance).
+The original source/coverage checks remain useful:
 
 1. Open Discover and your existing Global Semantic Map. Return to Discover and
    choose **Open connection comparison**. If a source is outdated, use Refresh.

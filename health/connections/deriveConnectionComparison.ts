@@ -71,14 +71,24 @@ export function deriveConnectionComparison(semantic: SemanticGlobalMap, topology
     const id = key(edge.left, edge.right), ranks = ranked.get(id)!;
     const category = explicit.has(id) ? "aligned" : "candidate";
     if (category === "aligned") alignedCount++; else candidateCount++;
-    publish(edge.left, edge.right, category, { score: edge.score, mutualTopK: edge.mutual, leftRank: ranks.leftRank, rightRank: ranks.rightRank });
+    const leftNeighbors = nodes.get(edge.left)!.neighbors, rightNeighbors = new Set(nodes.get(edge.right)!.neighbors.map(n => n.path));
+    const sharedNeighborPaths = Object.freeze(leftNeighbors.map(n => n.path)
+      .filter(path => path !== edge.left && path !== edge.right && rightNeighbors.has(path)).sort(compareStrings));
+    const rankClass = ranks.leftRank && ranks.rightRank
+      ? ranks.leftRank <= 3 && ranks.rightRank <= 3 ? "mutual-top-3" : "mutual-top-5"
+      : "one-sided-top-5";
+    publish(edge.left, edge.right, category, { score: edge.score, mutualTopK: edge.mutual, leftRank: ranks.leftRank, rightRank: ranks.rightRank,
+      rankClass, sharedNeighborPaths });
   }
   for (const [id, pair] of explicit) {
     if (!nodes.has(pair.left) || !nodes.has(pair.right)) { explicitOutsideSemanticMapCount++; continue; }
     if (!comparable(pair.left) || !comparable(pair.right)) { unclassifiedExplicitPairCount++; continue; }
     if (!semanticPairs.has(id)) { explicitOnlyCount++; publish(pair.left, pair.right, "explicit-only"); }
   }
-  pairs.sort((a, b) => compareStrings(a.category, b.category) || Number(b.semantic?.mutualTopK ?? false) - Number(a.semantic?.mutualTopK ?? false) ||
+  const rankOrder = { "mutual-top-3": 0, "mutual-top-5": 1, "one-sided-top-5": 2 };
+  pairs.sort((a, b) => compareStrings(a.category, b.category) ||
+    (a.semantic ? rankOrder[a.semantic.rankClass] : 0) - (b.semantic ? rankOrder[b.semantic.rankClass] : 0) ||
+    (b.semantic?.sharedNeighborPaths.length ?? 0) - (a.semantic?.sharedNeighborPaths.length ?? 0) ||
     (b.semantic?.score ?? 0) - (a.semantic?.score ?? 0) || compareStrings(a.leftPath, b.leftPath) || compareStrings(a.rightPath, b.rightPath));
   return Object.freeze({ semanticRevision: Object.freeze({ ...semantic.revision }), topologyRevision: Object.freeze({ ...topology.revision }), capturedAt,
     semanticMappedNoteCount: nodes.size, topologyNoteCount: links.size, comparableNoteCount: semantic.nodes.filter(node => comparable(node.path)).length,

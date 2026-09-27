@@ -65,7 +65,7 @@ import { VeynrelHealthView } from "./VeynrelHealthView";
 import { HealthRecoveryModal } from "./healthRecoveryModal";
 import { registerHealth } from "../obsidian/registerHealth";
 import { openHealthView } from "../obsidian/openHealthView";
-import { openHealthNote } from "../obsidian/openHealthNote";
+import { openHealthNote, openHealthNotePair } from "../obsidian/openHealthNote";
 import { inboxFinding, toolsFixture } from "./testSupport";
 import { serializeHealth } from "../store/codec";
 import type { SemanticIntelligencePort } from "../semanticIntelligencePort";
@@ -1446,7 +1446,9 @@ describe("Semantic Neighborhood Discover child surface", () => {
     f.content.action("connections-search").input("join");
     const state = (f.view as unknown as { comparisonView: ReturnType<typeof newConnectionComparisonViewState> }).comparisonView;
     state.visibleLimit = 100;
-    const before = { ...state }, loads = loadComparison.mock.calls.length, captured = comparison.getSnapshot().comparison;
+    state.rankFilter = "mutual-top-3"; state.reviewFilter = "unreviewed"; state.hideExcalidraw = true;
+    state.reviewByPairId.set("session-a", "useful"); state.reviewByPairId.set("session-b", "unsure");
+    const before = { ...state, reviewByPairId: new Map(state.reviewByPairId) }, loads = loadComparison.mock.calls.length, captured = comparison.getSnapshot().comparison;
     f.content.action("connections-explore-left").click(); await f.neighborhood.load("A.md");
     expect(f.content.action("neighborhood-back").text).toBe(t("@connections.back-comparison"));
     f.content.action("neighborhood-select-1").click(); f.content.action("neighborhood-explore").click(); await f.neighborhood.load("B.md");
@@ -1458,6 +1460,7 @@ describe("Semantic Neighborhood Discover child surface", () => {
     expect(f.content.action("connections-aligned").attrs["aria-pressed"]).toBe("true");
     expect(loadComparison).toHaveBeenCalledTimes(loads); expect(comparison.getSnapshot().comparison).toBe(captured);
     expect(f.content.texts()).not.toMatch(/@connections\./);
+    await comparison.refresh(); expect(state.reviewByPairId.size).toBe(0);
     for (const spy of [f.vault.read, f.cachedRead, f.adapter.write, mocks.requestUrl, fetch, xhr]) expect(spy).not.toHaveBeenCalled();
     f.content.action("connections-open-left").click(); await flush(); expect(f.openFile).toHaveBeenCalledOnce();
     await f.view.onClose(); comparison.dispose(); f.topology.dispose(); f.globalMap.dispose(); f.neighborhood.dispose(); f.controller.dispose();
@@ -1711,7 +1714,41 @@ describe("bounded connection pair presentation", () => {
     expect(parent.texts()).toContain(t("@connections.showing", { shown: 11, total: 11 }));
     parent.action("connections-pair-0").click(); expect(parent.action("connections-pair-0").attrs["aria-pressed"]).toBe("true");
     expect(parent.texts()).toContain("<svg onload=alert(1)> Join 11");
+    expect(parent.action("connections-pair-0").attrs["aria-label"]).toContain(t("@connections.rank", { note: "<svg onload=alert(1)> Join 11", rank: 1 }));
+    for (const verdict of ["useful", "not-useful", "unsure"] as const) {
+      parent.action(`connections-review-${verdict}`).click();
+      expect(state.reviewByPairId.get("11")).toBe(verdict);
+      expect(parent.action(`connections-review-${verdict}`).attrs["aria-pressed"]).toBe("true");
+      expect(parent.ownerDocument.activeElement).toBe(parent.action(`connections-review-${verdict}`));
+      expect(parent.action("connections-pair-0").texts()).toContain(t(`@connections.${verdict}`));
+    }
+    parent.action("connections-review-clear").click(); expect(state.reviewByPairId.size).toBe(0);
+    parent.action("connections-rank-one-sided-top-5").click(); expect(rows()).toHaveLength(0);
+    parent.action("connections-rank-mutual-top-3").click(); expect(rows()).toHaveLength(11);
+    parent.action("connections-review-useful").click();
+    parent.action("connections-review-filter-unreviewed").click(); expect(rows()).toHaveLength(10);
+    expect(state.visibleLimit).toBe(50);
     expect(parent.texts()).not.toMatch(/@connections\./);
     expect(port.load).not.toHaveBeenCalled(); expect(port.refresh).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("safe pair opening", () => {
+  it("resolves both Markdown endpoints before creating a new tab and public vertical split", async () => {
+    const f = appFixture(), left = new mocks.TFile(), right = Object.assign(new mocks.TFile(), { path: "B.md" });
+    const first = { openFile: vi.fn(async () => undefined) }, second = { openFile: vi.fn(async () => undefined) };
+    f.workspace.getLeaf.mockReturnValue(first);
+    const split = vi.fn(() => second); Object.assign(f.workspace, { createLeafBySplit: split });
+    f.vault.getAbstractFileByPath.mockImplementation(path => path === "A.md" ? left : path === "B.md" ? right : null);
+    for (const path of ["Missing.md", "../A.md", "Private/Config/secret.md"]) expect(await openHealthNotePair(f.app, "A.md", path)).toBe(false);
+    right.extension = "canvas"; expect(await openHealthNotePair(f.app, "A.md", "B.md")).toBe(false); right.extension = "md";
+    expect(f.workspace.getLeaf).not.toHaveBeenCalled();
+    expect(await openHealthNotePair(f.app, "A.md", "B.md")).toBe(true);
+    expect(f.workspace.getLeaf).toHaveBeenCalledWith("tab"); expect(split).toHaveBeenCalledWith(first, "vertical");
+    expect(first.openFile).toHaveBeenCalledWith(left); expect(second.openFile).toHaveBeenCalledWith(right);
+    split.mockClear(); first.openFile.mockImplementationOnce(async () => { f.vault.getAbstractFileByPath.mockReturnValue(null); return undefined; });
+    expect(await openHealthNotePair(f.app, "A.md", "B.md")).toBe(false); expect(split).not.toHaveBeenCalled();
+    for (const spy of [f.vault.read, f.adapter.write]) expect(spy).not.toHaveBeenCalled();
   });
 });

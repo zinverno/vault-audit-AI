@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { deriveConnectionComparison } from "./deriveConnectionComparison";
-import { semanticMap, topologyMap } from "./testFixtures";
+import { semanticMap, topologyMap, rankedSemanticMap, knownTopology } from "./testFixtures";
 
 describe("connection comparison derivation", () => {
   it("joins canonical pairs with exact ranks, directed links and pair-level coverage", async () => {
@@ -33,7 +33,7 @@ describe("connection comparison derivation", () => {
     expect(result.unclassifiedExplicitPairCount).toBe(1);
     expect(result.pairs.some(p => p.rightPath === "E.md")).toBe(false);
   });
-  it.each(["duplicate-semantic-path", "duplicate-topology-path", "duplicate-semantic-pair", "duplicate-topology-edge", "unknown-semantic", "unknown-topology", "self-semantic", "self-topology", "score", "mutual", "neighbor-score", "rank-order", "rank-bound", "missing-edge", "link-availability"])("rejects %s without partial results", async kind => {
+  it.each(["duplicate-semantic-path", "duplicate-topology-path", "duplicate-semantic-pair", "duplicate-topology-edge", "unknown-semantic", "unknown-topology", "self-semantic", "self-topology", "score", "mutual", "neighbor-score", "unknown-neighbor", "duplicate-neighbor", "self-neighbor", "rank-order", "rank-bound", "missing-edge", "link-availability"])("rejects %s without partial results", async kind => {
     const semantic = structuredClone(semanticMap()), topology = structuredClone(await topologyMap());
     if (kind === "duplicate-semantic-path") (semantic.nodes as unknown[]).push(semantic.nodes[0]);
     if (kind === "duplicate-topology-path") (topology.nodes as unknown[]).push(topology.nodes[0]);
@@ -46,10 +46,50 @@ describe("connection comparison derivation", () => {
     if (kind === "score") Object.assign(semantic.edges[0], { score: NaN });
     if (kind === "mutual") Object.assign(semantic.edges[0], { mutual: false });
     if (kind === "neighbor-score") Object.assign(semantic.nodes[0].neighbors[0], { score: 0.99 });
+    if (kind === "unknown-neighbor") Object.assign(semantic.nodes[0].neighbors[0], { path: "Unknown.md" });
+    if (kind === "duplicate-neighbor") (semantic.nodes[0].neighbors as unknown[]).push(semantic.nodes[0].neighbors[0]);
+    if (kind === "self-neighbor") Object.assign(semantic.nodes[0].neighbors[0], { path: "A.md" });
     if (kind === "rank-order") (semantic.nodes[0].neighbors as unknown[]).reverse();
     if (kind === "rank-bound") Object.assign(semantic.nodes[0], { neighbors: Array(6).fill(semantic.nodes[0].neighbors[0]) });
     if (kind === "missing-edge") (semantic.edges as unknown[]).pop();
     if (kind === "link-availability") Object.assign(topology.nodes[0], { linksAvailable: "true" });
     expect(() => deriveConnectionComparison(semantic, topology, 1)).toThrow("Invalid connection comparison input");
+  });
+});
+
+
+describe("candidate evidence", () => {
+  it("intersects existing top-five lists, canonically sorted, copied and frozen without endpoints", async () => {
+    const semantic = rankedSemanticMap({
+      "A.md": [["B.md", .99], ["D.md", .9], ["C.md", .8], ["E.md", .7], ["F.md", .6]],
+      "B.md": [["A.md", .99], ["D.md", .9], ["C.md", .8], ["X.md", .7], ["Y.md", .6]],
+    });
+    const result = deriveConnectionComparison(semantic, await knownTopology(semantic), 1);
+    const shared = result.pairs.find(p => p.leftPath === "A.md" && p.rightPath === "B.md")!.semantic!.sharedNeighborPaths;
+    expect(shared).toEqual(["C.md", "D.md"]); expect(Object.isFrozen(shared)).toBe(true);
+    expect(result.pairs.every(p => p.semantic!.sharedNeighborPaths.every(path => path !== p.leftPath && path !== p.rightPath && semantic.nodes.some(n => n.path === path)))).toBe(true);
+    Object.assign(semantic.nodes[0].neighbors[1], { path: "Changed.md" }); expect(shared).toEqual(["C.md", "D.md"]);
+  });
+  it.each([[1, 3, "mutual-top-3"], [2, 5, "mutual-top-5"], [2, undefined, "one-sided-top-5"]] as const)("classifies ranks %s / %s as %s", async (left, right, expected) => {
+    const neighbors = (other: string, rank: number | undefined) => rank === undefined ? [] :
+      [...Array.from({ length: rank - 1 }, (_, i) => [`Filler${i}.md`, .99 - i * .01] as const), [other, .8] as const];
+    const semantic = rankedSemanticMap({ "A.md": neighbors("B.md", left), "B.md": neighbors("A.md", right) });
+    const result = deriveConnectionComparison(semantic, await knownTopology(semantic), 1);
+    expect(result.pairs.find(p => p.leftPath === "A.md" && p.rightPath === "B.md")!.semantic).toMatchObject({ leftRank: left, rightRank: right, rankClass: expected });
+  });
+  it("orders by rank class, shared count, exact cosine, then both canonical paths", async () => {
+    const lists: Record<string, [string, number][]> = {};
+    // Named target pairs have intentionally conflicting score/path/shared-count priorities.
+    for (const [name, rank, shared, score] of [["Z", 1, 2, .6], ["Y", 1, 1, .7], ["X", 1, 1, .8], ["W", 1, 0, .9],
+      ["V", 5, 0, .95], ["U", 0, 0, .99], ["T", 1, 0, .9]] as const) {
+      const a = `${name}/A.md`, b = `${name}/B.md`;
+      lists[a] = [[b, score], ...Array.from({ length: shared }, (_, i) => [`${name}/Shared${i}.md`, .1] as [string, number])];
+      lists[b] = rank === 0 ? [] : [...Array.from({ length: rank - 1 }, (_, i) => [`${name}/Filler${i}.md`, .999 - i * .001] as [string, number]),
+        [a, score], ...Array.from({ length: shared }, (_, i) => [`${name}/Shared${i}.md`, .1] as [string, number])];
+    }
+    lists["T/A.md"].push(["T/C.md", .9]); lists["T/C.md"] = [["T/A.md", .9]];
+    const semantic = rankedSemanticMap(lists), result = deriveConnectionComparison(semantic, await knownTopology(semantic), 1);
+    expect(result.pairs.filter(p => p.leftPath.endsWith("/A.md") && /\/[BC]\.md$/.test(p.rightPath)).map(p => [p.leftPath, p.rightPath]))
+      .toEqual([["Z/A.md", "Z/B.md"], ["X/A.md", "X/B.md"], ["Y/A.md", "Y/B.md"], ["T/A.md", "T/B.md"], ["T/A.md", "T/C.md"], ["W/A.md", "W/B.md"], ["V/A.md", "V/B.md"], ["U/A.md", "U/B.md"]]);
   });
 });

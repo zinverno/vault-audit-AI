@@ -5,6 +5,14 @@ export { deriveConnectionComparison } from "../health/connections/deriveConnecti
 
 export async function connectionFixture(count = 150) {
   const f = await semanticGlobalMapFixture(count);
+  // Keep the existing real vector engine fixture; rename two synthetic paths to observed special formats.
+  const renamedPaths = new Map([[f.paths[20], "Drawings/Drawing A.excalidraw.md"], [f.paths[21], "Drawings/Drawing B.EXCALIDRAW.md"]]);
+  const captured = f.store.readSnapshot();
+  await f.store.applyChanges({ deletePaths: [...renamedPaths.keys()], upserts: captured.metadata.flatMap((entry, i) => {
+    const path = renamedPaths.get(entry.path);
+    return path ? [{ ...entry, path, id: `${path}:${entry.ordinal}`, vector: captured.vectors.slice(i * f.dimensions, (i + 1) * f.dimensions) }] : [];
+  }) });
+  f.paths = f.paths.map(path => renamedPaths.get(path) ?? path);
   const service = new SemanticDiscoveryService(f.store, f.dimensions);
   const revision = { vectorGeneration: 1, vectorCount: count * 3, dimensions: f.dimensions, provider: "ollama", model: "global-map-synthetic", configurationRevision: 0, runtimeRevision: 1 };
   const semantic = projectGlobalSemanticMap(await service.analyzeGlobalSemanticMap(), revision, 1)!;
@@ -20,5 +28,5 @@ export async function connectionFixture(count = 150) {
     basename: path.split("/").pop()!.replace(/\.md$/, ""), mtime: 1, contentAvailable: false,
     linksAvailable: path !== unavailable, resolvedOutgoing: edges.filter(e => e.source === path).map(e => e.target), unresolvedLinks: [] })),
     coverage: { noteListComplete: true, contentComplete: false, linksComplete: false }, diagnostics: [], diagnosticsTruncated: 0 }, 1, new AbortController().signal);
-  return { ...f, semantic, topology, plan: { oneWay, reciprocal, explicitOnly, missing, unavailable, topologyOnly, edges } };
+  return { ...f, semantic, topology, plan: { oneWay, reciprocal, explicitOnly, missing, unavailable, topologyOnly, edges, renamedPaths: [...renamedPaths] } };
 }

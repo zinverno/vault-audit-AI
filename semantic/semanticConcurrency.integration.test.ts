@@ -1,3 +1,4 @@
+import { newConnectionComparisonViewState, syncConnectionComparison, reviewCandidate, filteredConnectionPairs } from "../health/connections/connectionComparisonViewState";
 import { ConnectionComparisonController } from "../health/connections/connectionComparisonController";
 import { VaultTopologyController } from "../health/topology/vaultTopologyController";
 import { ObsidianLocalVaultSource } from "../health/analyzers/local/obsidianLocalVaultSource";
@@ -574,6 +575,10 @@ describe("semantic read/write barrier with real services and store", () => {
     try {
       expect(metadata.getFileCache).not.toHaveBeenCalled();
       await comparison.load(); expect(comparison.getSnapshot().comparison?.candidateCount).toBe(1);
+      const review = newConnectionComparisonViewState(); syncConnectionComparison(review, comparison.getSnapshot().comparison);
+      const candidate = filteredConnectionPairs(review)[0]; reviewCandidate(review, candidate.id, "useful");
+      review.rankFilter = "mutual-top-3"; review.reviewFilter = "useful"; review.query = "alpha"; review.hideExcalidraw = true;
+      expect(filteredConnectionPairs(review)).toEqual([candidate]);
       const captured = comparison.getSnapshot(); await port.focus("Alpha.md"); port.resetFocus(); expect(comparison.getSnapshot()).toBe(captured);
       topology.markStale(); expect(comparison.getSnapshot().state).toBe("stale");
       await comparison.refresh(); expect(comparison.getSnapshot().state).toBe("ready");

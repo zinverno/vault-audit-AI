@@ -20,10 +20,11 @@ socket.onmessage = e => {
 const send = (method, params = {}) => new Promise((resolve, reject) => { const next = ++id; pending.set(next, { resolve, reject }); socket.send(JSON.stringify({ id: next, method, params })); });
 const evaluate = async expression => { const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); assert(!r.exceptionDetails, JSON.stringify(r.exceptionDetails)); return r.result.value; };
 const click = key => evaluate(`hv.contentEl.querySelector('[data-health-action="${key}"]').click()`);
+const viewState = () => evaluate('(({comparison,reviewByPairId,...rest})=>({...rest,reviewByPairId:[...reviewByPairId]}))(hv.comparisonView)');
 const io = () => evaluate('({...io})');
 const resetIO = () => evaluate('Object.keys(io).forEach(k=>io[k]=0)');
 const report={matrix:[],boundaries:[],interactions:[],performance:[],exceptions,limitations:['Linux desktop only; narrow viewports are not mobile OS','No screen-reader speech, popout or third-party theme test','requestUrl is covered by the real-runtime integration test; native tracks embed/fetch/XHR']};
-const noIO=values=>{for(const key of ['embed','fetch','xhr','read','cachedRead','write','writeBinary','saveData','mutate'])assert.equal(values[key],0,key+': '+JSON.stringify(values));};
+const noIO=values=>{for(const key of ['embed','fetch','xhr','read','cachedRead','write','writeBinary','saveData','mutate','localStorage'])assert.equal(values[key],0,key+': '+JSON.stringify(values));};
 const setup = async (count, language = 'en', disabled = false) => {
   await evaluate(`(async()=>{window.nativeRestore?.(); for(const leaf of app.workspace.getLeavesOfType('veynrel-health'))leaf.detach(); await app.plugins.disablePlugin('ai-knowledge-hub');})()`);
   const settings = JSON.parse(await fs.readFile(pluginDir + '/data.json', 'utf8'));
@@ -45,7 +46,7 @@ const setup = async (count, language = 'en', disabled = false) => {
     window.hv=app.workspace.getLeavesOfType('veynrel-health')[0].view; await hv.controller.getHealthService();
     window.cp=hv.comparison;window.tp=hv.topology;window.np=hv.neighborhood; window.gp=hv.globalMap; window.store=engine.runtimeSlot?.runtime.components?.vectorStore;
     await new Promise(r=>setTimeout(r,180));
-    window.io={semanticLoad:0,topologyLoad:0,inventory:0,metadata:0,focus:0,global:0,catalog:0,similarity:0,snapshot:0,embed:0,fetch:0,xhr:0,read:0,cachedRead:0,write:0,writeBinary:0,saveData:0,mutate:0};
+    window.io={semanticLoad:0,topologyLoad:0,inventory:0,metadata:0,focus:0,global:0,catalog:0,similarity:0,snapshot:0,embed:0,fetch:0,xhr:0,read:0,cachedRead:0,write:0,writeBinary:0,saveData:0,mutate:0,localStorage:0};
     const restores=[]; const wrap=(obj,key,counter)=>{if(!obj||typeof obj[key]!=='function')return;const original=obj[key];obj[key]=function(...args){io[counter]++;return original.apply(this,args)};restores.push(()=>obj[key]=original)};
     const plan=${JSON.stringify(plan)};
     const inventory=app.vault.getMarkdownFiles.bind(app.vault),cache=app.metadataCache.getFileCache.bind(app.metadataCache);
@@ -55,7 +56,7 @@ const setup = async (count, language = 'en', disabled = false) => {
     wrap(gp,'load','semanticLoad');wrap(tp,'load','topologyLoad');wrap(app.vault,'getMarkdownFiles','inventory');wrap(app.metadataCache,'getFileCache','metadata');
     wrap(engine,'analyzeSemanticFocus','focus');wrap(engine,'analyzeGlobalSemanticMap','global');wrap(engine,'listIndexedPaths','catalog');wrap(engine,'findSimilarNotes','similarity');wrap(store,'readSnapshot','snapshot');wrap(store,'applyChanges','mutate');
     wrap(engine.runtimeSlot?.runtime.components?.searchService.provider,'embed','embed');
-    wrap(window,'fetch','fetch');wrap(XMLHttpRequest.prototype,'open','xhr');
+    wrap(Storage.prototype,'setItem','localStorage');wrap(window,'fetch','fetch');wrap(XMLHttpRequest.prototype,'open','xhr');
     wrap(app.vault,'read','read');wrap(app.vault,'cachedRead','cachedRead');wrap(plugin,'saveData','saveData');
     const adapter=app.vault.adapter;
     for(const key of ['write','writeBinary','append','remove','rename','mkdir']){const original=adapter[key];adapter[key]=function(path,...args){if(path.endsWith('.md')||path.startsWith('.obsidian/plugins/ai-knowledge-hub/'))io[key==='writeBinary'?'writeBinary':'write']++;return original.call(this,path,...args)};restores.push(()=>adapter[key]=original)}
@@ -97,6 +98,36 @@ try{
     const pair=source=>result.pairs.find(p=>p.leftPath===source.left&&p.rightPath===source.right);
     assert.equal(pair(plan.oneWay).markdown.direction,'left-to-right');assert.equal(pair(plan.reciprocal).markdown.direction,'reciprocal');assert.equal(pair(plan.explicitOnly).semantic,undefined);
     report.boundaries.push({language,passive,opened,counts:result.actual});
+    const evidence = await evaluate(`(()=>{
+      const c=cp.getSnapshot().comparison,s=gp.getSnapshot().map,byPath=new Map(s.nodes.map(n=>[n.path,n]));
+      const candidates=c.pairs.filter(p=>p.category==='candidate'),counts={};
+      for(const rank of ['mutual-top-3','mutual-top-5','one-sided-top-5'])counts[rank]=candidates.filter(p=>p.semantic.rankClass===rank).length;
+      return {counts,sharedCounts:[...new Set(candidates.map(p=>p.semantic.sharedNeighborPaths.length))],drawings:candidates.filter(p=>[p.leftPath,p.rightPath].some(p=>p.toLowerCase().endsWith('.excalidraw.md'))).length,
+        sharedValid:c.pairs.filter(p=>p.semantic).every(p=>JSON.stringify(p.semantic.sharedNeighborPaths)===JSON.stringify(byPath.get(p.leftPath).neighbors.map(n=>n.path).filter(path=>path!==p.leftPath&&path!==p.rightPath&&byPath.get(p.rightPath).neighbors.some(n=>n.path===path)).sort()))};})()`);
+    assert(evidence.sharedValid); assert(evidence.drawings>0); for(const n of Object.values(evidence.counts))assert(n>0);
+    for(const n of [0,1,2])assert(evidence.sharedCounts.includes(n));
+    await click('connections-rank-mutual-top-3'); await click('connections-pair-0'); await click('connections-review-useful');
+    assert.equal(await evaluate(`hv.contentEl.querySelector('[data-health-action="connections-review-useful"]').getAttribute('aria-pressed')`),'true');
+    await click('connections-pair-1');await click('connections-review-not-useful');
+    await click('connections-pair-2');await click('connections-review-unsure');
+    await click('connections-review-clear');await click('connections-review-unsure');
+    assert.equal(await evaluate('hv.comparisonView.reviewByPairId.size'),3);
+    await click('connections-review-filter-unreviewed');
+    await evaluate(`(()=>{const input=hv.contentEl.querySelector('[data-health-action="connections-hide-excalidraw"]');input.checked=true;input.dispatchEvent(new Event('change'));})()`);
+    assert(await evaluate(`cp.getSnapshot().comparison.candidateCount===${result.actual.candidate}`));
+    assert(await evaluate(`!([...hv.contentEl.querySelectorAll('.veynrel-connections-list button')].some(b=>b.title.toLowerCase().includes('.excalidraw.md')))`));
+    await search('.md');assert(await evaluate(`!hv.contentEl.querySelector('[data-health-action="connections-more"]').hidden`));
+    await click('connections-more');assert.equal(await evaluate('hv.comparisonView.visibleLimit'),100);
+    await click('connections-pair-0');const reviewedState=await viewState();await evaluate('window.reviewComparison=cp.getSnapshot()');
+    await click('connections-explore-left');await evaluate('np.load(np.getSnapshot().sourcePath)');
+    for(let i=0;i<2;i++){await click('neighborhood-select-1');await click('neighborhood-explore');await evaluate('np.load(np.getSnapshot().sourcePath)');}
+    await click('neighborhood-back');assert.deepEqual(await viewState(),reviewedState);assert(await evaluate('cp.getSnapshot()===reviewComparison'));
+    await evaluate('gp.focus(gp.getSnapshot().map.nodes[0].path)');await evaluate('gp.resetFocus()');assert.deepEqual(await viewState(),reviewedState);assert(await evaluate('cp.getSnapshot()===reviewComparison'));
+    await click('connections-aligned');await click('connections-candidate');assert.equal(await evaluate('hv.comparisonView.reviewByPairId.size'),3);
+    await search('join');assert.equal(await evaluate('hv.comparisonView.visibleLimit'),50);await search('');
+    await click('connections-rank-all');await click('connections-review-filter-all');
+    report.interactions.push({language,evidence,reviewRoundTrip:true,reviewedState});
+
     await evaluate(`hv.contentEl.querySelector('[data-health-action="connections-pair-0"]').focus()`);
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
     await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
@@ -122,20 +153,26 @@ try{
         }
       }
     }
-    await click('connections-refresh');await evaluate('cp.refresh()');assert.equal(await evaluate('cp.getSnapshot().state'),'ready');noIO(await io());
+    await click('connections-refresh');await evaluate('cp.refresh()');assert.equal(await evaluate('cp.getSnapshot().state'),'ready');assert.equal(await evaluate('hv.comparisonView.reviewByPairId.size'),0);noIO(await io());
     await click('connections-candidate');await click('connections-more');assert.equal(await evaluate('hv.comparisonView.visibleLimit'),100);
     await search('Databases');const filtered=await evaluate("hv.contentEl.querySelectorAll('[data-health-action^=\"connections-pair-\"]').length");assert(filtered>0&&filtered<=50);
     await search('');await click('connections-aligned');await click('connections-pair-0');await search('join');
-    await evaluate('hv.comparisonView.visibleLimit=100');const state=await evaluate('({...hv.comparisonView})');
+    await evaluate('hv.comparisonView.visibleLimit=100');const state=await viewState();
     const globalCalls=(await io()).global;await evaluate('window.savedComparison=cp.getSnapshot()');
     await click('connections-explore-left');await evaluate('np.load(np.getSnapshot().sourcePath)');
     for(let i=0;i<2;i++){await click('neighborhood-select-1');await click('neighborhood-explore');await evaluate('np.load(np.getSnapshot().sourcePath)');}
-    await click('neighborhood-back');assert.deepEqual(await evaluate('({...hv.comparisonView})'),state);assert(await evaluate('cp.getSnapshot()===savedComparison'));assert.equal((await io()).global,globalCalls);
+    await click('neighborhood-back');assert.deepEqual(await viewState(),state);assert(await evaluate('cp.getSnapshot()===savedComparison'));assert.equal((await io()).global,globalCalls);
     await evaluate('gp.focus(gp.getSnapshot().map.nodes[0].path)');await evaluate('gp.resetFocus()');assert(await evaluate('cp.getSnapshot()===savedComparison'));
     noIO(await io());assert.deepEqual(await digest(),before);
     report.interactions.push({language,roundTrip:true,state,focusPreserved:true,io:await io()});
     // Note opening is explicit navigation and measured separately from comparison IO.
     await click('connections-open-right');assert(await evaluate('!!app.workspace.getActiveFile()'));
+    const splitResult=await evaluate(`(async()=>{const before=[];app.workspace.iterateAllLeaves(l=>{before.push(l)});const pair=cp.getSnapshot().comparison.pairs.find(p=>p.id===hv.comparisonView.selectedPair);await hv.openPair(pair.leftPath,pair.rightPath);await new Promise(r=>setTimeout(r,200));const after=[];app.workspace.iterateAllLeaves(l=>{after.push(l)});const added=after.filter(l=>!before.includes(l));const boxes=added.map(l=>l.view.containerEl.getBoundingClientRect());return {retained:before.every(l=>after.includes(l)),added:added.length,paths:added.map(l=>l.view.file?.path),expected:[pair.leftPath,pair.rightPath],beside:boxes.length===2&&Math.abs(boxes[0].top-boxes[1].top)<2&&Math.abs(boxes[0].left-boxes[1].left)>100};})()`);
+    assert(splitResult.retained);assert.equal(splitResult.added,2);assert.deepEqual(splitResult.paths,splitResult.expected);assert(splitResult.beside);report.interactions.push({language,sideBySide:splitResult});
+    assert.deepEqual(await digest(),before);
+    // Clean up only leaves created by this synthetic test before the next locale matrix.
+    await evaluate(`for(const leaf of app.workspace.getLeavesOfType('markdown'))leaf.detach()`);
+
   }
   // Real Obsidian DOM timing: same bounded renderer, source computation excluded.
   await evaluate(await fs.readFile(root+'/presentation.js','utf8'));
