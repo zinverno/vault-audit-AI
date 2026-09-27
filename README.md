@@ -7,103 +7,124 @@
 </p>
 
 <p align="center">
-  Turn your Obsidian vault into a healthier, searchable, connected knowledge system.
+  A knowledge-health and semantic exploration workspace for Obsidian.
 </p>
 
 <p align="center">
   <a href="https://github.com/zinverno/veynrel/releases">Releases</a>
-  ·
-  <a href="https://github.com/zinverno/veynrel/stargazers">Star Veynrel</a>
-  ·
-  <a href="https://github.com/zinverno/veynrel/blob/main/LICENSE">MIT License</a>
+  · <a href="https://github.com/zinverno/veynrel/stargazers">Star Veynrel</a>
+  · <a href="LICENSE">MIT License</a>
 </p>
 
----
+See what needs attention, understand your vault's structure, discover relationships you have not explicitly linked, and remember what you learn. Start with local Health and native spaced repetition; enable AI and external integrations when you need them.
 
-## What is Veynrel?
-
-Veynrel is an open-source knowledge system for Obsidian.
-
-It helps you answer three simple questions:
-
-- **What in my vault needs attention?**
-- **What knowledge am I missing, forgetting, or duplicating?**
-- **How can AI help without taking control away from me?**
-
-Instead of being a collection of unrelated AI commands, Veynrel brings vault analysis, semantic discovery, spaced repetition, AI-assisted workflows, and external agent integration into one workspace.
+## One workspace
 
 ```text
 Health | Findings | Discover | Recall | Connect | Tools | Settings
 ```
 
-AI is explicit. Local features stay local. External agents cannot silently rewrite your vault.
+| Page | What you can do |
+| --- | --- |
+| **Health** | See Vault Pulse, recommendations, four dimensions of knowledge health and Vault Topology. |
+| **Findings** | Review evidence and decide what to address, dismiss or revisit. |
+| **Discover** | Search by meaning, explore semantic maps and inspect connection candidates. |
+| **Recall** | Review your flashcards with native FSRS-6 scheduling. |
+| **Connect** | Configure Companion, synchronize its mirror and review external proposals. |
+| **Tools** | Launch advanced audits, Ask your Vault, batch processing and MOC generation. |
+| **Settings** | Check capability state and configure the services you use. |
 
----
+## A look inside
 
-## The Veynrel workspace
+Synthetic vault data, shown in native dark and light themes. Select an image to inspect it at full size.
 
-### Health
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="docs/final-product-ui-ux-evidence/after/en-health-1440-dark.png"><img src="docs/final-product-ui-ux-evidence/after/en-health-1440-dark.png" width="600" alt="Health dashboard with Vault Pulse, a recommendation and four dimensions"></a>
+      <br><strong>Health</strong> — attention, evidence and next steps.
+    </td>
+    <td width="50%" valign="top">
+      <a href="docs/final-product-ui-ux-evidence/after/en-semantic-map-1440-light.png"><img src="docs/final-product-ui-ux-evidence/after/en-semantic-map-1440-light.png" width="600" alt="Global Semantic Map with the vault semantic core and a selected note inspector"></a>
+      <br><strong>Global Semantic Map</strong> — explore your indexed knowledge.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="docs/final-product-ui-ux-evidence/after/en-connection-opportunities-1440-light.png"><img src="docs/final-product-ui-ux-evidence/after/en-connection-opportunities-1440-light.png" width="600" alt="Connection Opportunities with category counts, candidate pairs and semantic evidence"></a>
+      <br><strong>Connection Opportunities</strong> — inspect relationships alongside your links.
+    </td>
+    <td width="50%" valign="top">
+      <a href="docs/final-product-ui-ux-evidence/after/en-recall-review.png"><img src="docs/final-product-ui-ux-evidence/after/en-recall-review.png" width="600" alt="Native Recall review showing an answer and Again, Hard, Good and Easy ratings"></a>
+      <br><strong>Recall</strong> — a focused review, inside Obsidian.
+    </td>
+  </tr>
+</table>
 
-**See what needs your attention.**
+## Quick start
 
-Veynrel looks at your vault through four dimensions:
+1. [Install Veynrel](#installation), then use its ribbon icon or **Open Veynrel Health** command.
+2. Choose a profile and **run local Health**. Inspect the recommendation and Findings; no AI provider is required.
+3. Optionally enable **Semantic Intelligence**: choose an embedding provider/model, test the connection and explicitly build the first index.
+4. Open **Discover** to explore Semantic Neighborhood, Global Semantic Map and Connection Opportunities.
+5. If you want spaced repetition, add flashcards and choose **Find flashcards** in Recall.
+6. Configure **Deep Intelligence** for Knowledge Health or advanced AI workflows, and **Connect** for Companion, only if needed.
 
-- **Structure** — broken links, orphan notes, weak note structure, disconnected areas.
-- **Connections** — graph issues, exact duplicates, semantic duplicates and relationship quality.
-- **Recall** — what is due for review in native spaced repetition.
-- **Knowledge** — explicit LLM-assisted signals for notes that may be underdeveloped.
+## Health and Findings
 
-Health is not a mysterious score.
+**Vault Pulse → recommendation → current data.** Health shows concrete Findings and coverage instead of an opaque 0–100 score, across four dimensions:
 
-You see concrete states, evidence, and actions.
+- **Structure:** broken links, orphan notes, weak structure and disconnected areas.
+- **Connections:** explicit relationships, exact duplicates and semantic duplicate findings.
+- **Recall:** cards due for native review.
+- **Knowledge:** explicit AI-assisted signals about underdeveloped notes.
 
----
+The current-data dashboard brings findings, last-check information, Recall and Knowledge state together. **Vault Topology** lets you inspect actual Markdown links in a map with note details. The local Health scan requires no AI.
 
-### Findings
+**Findings is your action inbox.** Review evidence, open affected notes, dismiss, snooze or reopen a Finding. Supported checks automatically resolve findings when a subsequent analysis confirms the issue has disappeared.
 
-**Your action inbox.**
+## Discover by meaning
 
-Every meaningful issue can become a Finding.
+- **Search & find:** semantic search, related notes and potential semantic duplicates.
+- **Visual exploration:** Semantic Neighborhood, Global Semantic Map with selected-note focus, and Connection Opportunities.
+- **Semantic Health:** explicitly check for semantic duplicates and review the resulting Findings.
 
-Findings can be:
+These features reuse the existing semantic index. Similarity is a discovery signal, not proof that notes are identical or agree.
 
-- reviewed,
-- opened in context,
-- dismissed,
-- snoozed,
-- reopened,
-- automatically resolved when the underlying issue disappears.
+| Relationship view | What it shows |
+| --- | --- |
+| **Vault Topology** (Health) | The Markdown links you actually created. |
+| **Semantic Neighborhood** | One note and its closest semantic neighbors. |
+| **Global Semantic Map** | The whole eligible indexed semantic space, within the current map limit. |
+| **Connection Opportunities** | Semantic top-5 relationships compared with explicit Markdown links. |
 
-Veynrel keeps the observation separate from your decision about it.
+### Global Semantic Map
 
----
+Distance from the center reflects semantic similarity to the current center: **closer means more similar**. The default center is the **vault semantic core**; any mapped note can explicitly become the focus, with a simple reset to the core.
 
-### Discover
+Node size reflects **semantic connectedness**, not importance or note quality. Map exploration reuses existing embeddings and makes no new embedding requests. See the [map guide](docs/global-semantic-map.md) for details.
 
-**Explore your vault by meaning.**
+### Connection Opportunities
 
-Discover brings semantic exploration into one place:
+Inspect connection candidates with semantic evidence beside the Markdown relationship:
 
-- semantic search,
-- related notes,
-- potential semantic duplicates,
-- explicit Semantic Health checks.
+| Category | Meaning |
+| --- | --- |
+| **Candidate** | A semantic top-5 relationship with no known Markdown link in either direction. |
+| **Aligned** | A semantic top-5 relationship that also has Markdown linkage. |
+| **Explicit-only** | A Markdown-linked pair outside the sparse semantic top-5 graph. |
 
-Veynrel reuses one persistent semantic index rather than building separate indexes for every feature.
+**Explicit-only does not mean semantically unrelated.** Candidates are invitations to inspect, not proof that a link should exist. Coverage notices identify relationships that could not be compared.
 
-> Semantic similarity is a discovery signal, not proof that two notes are identical.
+Review aids include mutual top-3, mutual top-5 and one-sided evidence; shared semantic neighbors; and an optional **Hide Excalidraw notes** presentation filter. Mark a candidate **Useful / Not useful / Unsure** during the current session. These annotations are not persisted, and no Markdown links are created automatically.
 
----
+More: [Connection Opportunities](docs/connection-opportunities.md) · [candidate evidence and review](docs/connection-candidate-quality.md).
 
-### Recall
+## Remember with Recall
 
-**Remember what matters.**
+Native spaced repetition uses **FSRS-6**, a due queue and local scheduling. No third-party spaced repetition plugin is required.
 
-Veynrel includes native spaced repetition powered by **FSRS-6**.
-
-No third-party review plugin is required.
-
-Supported cards use simple Markdown:
+Write one `Question::Answer` card per line under a Markdown heading named exactly **`Flashcards`** (case-sensitive):
 
 ```markdown
 ## Flashcards
@@ -112,266 +133,48 @@ What is retrieval practice::Actively recalling information instead of rereading 
 Why use spaced repetition::It schedules reviews near the point of forgetting
 ```
 
-Recall gives you:
+Choose **Find flashcards**, start a review, reveal the answer and rate **Again / Hard / Good / Easy** (keys **1–4**). Schedules survive restarts.
 
-- explicit flashcard discovery,
-- local scheduling,
-- due queues,
-- Question → Reveal answer,
-- **Again / Hard / Good / Easy**,
-- preserved scheduling across restarts,
-- Recall Health on the main dashboard.
+AI card generation is optional and explicit: it uses your configured language model and appends generated cards to the note for native Recall. [Recall guide](docs/recall-review-experience.md).
 
-You can also explicitly generate flashcards for the current note with your configured language model. Generated cards are appended to Markdown and immediately become available to native Recall.
+## Connect, Tools and Settings
 
----
+**Connect** works with the optional, self-hosted [Veynrel Companion](https://github.com/zinverno/veynrel-companion). It makes a synchronized mirror available to MCP clients for note reading, semantic search and change proposals. External agents **cannot directly write your vault through the proposal workflow**: you inspect each proposal in Obsidian and choose **Approve** or **Reject**.
 
-### Connect
+Manual mirror sync requires confirmation. Enabling Connect also permits disclosed incremental synchronization after subsequent semantic changes. The mirror can contain Markdown, chunk text, metadata and embeddings; use an endpoint you trust. [Connect data flow and setup](docs/veynrel-connect.md).
 
-**Bridge your knowledge to external tools and agents.**
+**Tools** keeps Ask your Vault, Deep Audit / Single Audit, batch processing, MOC generation and legacy reports available. Editor workflows—AI writing, selection transforms, Dataview generation and atomization—remain separate, through the command palette and editor context menu. Existing command IDs remain compatible with hotkeys and automation.
 
-Veynrel Connect is the product surface for the optional
-[Veynrel Companion](https://github.com/zinverno/veynrel-companion).
+**Settings** summarizes Deep Intelligence, Semantic Intelligence, Connect and Recall. Native **Obsidian Settings → Veynrel** provides advanced provider/model, embedding, Companion, Deep Audit, output and interface controls.
 
-It can expose a synchronized mirror of your vault to external MCP clients for:
+Supported language-model providers include Ollama, OpenRouter, OpenAI, Groq and custom OpenAI-compatible endpoints. Embeddings support Ollama, OpenRouter and OpenAI-compatible endpoints. Language-model, embedding and Companion credentials are separate.
 
-- vault status,
-- note listing and reading,
-- chunk retrieval,
-- semantic search,
-- proposed note changes.
+## Local-first, explicit AI
 
-External agents **cannot directly write your Obsidian vault** through this workflow.
-
-They may submit a proposal. You inspect it in Obsidian and explicitly choose **Approve** or **Reject**.
-
-```text
-External agent
-      ↓
-Veynrel Companion
-      ↓
-Proposed change
-      ↓
-Review in Obsidian
-      ↓
-Approve / Reject
-```
-
-The plugin remains the authoritative vault writer.
-
----
-
-### Tools
-
-Tools is a primary workspace tab, also reached from the Findings shortcut.
-Existing commands and context workflows remain available; Health has no redundant Tools button beside its profile controls.
-
-**Advanced workflows without cluttering the main product loops.**
-
-Tools keeps existing power-user workflows available:
-
-- Ask your Vault,
-- Deep Audit / Single Audit,
-- batch processing,
-- MOC generation,
-- legacy vault reports.
-
-Editor-specific workflows such as AI writing, selection transforms, Dataview generation, and atomization remain available through the command palette and editor context menu.
-
----
-
-### Settings
-
-**Understand what powers Veynrel.**
-
-The product Settings page summarizes:
-
-- Deep Intelligence,
-- Semantic Intelligence,
-- Veynrel Connect,
-- native Recall.
-
-Advanced configuration remains available through Obsidian Settings for:
-
-- providers and models,
-- embedding configuration,
-- Companion endpoint and timeout,
-- Deep Audit tuning,
-- output folders,
-- insertion behavior,
-- interface preferences.
-
-Language-model, embedding, and Companion credentials remain separate.
-
----
-
-## Why Veynrel is different
-
-### Local-first where it matters
-
-Local Health checks and Recall scheduling do not require an AI provider.
-
-Your semantic vector index is stored inside your Obsidian plugin data.
-
-Ollama can keep language-model and embedding work local when configured against a local endpoint.
-
-### AI only when you ask for it
-
-Opening Veynrel does not automatically:
-
-- scan your vault,
-- build an index,
-- call a language model,
-- contact Companion,
-- generate flashcards,
-- rewrite notes.
-
-Network work and note mutations belong to explicit user actions.
-
-### No opaque “knowledge score”
-
-Veynrel does not compress your vault into one meaningless 0–100 number.
-
-Health shows concrete dimensions, coverage, findings, and evidence.
-
-### Human approval stays in the loop
-
-Knowledge Health is a review signal, not a truth detector.
-
-Semantic duplicates are suggestions, not automatic merges.
-
-External MCP clients can propose changes, but they cannot bypass explicit approval in Obsidian.
-
----
-
-## Quick start
-
-### 1. Open Veynrel
-
-Use the ribbon icon or run:
-
-**Open Veynrel Health**
-
-Start with the local Health scan. It requires no AI provider.
-
-### 2. Enable Semantic Intelligence
-
-From the Veynrel workspace or Advanced Settings:
-
-1. choose an embedding provider,
-2. choose a model,
-3. test the connection,
-4. explicitly build the first semantic index.
-
-After the first index exists, normal Markdown edits can be synchronized incrementally.
-
-### 3. Configure Deep Intelligence
-
-Choose your language-model provider:
-
-- Ollama,
-- OpenRouter,
-- OpenAI,
-- Groq,
-- custom OpenAI-compatible endpoint.
-
-Deep Intelligence powers Knowledge Health and the existing AI-assisted workflows.
-
-### 4. Try Recall
-
-Create or find cards under a `Flashcards` heading and choose **Find flashcards**.
-
-Review them directly inside Veynrel.
-
-### 5. Optional: Connect
-
-If you run Veynrel Companion, open **Connect** to configure the endpoint, test the connection, synchronize the mirror, and review proposed changes.
-
----
-
-## Supported providers
-
-### Language models
-
-- Ollama
-- OpenRouter
-- OpenAI
-- Groq
-- Custom OpenAI-compatible endpoints
-
-### Embeddings
-
-- Ollama
-- OpenRouter
-- OpenAI-compatible endpoints
-
-Provider availability, pricing, retention, and rate limits are controlled by the provider you choose.
-
----
-
-## Privacy model
-
-Veynrel separates local state from explicit provider-side processing.
-
-| Feature | What happens |
+| Activity | Where the work happens |
 | --- | --- |
-| Health — local checks | Local vault analysis, no provider required |
-| Recall discovery/review | Local inventory and FSRS scheduling |
-| Semantic indexing | Note chunks go to the configured embedding provider when remote |
-| Semantic search | Query goes to the configured embedding provider when remote |
-| Knowledge Health | Confirmed eligible note content goes to the configured language model |
-| AI writing / authoring | Only the content required for the explicit action is sent |
-| Connect | A disclosed mirror is sent to the configured Companion endpoint |
-| MCP proposals | Stored on Companion; no vault write until explicit Obsidian approval |
+| Local Health and Vault Topology | On your device; no AI provider required. |
+| Recall discovery and scheduling | Locally, using native FSRS-6. |
+| Semantic indexing / search | A remote embedding provider receives required note chunks / the search query. A local Ollama endpoint can keep embedding work local. |
+| Semantic maps / connection comparison | Existing index and link metadata; no new embeddings or provider calls. |
+| Knowledge Health / AI workflows | Explicit actions send the content needed for the task to your configured language model. |
+| Connect | The disclosed mirror goes to your configured Companion endpoint; proposed vault changes require Obsidian approval. |
 
-Veynrel has no telemetry or analytics.
+Opening the workspace does not itself scan, build an index, call a provider or synchronize Companion. The first semantic build is explicit; later Markdown edits can update an existing index incrementally. A local vector index does not make a remote provider local.
 
-Provider API keys are not sent to Companion. The Companion token is not sent to AI providers. MCP authentication is configured separately on the Companion server.
-
-A local vector index does not make a remote embedding provider local. Review the privacy policy of any remote service before sending sensitive notes.
-
-For the full data-flow and durability model, see the project documentation in [`docs/`](docs/).
-
----
-
-## Local data
-
-Veynrel keeps feature state inside the existing plugin directory:
-
-```text
-<your-vault>/<configDir>/plugins/ai-knowledge-hub/
-```
-
-Main locations:
-
-| Path | Purpose |
-| --- | --- |
-| `data.json` | Plugin settings and provider configuration |
-| `semantic-index/` | Persistent semantic vectors |
-| `note-index.json` | Legacy Deep Audit cache and saved clusters |
-| `health/` | Findings, scan receipts and Health recovery data |
-| `recall/cards.json` | Native Recall inventory and FSRS scheduling |
-| `recall/recovery/` | Explicit Recall recovery backups |
-
-Not every file exists in every setup.
-
-The historical plugin ID remains `ai-knowledge-hub` for update compatibility.
-
----
+Veynrel has no telemetry or analytics. Provider API keys are not sent to Companion, and the Companion token is not sent to AI providers. Review the policies of remote services before sending sensitive notes. Data-flow, storage and recovery details are in [`docs/`](docs/).
 
 ## Installation
 
 ### Obsidian Community Plugins
 
-1. Open **Settings → Community plugins**.
-2. Select **Browse**.
-3. Search for **Veynrel**.
-4. Install and enable it.
+1. Open **Settings → Community plugins → Browse**.
+2. Search for **Veynrel**.
+3. Install and enable it.
 
 ### Manual installation
 
-Download these three files from the same
-[GitHub Release](https://github.com/zinverno/veynrel/releases):
+Download exactly these three files from the same [GitHub Release](https://github.com/zinverno/veynrel/releases):
 
 ```text
 main.js
@@ -387,98 +190,39 @@ Place them in:
 
 Reload Obsidian and enable Veynrel.
 
-### Updating from an older version
+### Updating
 
-Veynrel keeps the same Community Plugin ID.
+The plugin ID remains **`ai-knowledge-hub`**. Existing users update normally; do not create a second `veynrel` plugin folder. Compatible settings and feature data continue to use the existing plugin directory.
 
-Update normally. Do not create a second plugin folder.
-
-Existing compatible settings, semantic index data, Companion identity, notes, and legacy Deep Audit data are preserved.
-
-Newer Health and Recall storage is additive.
-
----
-
-## Existing commands stay available
-
-Veynrel still supports the fast command-palette and editor workflows that existed before the new workspace.
-
-Examples include:
-
-- Semantic search
-- Ask your Vault
-- Find similar notes
-- Find potential semantic duplicates
-- Update / rebuild semantic index
-- AI writing
-- Process selection
-- Generate Dataview
-- Generate flashcards
-- Batch processing
-- Atomize note
-- Deep Audit
-- Generate MOCs
-- Review AI change proposals
-
-Existing command IDs remain compatible with old hotkeys and automation.
-
----
-
-## Architecture
-
-At a high level:
+## How it fits together
 
 ```text
-                    ┌─────────────────────┐
-                    │      Obsidian       │
-                    │    Markdown vault   │
-                    └──────────┬──────────┘
-                               │
-             ┌─────────────────┼─────────────────┐
-             │                 │                 │
-             ▼                 ▼                 ▼
-      Local Health       Semantic Index      Native Recall
-             │                 │                 │
-             ▼                 ▼                 ▼
-         Findings          Discover           FSRS-6
-             │                 │                 │
-             └────────────┬────┴────────────┬────┘
-                          │                 │
-                          ▼                 ▼
-                     Veynrel UI      Deep Intelligence
-                          │                 │
-                          └────────┬────────┘
-                                   ▼
-                               Knowledge
-                                   │
-                                   ▼
-                               Findings
-
-Optional:
-
-Semantic mirror → Veynrel Companion → MCP clients → proposals → explicit approval
+Obsidian vault
+├─ Local Health → Findings
+│                Vault Topology
+├─ Semantic Index → Search / Related / Duplicates
+│                   Semantic Neighborhood
+│                   Global Semantic Map → Selected-note focus
+│                   Connection Opportunities ← Markdown links
+├─ Recall → FSRS-6
+├─ Deep Intelligence → Knowledge Health / advanced AI workflows
+└─ Connect → Companion / MCP → proposals → approval in Obsidian
 ```
 
-The main design principle is simple:
-
-> **Analysis may suggest. Veynrel shows evidence. The user decides.**
-
----
+**Analysis may suggest. Veynrel shows evidence. You decide.**
 
 ## Current limitations
 
-- Semantic indexing is explicit for the first build and after incompatible embedding-space changes.
-- Similarity search currently uses a local linear scan.
-- Potential duplicate detection performs pairwise document comparison and is intended for personal vault sizes.
-- Ask your Vault is currently a one-shot flow rather than a persistent chat.
-- Knowledge Health is an LLM-assisted quality signal, not factual verification.
-- Native Recall currently focuses on a single built-in review workflow rather than decks, daily limits, or optimizer analytics.
-- Companion is self-hosted and does not provide a hosted Veynrel account service.
-- Some multi-file operations are deliberately not crash-atomic; recovery behavior is documented separately.
+- The first semantic build and rebuilds after incompatible embedding-space changes are explicit.
+- Global Semantic Map exact mode supports **up to 500 eligible mapped notes**; Connection Opportunities shares that limit.
+- Connection Opportunities uses a sparse **top-5** semantic graph. It cannot prove a Markdown link should exist; candidate reviews are **session-only**, not persisted.
+- Recall has no decks, review-history views or optimizer analytics.
+- Semantic search uses a local linear scan; duplicate detection uses pairwise comparison suited to personal vault sizes.
+- Ask your Vault is a one-shot flow, and Knowledge Health is an AI-assisted review signal, not factual verification.
+- Companion remains **self-hosted**, with no hosted Veynrel account service.
+- Verification of the newer visual/native surfaces is strongest on **Linux desktop**. Mobile and other desktop environments are not equally covered for every surface.
 
----
-
-## Development
+## Development and contributing
 
 ```bash
 npm ci
@@ -489,36 +233,13 @@ npm run audit:proposals
 npm run build
 ```
 
-Veynrel and Veynrel Companion are developed as separate repositories with a stable protocol boundary.
+Veynrel and Companion are separate repositories. For integration development, clone [Companion](https://github.com/zinverno/veynrel-companion) beside this repository as `../veynrel-companion`, then run `npm run companion:smoke-sibling`.
 
-For Companion integration development:
-
-```bash
-git clone https://github.com/zinverno/veynrel-companion.git ../veynrel-companion
-npm run companion:smoke-sibling
-```
-
-See [`docs/`](docs/) for architecture, storage contracts, release verification, Recall scheduling, Health semantics, Connect, and migration details.
-
----
-
-## Contributing
-
-Issues, bug reports, architecture discussions, feature ideas, and pull requests are welcome.
-
-If Veynrel is useful to you, consider starring the repository. It helps other Obsidian users discover the project.
-
----
+See [`docs/`](docs/) for architecture and storage contracts, or the [final UI/UX audit](docs/final-product-ui-ux.md) for native verification and known interface limitations. Issues, bug reports and pull requests are welcome.
 
 ## Support Veynrel
 
-Veynrel is free and open source.
-
-If you want to support continued development:
-
-[Support Veynrel on Boosty](https://boosty.to/veynrel)
-
----
+Veynrel is free and open source. [Star the repository](https://github.com/zinverno/veynrel/stargazers) or [support development on Boosty](https://boosty.to/veynrel).
 
 ## License
 
