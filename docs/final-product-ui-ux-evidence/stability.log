@@ -1,0 +1,14 @@
+PASS 390px dark: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 390px light: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 390px yellow: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 768px dark: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 768px light: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 768px yellow: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 1280px dark: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 1280px light: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 1280px yellow: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 1600px dark: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 1600px light: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 1600px yellow: pointer/keyboard load, refresh, stale, route focus, CSS and Tab
+PASS 168 route/theme/width surfaces: shell alignment, prose, seven primary tabs and contextual status
+{"updates":144,"maxScrollDelta":0,"runtime":{"protocolVersion":"1.3","product":"Chrome/142.0.7444.265","revision":"@9722f06a26ed9376ee395a4de8c472268d88a4fb","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) obsidian/1.12.7 Chrome/142.0.7444.265 Electron/39.8.10 Safari/537.36","jsVersion":"14.2.231.22"}}

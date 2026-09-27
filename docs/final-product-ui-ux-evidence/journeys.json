@@ -1,0 +1,95 @@
+{
+  "matrix": [],
+  "boundaries": [],
+  "interactions": [
+    {
+      "language": "en",
+      "journey": "new local-first",
+      "result": "profile → local scan → recommendation → Findings → Health; zero provider requests"
+    },
+    {
+      "language": "en",
+      "journey": "native Recall",
+      "result": "first-run → inventory → 2 due → reveal → keyboard 3 twice → completion → overview"
+    },
+    {
+      "language": "en",
+      "confirmation": "semantic index",
+      "text": "Update the Vault semantic index\n\nMarkdown files: 151\n\nChunk content will be sent to OpenAI-compatible.\n\nThis operation may take some time.\n\nThe index is stored locally inside the plugin directory.\n\nCancel\nUpdate index"
+    },
+    {
+      "language": "en",
+      "journey": "semantic + all child origins",
+      "result": "configure/check/build → Discover → Neighborhood → Map/focus → Neighborhood/Back with query, selection and viewport → comparison/filter/review → Neighborhood/Back → Topology/Back"
+    },
+    {
+      "language": "en",
+      "journey": "Connect",
+      "result": "disabled → configure/test → check → explicit sync confirmation → mirror ready → proposal review entry",
+      "localhostRequests": {
+        "embedding": 3,
+        "status": 2,
+        "plan": 1,
+        "batch": 1,
+        "proposals": 1
+      }
+    },
+    {
+      "language": "en",
+      "journey": "power user",
+      "result": "Tools → batch workflow modal → return → Settings → semantic configuration → Health"
+    },
+    {
+      "language": "ru",
+      "journey": "new local-first",
+      "result": "profile → local scan → recommendation → Findings → Health; zero provider requests"
+    },
+    {
+      "language": "ru",
+      "journey": "native Recall",
+      "result": "first-run → inventory → 2 due → reveal → keyboard 3 twice → completion → overview"
+    },
+    {
+      "language": "ru",
+      "confirmation": "semantic index",
+      "text": "Обновить семантический индекс Vault\n\nMarkdown-файлов: 151\n\nСодержимое фрагментов будет отправлено провайдеру OpenAI-compatible.\n\nОперация может занять некоторое время.\n\nИндекс хранится локально внутри каталога плагина.\n\nОтмена\nОбновить индекс"
+    },
+    {
+      "language": "ru",
+      "journey": "semantic + all child origins",
+      "result": "configure/check/build → Discover → Neighborhood → Map/focus → Neighborhood/Back with query, selection and viewport → comparison/filter/review → Neighborhood/Back → Topology/Back"
+    },
+    {
+      "language": "ru",
+      "journey": "Connect",
+      "result": "disabled → configure/test → check → explicit sync confirmation → mirror ready → proposal review entry",
+      "localhostRequests": {
+        "embedding": 3,
+        "status": 2,
+        "plan": 1,
+        "batch": 1,
+        "proposals": 1
+      }
+    },
+    {
+      "language": "ru",
+      "journey": "power user",
+      "result": "Tools → batch workflow modal → return → Settings → semantic configuration → Health"
+    }
+  ],
+  "exceptions": [],
+  "limitations": [
+    "Linux desktop only; narrow viewports are not mobile OS",
+    "No screen-reader speech, popout or third-party theme test",
+    "requestUrl is covered by the real-runtime integration test; native tracks embed/fetch/XHR"
+  ],
+  "screenshots": [],
+  "states": [],
+  "environment": {
+    "electron": "39.8.10",
+    "platform": "linux",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) obsidian/1.12.7 Chrome/142.0.7444.265 Electron/39.8.10 Safari/537.36"
+  },
+  "artifactSha256": "87ecfbd74e5db7dc1e0f7d9e1ed07c41631cc2b45203cb5bc3efe5cbf297eb5c",
+  "stylesSha256": "c28fb14b7157c06d6f959434da5ae52a7fd82e7248a13f99c2bdc68e6903ee31"
+}
