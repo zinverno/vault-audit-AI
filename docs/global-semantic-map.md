@@ -132,12 +132,21 @@ In a fixed 1000×1000 coordinate space centered at (500, 500):
 ```
 normalizedCore = (coreSimilarity + 1) / 2
 radialDistance = 120 + (1 - normalizedCore) * 290       // [120, 410]
-nodeRadius = 4 + ((semanticConnectedness + 1) / 2) * 5 // [4, 9]
+nodeRadius = 4 + 10 * ((semanticConnectedness + 1) / 2)^3 // [4, 14]
 ```
 
 These absolute monotonic mappings do not exaggerate tiny differences through
 rank scaling. Node size stays bounded. Layout never changes a node's semantic
-radius. Pan/zoom applies only a shared view transform.
+radius. The cubic size scale gives common positive connectedness scores more
+visible differentiation. Pan/zoom applies only a shared view transform.
+
+Reference rings are labeled +1, 0 and −1 at the actual radii 120, 265 and 410.
+A visible EN/RU caption identifies these as similarity to the semantic core.
+The compact summary shows captured indexed/mapped counts plus the minimum,
+maximum and median of each metric across mapped notes. An even-length median
+averages the middle two values; undefined singleton connectedness is omitted and
+shown as “No semantic neighbors”. These are local calculations over the published
+map, with no new engine analysis or persistence.
 
 Angles come from a deterministic maximum-similarity spanning forest of the
 sparse union graph. Kruskal orders edges by score descending, then canonical
@@ -151,7 +160,10 @@ semantic relationship contract. No generated topic names are shown.
 
 Only the selected note and the five highest-connectedness notes are permanently
 labeled (three at narrow pane widths). Labels are unique, basename-only and
-truncated, with bounded text staggering to reduce overlap. Hover exposes other
+truncated, with measured text widths and a bounded search for the nearest free
+row in either direction, including at the map boundary. Core/ring annotations
+reserve space; selected labels take priority. Quiet connector lines identify
+nodes whose labels moved, without intercepting pointer input. Hover exposes other
 labels; native titles and the inspector retain full paths. Node positions are
 never changed to fit text. Highly connected notes are not called “most important”.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SemanticGlobalMap } from "../semanticGlobalMapPort";
-import { semanticCoreRadius, semanticGlobalMapLayout, semanticNodeRadius } from "./semanticGlobalMapLayout";
+import { semanticCoreRadius, semanticGlobalMapLayout, semanticNodeRadius, semanticScoreSummary } from "./semanticGlobalMapLayout";
 import { semanticGraphLabel, separateSemanticLabels } from "./semanticGraphLabel";
 function fixture(bridge: boolean): SemanticGlobalMap {
   return { revision: { vectorGeneration: 1, vectorCount: 6, dimensions: 3, provider: "test", model: "test", configurationRevision: 0, runtimeRevision: 0 },
@@ -20,7 +20,7 @@ describe("deterministic semantic angular forest", () => {
       expect(point.x).toBeGreaterThanOrEqual(90); expect(point.x).toBeLessThanOrEqual(910);
       expect(point.y).toBeGreaterThanOrEqual(90); expect(point.y).toBeLessThanOrEqual(910);
       expect(Math.hypot(point.x - 500, point.y - 500)).toBeCloseTo(semanticCoreRadius(map.nodes[i].coreSimilarity), 10);
-      expect(point.radius).toBeGreaterThanOrEqual(4); expect(point.radius).toBeLessThanOrEqual(9);
+      expect(point.radius).toBeGreaterThanOrEqual(4); expect(point.radius).toBeLessThanOrEqual(14);
       if (i) { expect(point.distance).toBeGreaterThanOrEqual(positions[i - 1].distance); expect(point.radius).toBeLessThanOrEqual(positions[i - 1].radius); }
     }
     const order = [...positions].sort((a, b) => a.angle - b.angle).map((p) => p.path);
@@ -30,17 +30,36 @@ describe("deterministic semantic angular forest", () => {
       expect(child.angle).toBeGreaterThan(subtree.sectorStart); expect(child.angle).toBeLessThan(subtree.sectorEnd);
     }
   });
-  it("keeps adjacent permanent labels readable without changing nodes", () => {
-    const labels = Array.from({ length: 6 }, (_, i) => ({ path: String(i), text: "Nearby semantic note", x: 300, y: 650 + i, anchor: "end" }));
+  it.each([20, 650, 980])("separates crowded labels, including map boundaries at %s", (y) => {
+    const labels = Array.from({ length: 6 }, (_, i) => ({ path: String(i), text: "Nearby semantic note", width: 250, x: 300, y: y + i, anchor: "end" }));
+    const original = JSON.stringify(labels);
     const positions = separateSemanticLabels(labels);
     expect(positions).toEqual(separateSemanticLabels(labels));
-    for (let i = 1; i < positions.length; i++) expect(positions[i].y - positions[i - 1].y).toBeGreaterThanOrEqual(24);
-    expect(labels[0].y).toBe(650);
+    for (const a of positions) {
+      expect(a.y).toBeGreaterThanOrEqual(20); expect(a.y).toBeLessThanOrEqual(980);
+      expect(a.right - a.left).toBe(250);
+      for (const b of positions) if (a !== b) expect(Math.abs(a.y - b.y)).toBeGreaterThanOrEqual(28);
+    }
+    expect(JSON.stringify(labels)).toBe(original);
+  });
+  it("keeps label text clear of scale and core annotations", () => {
+    const [position] = separateSemanticLabels([{ path: "a", text: "A", x: 500, y: 368, anchor: "middle" }], [{ left: 478, right: 522, top: 356, bottom: 380 }]);
+    expect(Math.abs(position.y - 368)).toBeGreaterThanOrEqual(28);
   });
   it("uses absolute cosine and bounded connectedness, not rank", () => {
     expect(semanticCoreRadius(1)).toBe(120); expect(semanticCoreRadius(-1)).toBe(410);
     expect(semanticCoreRadius(0.81) - semanticCoreRadius(0.82)).toBeCloseTo(1.45);
-    expect(semanticNodeRadius(-1)).toBe(4); expect(semanticNodeRadius(1)).toBe(9); expect(semanticNodeRadius(null)).toBe(4);
+    expect(semanticNodeRadius(-1)).toBe(4); expect(semanticNodeRadius(1)).toBe(14); expect(semanticNodeRadius(null)).toBe(4);
+    // Distinct common positive scores now differ by >4 units, previously just 1.
+    expect(semanticNodeRadius(0.9) - semanticNodeRadius(0.5)).toBeGreaterThan(4);
+    for (let i = 1; i <= 100; i++) expect(semanticNodeRadius(-1 + i / 50)).toBeGreaterThanOrEqual(semanticNodeRadius(-1 + (i - 1) / 50));
+  });
+  it("derives ranges and medians from captured scores without changing inputs", () => {
+    const scores = Object.freeze([0.9, -0.2, 0.1, 0.5]);
+    expect(semanticScoreSummary(scores)).toEqual({ min: -0.2, max: 0.9, median: 0.3 });
+    expect(semanticScoreSummary([0.9, null, -0.2, 0.1])).toEqual({ min: -0.2, max: 0.9, median: 0.1 });
+    expect(semanticScoreSummary([1])).toEqual({ min: 1, max: 1, median: 1 });
+    expect(semanticScoreSummary([null])).toBeUndefined(); expect(semanticScoreSummary([])).toBeUndefined();
   });
   it("places labels radially without moving nodes", () => {
     expect(semanticGraphLabel({ x: 500, y: 500 }, 35)).toEqual({ x: 500, y: 447, anchor: "middle" });

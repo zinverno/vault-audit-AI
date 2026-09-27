@@ -4,6 +4,7 @@ import type { SemanticGlobalMapPort, SemanticGlobalMapProductSnapshot } from "..
 import { healthButton } from "./renderHealthHome";
 import { fitGraph } from "./graphViewport";
 import { renderSemanticGlobalMapGraph } from "./renderSemanticGlobalMapGraph";
+import { semanticScoreSummary } from "./semanticGlobalMapLayout";
 import type { SemanticGlobalMapViewState } from "./renderSemanticGlobalMapGraph";
 
 export function globalSemanticMapStatus(snapshot: SemanticGlobalMapProductSnapshot): string | undefined {
@@ -21,14 +22,20 @@ export function renderSemanticGlobalMap(parent: HTMLElement, port: SemanticGloba
   section.createEl("p", { text: t("@global-map.description") });
   const status = globalSemanticMapStatus(snapshot);
   if (status) section.createEl("p", { text: status, cls: "veynrel-global-map-status" });
+  const map = snapshot.map;
   const metrics = section.createEl("dl", { cls: "veynrel-global-map-metrics" });
-  for (const [label, value] of [["indexed", snapshot.indexedNoteCount], ["mapped", snapshot.mappedNoteCount]] as const) {
+  for (const [label, value] of [["indexed", map?.indexedNoteCount ?? snapshot.indexedNoteCount], ["mapped", map?.mappedNoteCount ?? snapshot.mappedNoteCount]] as const) {
     if (value === undefined) continue;
     const item = metrics.createDiv(); item.createEl("dt", { text: t(`@global-map.${label}`) }); item.createEl("dd", { text: String(value) });
   }
+  if (map) for (const [key, scores] of [["similarity", map.nodes.map((node) => node.coreSimilarity)], ["connectedness", map.nodes.map((node) => node.semanticConnectedness)]] as const) {
+    const summary = semanticScoreSummary(scores);
+    const item = metrics.createDiv({ cls: "veynrel-global-map-summary" });
+    item.createEl("dt", { text: t(`@global-map.${key}`) });
+    item.createEl("dd", { text: summary ? t("@global-map.score-summary", { min: formatSemanticScore(summary.min), max: formatSemanticScore(summary.max), median: formatSemanticScore(summary.median) }) : t("@global-map.no-neighbors") });
+  }
   const controls = section.createDiv({ cls: "veynrel-global-map-actions" });
   healthButton(controls, t("@global-map.refresh"), () => { void port.refresh(); }, "global-map-refresh", snapshot.busy);
-  const map = snapshot.map;
   if (!map) return () => {};
   if (state.map !== map) { state.map = map; state.viewport = fitGraph(); if (!map.nodes.some((node) => node.path === state.selected)) state.selected = undefined; }
   const search = section.createEl("label", { cls: "veynrel-global-map-search" });
@@ -37,6 +44,7 @@ export function renderSemanticGlobalMap(parent: HTMLElement, port: SemanticGloba
   const results = section.createDiv({ cls: "veynrel-global-map-results" });
   const composition = section.createDiv({ cls: "veynrel-global-map-composition" });
   const visual = composition.createDiv({ cls: "veynrel-global-map-visual" });
+  visual.createEl("p", { cls: "veynrel-global-map-scale", text: t("@global-map.radial-scale") });
   const inspector = composition.createEl("section", { cls: "veynrel-global-map-inspector", attr: { "aria-label": t("@global-map.selection"), tabindex: "-1" } });
   const nodes = new Map(map.nodes.map((node) => [node.path, node]));
   const inspect = (path?: string): void => {

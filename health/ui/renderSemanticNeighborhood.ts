@@ -3,7 +3,7 @@ import { t } from "../../i18n";
 import { formatSemanticScore } from "../../utils/semanticPresentation";
 import type { SemanticNeighborhoodMap, SemanticNeighborhoodNode, SemanticNeighborhoodPort, SemanticNeighborhoodProductSnapshot } from "../semanticNeighborhoodPort";
 import { healthButton } from "./renderHealthHome";
-import { semanticNeighborhoodLayout } from "./semanticNeighborhoodLayout";
+import { semanticNeighborhoodLayout, semanticNeighborhoodRadius } from "./semanticNeighborhoodLayout";
 
 export interface SemanticNeighborhoodViewState { query: string; selected?: string; map?: SemanticNeighborhoodMap; focusAction?: "neighborhood-search" | "neighborhood-select-0" }
 export function neighborhoodStatus(snapshot: SemanticNeighborhoodProductSnapshot): string | undefined {
@@ -90,7 +90,7 @@ export function renderSemanticNeighborhood(parent: HTMLElement, port: SemanticNe
   if (map.neighbors.length) {
     const svg = visual.createSvg("svg", { cls: "veynrel-neighborhood-svg", attr: { viewBox: "0 0 1000 1000", "aria-hidden": "true", focusable: "false" } });
     // Fixed reference rings, no thresholds or force physics. Distance alone encodes score.
-    for (const radius of [190, 300, 410]) svg.createSvg("circle", { cls: "veynrel-neighborhood-guide", attr: { cx: "500", cy: "500", r: String(radius) } });
+    for (const score of [1, 0, -1]) svg.createSvg("circle", { cls: "veynrel-neighborhood-guide", attr: { cx: "500", cy: "500", r: String(semanticNeighborhoodRadius(score)) } });
     for (const position of positions.slice(1)) svg.createSvg("line", { cls: "veynrel-neighborhood-edge", attr: { x1: "500", y1: "500", x2: String(position.x), y2: String(position.y) } });
     for (const node of nodes) {
       const position = positions.find((p) => p.id === node.id)!;

@@ -3,7 +3,15 @@ import type { SemanticGlobalMap } from "../semanticGlobalMapPort";
 
 /** Fixed cosine encodings, never rank-scaled. Layout affects angles only. */
 export const semanticCoreRadius = (score: number): number => 120 + (1 - (score + 1) / 2) * 290;
-export const semanticNodeRadius = (score: number | null): number => score === null ? 4 : 4 + (score + 1) / 2 * 5;
+export const semanticNodeRadius = (score: number | null): number => score === null ? 4 : 4 + 10 * ((score + 1) / 2) ** 3;
+
+/** Summarize the captured map, excluding undefined connectedness for a singleton. */
+export function semanticScoreSummary(scores: readonly (number | null)[]) {
+  const sorted = scores.filter((score): score is number => score !== null).sort((a, b) => a - b);
+  if (!sorted.length) return undefined;
+  const middle = Math.floor(sorted.length / 2);
+  return { min: sorted[0], max: sorted[sorted.length - 1], median: sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2 };
+}
 
 export function semanticGlobalMapLayout(map: SemanticGlobalMap) {
   const nodes = new Map(map.nodes.map((node) => [node.path, node]));

@@ -27,7 +27,7 @@ const noIO = values => { for (const key of ['embed', 'fetch', 'xhr', 'read', 'ca
 const setup = async (count, language = 'en', disabled = false) => {
   await evaluate(`(async()=>{window.nativeRestore?.(); for(const leaf of app.workspace.getLeavesOfType('veynrel-health'))leaf.detach(); await app.plugins.disablePlugin('ai-knowledge-hub');})()`);
   const settings = JSON.parse(await fs.readFile(pluginDir + '/data.json', 'utf8'));
-  settings.language = language; settings.semantic.enabled = !disabled;
+  settings.language = language; settings.semantic.enabled = !disabled; settings.semantic.embeddingModel = 'global-map-synthetic';
   await fs.writeFile(pluginDir + '/data.json', JSON.stringify(settings));
   await fs.rm(pluginDir + '/semantic-index', { recursive: true, force: true });
   if (count) { await fs.mkdir(pluginDir + '/semantic-index'); for (const file of await fs.readdir(root + '/fixtures/' + count)) if (file !== 'paths.json') await fs.copyFile(root + '/fixtures/' + count + '/' + file, pluginDir + '/semantic-index/' + file); }
@@ -105,6 +105,25 @@ try {
       assert(result.scroll<=result.width+1&&result.sectionScroll<=result.section+1,JSON.stringify({scenario,language,color,width,...result}));
       assert(!result.rawKeys);assert.equal(result.tabs,7);assert.equal(result.current,'nav-discover');assert.equal(result.svgTabs,0);
       if(scenario==='overview')assert.equal(result.labels,width<=390?3:5);
+      if(['overview','selected','stale','single'].includes(scenario)){
+        const presentation=await evaluate(`(()=>{
+          const r=hv.contentEl,svg=r.querySelector('.veynrel-global-map-svg'),map=gp.getSnapshot().map;
+          const labels=[...svg.querySelectorAll('.veynrel-global-map-label')].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.getBBox());
+          const overlaps=labels.flatMap((a,i)=>labels.slice(i+1).filter(b=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y));
+          const summary=[...r.querySelectorAll('.veynrel-global-map-summary dd')].map(e=>e.innerText);
+          const scores=[map.nodes.map(n=>n.coreSimilarity),map.nodes.map(n=>n.semanticConnectedness).filter(n=>n!==null)].map(a=>a.sort((x,y)=>x-y));
+          return {overlaps:overlaps.length,rings:[...svg.querySelectorAll('.veynrel-global-map-ring-label')].map(e=>e.textContent),
+            scale:r.querySelector('.veynrel-global-map-scale').innerText,summary,
+            values:scores.map(a=>a.length?[a[0],a[a.length-1],a.length%2?a[Math.floor(a.length/2)]:(a[a.length/2-1]+a[a.length/2])/2].map(n=>n.toFixed(3)):[]),
+            sizes:[...svg.querySelectorAll('.veynrel-global-map-dot')].map(e=>+e.getAttribute('r')),
+            leadersIgnorePointer:[...svg.querySelectorAll('.veynrel-global-map-label-link')].every(e=>getComputedStyle(e).pointerEvents==='none')};
+        })()`);
+        assert.equal(presentation.overlaps,0,JSON.stringify({language,color,width,presentation}));
+        assert.deepEqual(presentation.rings,['+1','0','-1']);assert(presentation.scale.length>20);assert(presentation.leadersIgnorePointer);
+        presentation.values.forEach((values,i)=>values.forEach(value=>assert(presentation.summary[i].includes(value))));
+        assert(presentation.sizes.every(radius=>radius>=4&&radius<=14));
+        result.presentation=presentation;
+      }
       report.matrix.push({scenario,language,theme:color,viewport:width,...result});
     }
     if(language==='en'){
