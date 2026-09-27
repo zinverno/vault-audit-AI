@@ -1,3 +1,4 @@
+import type { GlobalSemanticAnalysis, GlobalSemanticOptions } from "./globalSemanticMap";
 import type { RagContextBuilder } from "../rag/ragContextBuilder";
 import type { RagContext } from "../rag/types";
 import { stableHash } from "../chunking/hash";
@@ -149,6 +150,11 @@ export class LazySemanticRuntime implements SemanticRuntime {
     await this.initialize();
     if (!this.ragContextBuilder) throw new SemanticNotReadyError();
     return this.ragContextBuilder.build(question);
+  }
+
+  async analyzeGlobalSemanticMap(options?: GlobalSemanticOptions): Promise<GlobalSemanticAnalysis> {
+    // Global exploration requires an already loaded compatible index; never initialize/write here.
+    return this.requireDiscoveryService().analyzeGlobalSemanticMap(options);
   }
 
   async listIndexedPaths(): Promise<readonly string[]> {

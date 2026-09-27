@@ -4,7 +4,9 @@ Semantic Neighborhood is Discover's interactive exploration surface for the
 **existing compatible semantic index**. It answers “What does Veynrel see as
 related by meaning?” Vault Topology answers “What did I explicitly connect?”
 Topology represents resolved Markdown relationships; Neighborhood represents
-semantic relationships. Their data and renderers are separate.
+semantic relationships. [Global Semantic Map](global-semantic-map.md) answers
+“How is my knowledge space shaped?” using the whole eligible index. Their relationship
+semantics remain distinct.
 
 ## Engine and product boundary
 
@@ -46,7 +48,7 @@ embedding/provider/network calls, Markdown-body reads, storage writes or index
 mutations. The card appears only when Semantic Intelligence is Ready. Existing
 Discover setup remains authoritative when it is unavailable.
 
-**Open semantic map** is the explicit prepare boundary. Choose a note, Refresh,
+**Open semantic neighborhood** is the explicit prepare boundary. Choose a note, Refresh,
 and Explore from this note are subsequent explicit work boundaries. Every such
 operation uses existing vectors/metadata/previews: **no new embedding request,
 no provider request, no network, no `vault.read` / `vault.cachedRead`, no write**.
@@ -126,6 +128,15 @@ the heading; same-route asynchronous work preserves the workspace viewport and
 nearby action focus using the established view behavior. The persistent polite,
 atomic live region stays visually hidden. Visible routine/loading/error status is
 inside the Neighborhood page; no status is added above navigation.
+
+Source, selected note and the top three nearest neighbors are always labeled;
+ties use the existing score-descending, canonical-path ordering. Duplicate labels
+are avoided. Narrow screens retain source + selected and the top two neighbors.
+Other nodes reveal labels on hover/selection. Labels use basenames, truncate to
+the available visual space, and sit outside nodes in the radial direction with
+position-dependent text anchors. Full paths remain in native titles, the keyboard
+list's accessible names and inspector. Node radii, distance, evidence, controller,
+recenter and revision behavior are unchanged.
 
 Wide panes place map/list beside the inspector. At container widths ≤850px the
 inspector follows map/list. Long paths and previews wrap. Primary navigation keeps

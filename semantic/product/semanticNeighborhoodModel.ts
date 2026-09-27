@@ -1,22 +1,9 @@
 import { compareStrings, isVaultPath } from "../../health/domain/validation";
 import type { SemanticNeighborhoodMap, SemanticNeighborhoodNode, SemanticNeighborhoodRevision } from "../../health/semanticNeighborhoodPort";
 import { DEFAULT_MATCHES_PER_DOCUMENT, DEFAULT_SIMILAR_NOTES_LIMIT } from "../semanticDiscoveryService";
-import type { SemanticChunkMatch, SemanticDocumentSimilarity, SemanticIndexState } from "../types";
+import type { SemanticChunkMatch, SemanticDocumentSimilarity } from "../types";
 
-/** Same readiness and seven-field identity semantics as SemanticHealthAnalysisAdapter. */
-export function neighborhoodRevision(state: SemanticIndexState): SemanticNeighborhoodRevision | undefined {
-  if (state.kind !== "ready" || !Number.isSafeInteger(state.vectorCount) || state.vectorCount <= 0 ||
-      !Number.isSafeInteger(state.dimensions) || state.dimensions <= 0 ||
-      ![state.vectorGeneration, state.configurationRevision, state.runtimeRevision].every((n) => Number.isSafeInteger(n) && n >= 0) ||
-      typeof state.provider !== "string" || !state.provider || typeof state.model !== "string" || !state.model) return undefined;
-  return Object.freeze({ vectorGeneration: state.vectorGeneration, vectorCount: state.vectorCount, dimensions: state.dimensions,
-    provider: state.provider, model: state.model, configurationRevision: state.configurationRevision, runtimeRevision: state.runtimeRevision });
-}
-export function sameNeighborhoodRevision(a: SemanticNeighborhoodRevision | undefined, b: SemanticNeighborhoodRevision | undefined): boolean {
-  return Boolean(a && b && a.vectorGeneration === b.vectorGeneration && a.vectorCount === b.vectorCount &&
-    a.dimensions === b.dimensions && a.provider === b.provider && a.model === b.model &&
-    a.configurationRevision === b.configurationRevision && a.runtimeRevision === b.runtimeRevision);
-}
+export { semanticIndexRevision as neighborhoodRevision, sameSemanticIndexRevision as sameNeighborhoodRevision } from "../semanticIndexRevision";
 export class InvalidNeighborhoodResult extends Error {}
 function requireValid(valid: boolean): asserts valid {
   if (!valid) throw new InvalidNeighborhoodResult();

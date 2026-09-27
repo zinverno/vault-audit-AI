@@ -1,3 +1,4 @@
+import { semanticIndexRevision, sameSemanticIndexRevision } from "../semanticIndexRevision";
 import { canonicalFindingPaths, createFindingFingerprint } from "../../health/domain/identity";
 import type { FindingCandidate } from "../../health/domain/finding";
 import { isCancellation, throwIfAborted, withAbort } from "../../health/analyzers/local/cancellation";
@@ -56,22 +57,14 @@ export class SemanticHealthAnalysisAdapter implements SemanticHealthAnalysisPort
     let current: SemanticIndexRevision;
     try { current = this.captureReadyRevision(); }
     catch { throw new SemanticHealthAnalysisError("semantic-index-changed"); }
-    if (current.vectorGeneration !== revision.vectorGeneration || current.vectorCount !== revision.vectorCount ||
-        current.dimensions !== revision.dimensions || current.provider !== revision.provider || current.model !== revision.model ||
-        current.configurationRevision !== revision.configurationRevision || current.runtimeRevision !== revision.runtimeRevision) {
+    if (!sameSemanticIndexRevision(current, revision)) {
       throw new SemanticHealthAnalysisError("semantic-index-changed");
     }
   }
 
   private captureReadyRevision(): SemanticIndexRevision {
-    const state = this.engine.getCachedIndexState();
-    if (state.kind !== "ready" || !Number.isSafeInteger(state.vectorCount) || state.vectorCount <= 0 ||
-        !Number.isSafeInteger(state.dimensions) || state.dimensions <= 0 ||
-        ![state.vectorGeneration, state.configurationRevision, state.runtimeRevision].every((n) => Number.isSafeInteger(n) && n >= 0) ||
-        typeof state.provider !== "string" || !state.provider || typeof state.model !== "string" || !state.model) {
-      throw new SemanticHealthAnalysisError("semantic-unavailable");
-    }
-    return { vectorGeneration: state.vectorGeneration, vectorCount: state.vectorCount, dimensions: state.dimensions,
-      provider: state.provider, model: state.model, configurationRevision: state.configurationRevision, runtimeRevision: state.runtimeRevision };
+    const revision = semanticIndexRevision(this.engine.getCachedIndexState());
+    if (!revision) throw new SemanticHealthAnalysisError("semantic-unavailable");
+    return revision;
   }
 }

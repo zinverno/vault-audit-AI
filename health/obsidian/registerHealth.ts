@@ -1,3 +1,4 @@
+import type { SemanticGlobalMapPort } from "../semanticGlobalMapPort";
 import { Notice } from "obsidian";
 import type { Plugin } from "obsidian";
 import { t } from "../../i18n";
@@ -22,12 +23,13 @@ import type { SemanticNeighborhoodPort } from "../semanticNeighborhoodPort";
 
 export function registerHealth(plugin: Plugin, tools: VeynrelToolsPort, preferences: HealthPreferencesPort, semantic?: SemanticIntelligencePort,
   semanticAnalysis?: SemanticHealthAnalysisPort, deep?: DeepIntelligencePort, deepAnalysis?: DeepHealthAnalysisPort,
-  createAuthoring?: (recall: RecallProductPort) => RecallAuthoringPort, connect?: ConnectPort, neighborhood?: SemanticNeighborhoodPort): void {
+  createAuthoring?: (recall: RecallProductPort) => RecallAuthoringPort, connect?: ConnectPort, neighborhood?: SemanticNeighborhoodPort, globalMap?: SemanticGlobalMapPort): void {
   const recall = createObsidianRecallProduct(plugin.app, plugin.manifest.id, (path) => openHealthNote(plugin.app, path));
   const authoring = createAuthoring?.(recall);
   const topology = createObsidianVaultTopology(plugin.app);
   const controller = new HealthPluginController(plugin.app, plugin.manifest.id, preferences, semanticAnalysis, new RecallHealthAdapter(recall), deepAnalysis);
-  plugin.registerView(VEYNREL_HEALTH_VIEW_TYPE, (leaf) => new VeynrelHealthView(leaf, controller, tools, semantic, recall, deep, authoring, connect, topology, neighborhood));
+  plugin.registerView(VEYNREL_HEALTH_VIEW_TYPE, (leaf) => new VeynrelHealthView(leaf, controller, tools, semantic, recall, deep, authoring, connect, topology, neighborhood, globalMap));
+  plugin.register(() => globalMap?.dispose());
   plugin.register(() => neighborhood?.dispose());
   plugin.register(() => topology.dispose());
   plugin.register(() => controller.dispose());

@@ -1,3 +1,4 @@
+import type { GlobalSemanticAnalysis, GlobalSemanticOptions } from "./globalSemanticMap";
 import { EmbeddingError } from "../embeddings/errors";
 import { INDEXING_EMBEDDING_TIMEOUT_MS } from "../indexing/indexingService";
 import { IndexingObsoleteError } from "../indexing/errors";
@@ -717,6 +718,13 @@ export class ObsidianSemanticController {
         );
       }
       return runtime.search(query, { limit: 10, matchesPerDocument: 3 });
+    });
+  }
+
+  async analyzeGlobalSemanticMap(options?: GlobalSemanticOptions): Promise<GlobalSemanticAnalysis> {
+    return this.barrier.withShared(async () => {
+      const runtime = await this.runtimeForDiscovery();
+      return runtime.analyzeGlobalSemanticMap(options);
     });
   }
 

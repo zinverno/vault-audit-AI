@@ -1,3 +1,4 @@
+import { SemanticGlobalMapController } from "./product/semanticGlobalMapController";
 import {
   afterAll,
   afterEach,
@@ -514,6 +515,31 @@ describe("semantic read/write barrier with real services and store", () => {
       await port.prepare(); expect(port.searchSources("").paths).toEqual(["Alpha.md", "Near.md"]);
       await port.load("Alpha.md"); expect(port.getSnapshot().map?.neighbors[0].path).toBe("Near.md");
       await port.refresh(); await port.load("Near.md"); expect(port.getSnapshot().map?.source.path).toBe("Near.md");
+      for (const spy of [embed, fetchSpy, xhr, obsidianMocks.requestUrl, read, harness.plugin.app.vault.cachedRead,
+        harness.plugin.app.vault.getMarkdownFiles, write, writeBinary, save]) expect(spy).not.toHaveBeenCalled();
+    } finally { port.dispose(); embed.mockRestore(); vi.unstubAllGlobals(); vi.stubGlobal("window", testWindow); }
+  });
+
+  it("Global map loads, refreshes and searches through the real engine with zero external IO", async () => {
+    const harness = createHarness();
+    harness.setContent("# Alpha\n\nalpha synthetic semantic content with enough meaningful characters for discovery");
+    harness.createFile("Near.md", "# Near\n\nalpha synthetic semantic content with enough meaningful characters for discovery");
+    await harness.controller.indexVault();
+    const port = new SemanticGlobalMapController(harness.controller);
+    const embed = vi.spyOn(BaseEmbeddingProvider.prototype, "embed");
+    const fetchSpy = vi.fn(); const xhr = vi.fn(); vi.stubGlobal("fetch", fetchSpy); vi.stubGlobal("XMLHttpRequest", xhr);
+    const read = vi.fn(); Object.assign(harness.plugin.app.vault, { read });
+    harness.plugin.app.vault.cachedRead.mockClear(); harness.plugin.app.vault.getMarkdownFiles.mockClear();
+    obsidianMocks.requestUrl.mockClear();
+    const write = vi.spyOn(harness.adapter, "write"); const writeBinary = vi.spyOn(harness.adapter, "writeBinary");
+    const save = vi.spyOn(harness.plugin, "saveSettings");
+    try {
+      const store = runtimeStore(activeSlot(harness.controller).runtime);
+      const traversal = vi.spyOn(store, "readSnapshot"), mutate = vi.spyOn(store, "applyChanges");
+      expect(traversal).not.toHaveBeenCalled(); expect(port.search("").total).toBe(0);
+      await port.load(); expect(port.getSnapshot().map?.mappedNoteCount).toBe(2);
+      await port.refresh(); expect(port.search("near").nodes[0].path).toBe("Near.md");
+      expect(mutate).not.toHaveBeenCalled(); expect(traversal).toHaveBeenCalledTimes(2);
       for (const spy of [embed, fetchSpy, xhr, obsidianMocks.requestUrl, read, harness.plugin.app.vault.cachedRead,
         harness.plugin.app.vault.getMarkdownFiles, write, writeBinary, save]) expect(spy).not.toHaveBeenCalled();
     } finally { port.dispose(); embed.mockRestore(); vi.unstubAllGlobals(); vi.stubGlobal("window", testWindow); }

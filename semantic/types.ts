@@ -1,3 +1,4 @@
+import type { GlobalSemanticAnalysis, GlobalSemanticOptions } from "./globalSemanticMap";
 import type { ChunkSourceRange } from "../chunking/types";
 import type { RagContext } from "../rag/types";
 import type {
@@ -72,6 +73,7 @@ export interface SemanticPathChanges {
 }
 
 export interface SemanticRuntime {
+  analyzeGlobalSemanticMap: (options?: GlobalSemanticOptions) => Promise<GlobalSemanticAnalysis>;
   listIndexedPaths: () => Promise<readonly string[]>;
   initialize: () => Promise<void>;
   indexVault: (options?: IndexingExecutionOptions) => Promise<IndexingRunResult>;

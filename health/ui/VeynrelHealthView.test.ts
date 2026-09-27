@@ -1395,12 +1395,16 @@ describe("Semantic Neighborhood Discover child surface", () => {
   beforeEach(() => { vi.stubGlobal("window", { setTimeout, clearTimeout }); });
   afterEach(() => vi.unstubAllGlobals());
   async function neighborhoodFixture() {
+    const { SemanticGlobalMapController } = await import("../../semantic/product/semanticGlobalMapController");
     const { SemanticNeighborhoodController } = await import("../../semantic/product/semanticNeighborhoodController");
     let index = { kind: "ready" as SemanticStatus["kind"], vectorCount: 9, vectorGeneration: 1, dimensions: 3,
       provider: "ollama", providerLabel: "Ollama", model: "synthetic", configurationRevision: 0, runtimeRevision: 1 };
     const listeners = new Set<() => void>();
     const engine = { getCachedIndexState: () => index, getSemanticStatus: () => index,
       subscribeStatus: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+      analyzeGlobalSemanticMap: vi.fn(async () => ({ state: "ready" as const, indexedNoteCount: 2, mappedNoteCount: 2,
+        nodes: ["A.md", "B.md"].map((path, i) => ({ path, coreSimilarity: 0.96, semanticConnectedness: 0.91,
+          neighbors: [{ path: i ? "A.md" : "B.md", score: 0.91 }] })), edges: [{ left: "A.md", right: "B.md", score: 0.91, mutual: true }] })),
       listIndexedPaths: vi.fn(async () => ["A.md", "B.md"]),
       findSimilarNotes: vi.fn(async (source: string) => [{ path: source === "A.md" ? "B.md" : "A.md", score: 0.91,
         matches: [{ id: "chunk", path: source === "A.md" ? "B.md" : "A.md", score: 0.94, headingPath: ["Stored heading"], ordinal: 0, contentHash: "hash",
@@ -1409,12 +1413,13 @@ describe("Semantic Neighborhood Discover child surface", () => {
     const settings = { get: () => ({ ...DEFAULT_EMBEDDING_SETTINGS, enabled: true }), update: vi.fn() };
     const semantic = new SemanticIntelligenceController(settings, engine);
     const neighborhood = new SemanticNeighborhoodController(engine);
+    const globalMap = new SemanticGlobalMapController(engine);
     const f = fixture();
     const cachedRead = vi.fn(); Object.assign(f.vault, { cachedRead });
-    const view = new VeynrelHealthView({ app: f.app } as never, f.controller, f.tools, semantic, undefined, undefined, undefined, undefined, undefined, neighborhood);
+    const view = new VeynrelHealthView({ app: f.app } as never, f.controller, f.tools, semantic, undefined, undefined, undefined, undefined, undefined, neighborhood, globalMap);
     const content = view.contentEl as unknown as InstanceType<typeof mocks.Element>;
     await view.onOpen();
-    return { ...f, cachedRead, view, content, engine, semantic, neighborhood, change: () => { index = { ...index, vectorGeneration: 2 }; for (const l of listeners) l(); } };
+    return { ...f, cachedRead, view, content, engine, semantic, neighborhood, globalMap, change: () => { index = { ...index, vectorGeneration: 2 }; for (const l of listeners) l(); } };
   }
   it("keeps passive Discover free of catalog/similarity/body/network/write work, and preserves existing launchers", async () => {
     const f = await neighborhoodFixture();
@@ -1422,6 +1427,7 @@ describe("Semantic Neighborhood Discover child surface", () => {
     mocks.requestUrl.mockClear();
     const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
     f.content.action("nav-discover").click();
+    expect(f.engine.analyzeGlobalSemanticMap).not.toHaveBeenCalled();
     expect(f.engine.listIndexedPaths).not.toHaveBeenCalled(); expect(f.engine.findSimilarNotes).not.toHaveBeenCalled();
     for (const spy of [f.vault.read, f.cachedRead, f.adapter.write, mocks.requestUrl, fetch]) expect(spy).not.toHaveBeenCalled();
     for (const action of ["discover-search", "discover-related", "discover-duplicates", "semantic-health-scan"]) expect(f.content.action(action)).toBeDefined();
@@ -1431,6 +1437,27 @@ describe("Semantic Neighborhood Discover child surface", () => {
     expect(f.content.action("neighborhood-search")).toBeDefined();
     expect(f.engine.listIndexedPaths).toHaveBeenCalledOnce(); expect(f.engine.findSimilarNotes).not.toHaveBeenCalled();
     await f.view.onClose(); f.neighborhood.dispose(); f.controller.dispose();
+  });
+  it("opens Global Map explicitly as a Discover child, searches/selects locally, and reuses Neighborhood", async () => {
+    const f = await neighborhoodFixture();
+    f.content.action("nav-discover").click(); expect(f.engine.analyzeGlobalSemanticMap).not.toHaveBeenCalled();
+    f.vault.read.mockClear(); f.cachedRead.mockClear(); f.adapter.write.mockClear(); mocks.requestUrl.mockClear();
+    f.content.action("global-map-open").click(); await f.globalMap.load();
+    expect(f.content.action("nav-semantic-map")).toBeUndefined(); expect(f.content.action("nav-discover").attrs["aria-current"]).toBe("page");
+    expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
+    expect(f.content.all().filter(e => e.attrs["tabindex"] === "0")).toEqual([]);
+    expect(f.content.action("global-map-open-note")).toBeUndefined();
+    f.content.action("global-map-search").input("B.md"); f.content.action("global-map-result-0").click();
+    expect(f.content.texts()).toContain("B.md"); expect(f.content.texts()).toContain("0.910");
+    expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
+    for (const spy of [f.vault.read, f.cachedRead, f.adapter.write, mocks.requestUrl]) expect(spy).not.toHaveBeenCalled();
+    f.content.action("global-map-explore").click(); await f.neighborhood.load("B.md");
+    expect(f.neighborhood.getSnapshot().map?.source.path).toBe("B.md");
+    f.content.action("neighborhood-back").click(); f.content.action("global-map-open").click(); await f.globalMap.load();
+    expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce(); f.change();
+    expect(f.content.texts()).toContain(t("@global-map.stale"));
+    f.content.action("global-map-refresh").click(); await f.globalMap.refresh(); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledTimes(2);
+    await f.view.onClose(); f.globalMap.dispose(); f.neighborhood.dispose(); f.controller.dispose();
   });
   it.each(["en", "ru"] as const)("selects without querying, recenters explicitly, preserves viewport, and renders literal evidence in %s", async (lang) => {
     setLanguage(lang); const f = await neighborhoodFixture();

@@ -1,3 +1,4 @@
+import { semanticGraphLabel, semanticGraphBasename } from "./semanticGraphLabel";
 import { t } from "../../i18n";
 import { formatSemanticScore } from "../../utils/semanticPresentation";
 import type { SemanticNeighborhoodMap, SemanticNeighborhoodNode, SemanticNeighborhoodPort, SemanticNeighborhoodProductSnapshot } from "../semanticNeighborhoodPort";
@@ -61,16 +62,10 @@ export function renderSemanticNeighborhood(parent: HTMLElement, port: SemanticNe
   const positions = semanticNeighborhoodLayout(map.source, map.neighbors);
   const buttons = new Map<string, HTMLButtonElement>();
   const circles = new Map<string, SVGElement>();
-  let selectedLabel: SVGElement | undefined;
   const select = (node: SemanticNeighborhoodNode): void => {
     state.selected = node.id;
     for (const [id, button] of buttons) button.setAttribute("aria-pressed", String(id === node.id));
     for (const [id, circle] of circles) circle.setAttribute("data-selected", String(id === node.id));
-    if (selectedLabel) {
-      const position = positions.find((p) => p.id === node.id)!;
-      selectedLabel.setAttribute("x", String(position.x)); selectedLabel.setAttribute("y", String(position.y + 62));
-      selectedLabel.textContent = node.basename.length > 24 ? `${node.basename.slice(0, 23)}…` : node.basename;
-    }
     inspector.empty();
     inspector.createEl("p", { text: t(node.role === "source" ? "@neighborhood.source" : "@neighborhood.neighbor"), cls: "veynrel-health-muted" });
     inspector.createEl("h2", { text: node.basename });
@@ -99,20 +94,25 @@ export function renderSemanticNeighborhood(parent: HTMLElement, port: SemanticNe
     for (const position of positions.slice(1)) svg.createSvg("line", { cls: "veynrel-neighborhood-edge", attr: { x1: "500", y1: "500", x2: String(position.x), y2: String(position.y) } });
     for (const node of nodes) {
       const position = positions.find((p) => p.id === node.id)!;
-      const group = svg.createSvg("g", { cls: "veynrel-neighborhood-node", attr: { "data-neighborhood-node": node.id, "data-role": node.role } });
+      const group = svg.createSvg("g", { cls: "veynrel-neighborhood-node", attr: { "data-neighborhood-node": node.id, "data-role": node.role, "data-label-rank": String(map.neighbors.findIndex((n) => n.id === node.id) + 1) } });
       group.createSvg("title").textContent = node.path;
       // Comfortable pointer target; keyboard equivalents are real buttons below.
       group.createSvg("circle", { cls: "veynrel-neighborhood-hit", attr: { cx: String(position.x), cy: String(position.y), r: "40" } });
       group.createSvg("circle", { cls: "veynrel-neighborhood-dot", attr: { cx: String(position.x), cy: String(position.y), r: node.role === "source" ? "25" : "18" } });
       if (node.role === "source") group.createSvg("circle", { cls: "veynrel-neighborhood-source-ring", attr: { cx: "500", cy: "500", r: "35" } });
+      const labelPosition = semanticGraphLabel(position, node.role === "source" ? 35 : 18);
+      const space = labelPosition.anchor === "start" ? 980 - labelPosition.x : labelPosition.anchor === "end" ? labelPosition.x - 20 : 300;
+      group.createSvg("text", { cls: "veynrel-neighborhood-label", attr: { x: String(labelPosition.x), y: String(labelPosition.y),
+        "text-anchor": labelPosition.anchor, "dominant-baseline": "middle" } }).textContent = semanticGraphBasename(node.basename, Math.max(3, Math.min(22, Math.floor(space / 13))));
       group.addEventListener("click", () => select(node)); circles.set(node.id, group);
     }
-    selectedLabel = svg.createSvg("text", { cls: "veynrel-neighborhood-label", attr: { "text-anchor": "middle" } });
     visual.createEl("p", { text: t("@neighborhood.legend"), cls: "veynrel-neighborhood-legend" });
   } else visual.createEl("p", { text: t("@neighborhood.empty"), cls: "veynrel-neighborhood-empty" });
   const list = visual.createDiv({ cls: "veynrel-neighborhood-list", attr: { "aria-label": t("@neighborhood.neighbors") } });
   nodes.forEach((node, index) => {
     const button = healthButton(list, "", () => select(node), `neighborhood-select-${index}`);
+    button.setAttribute("title", node.path);
+    button.setAttribute("aria-label", node.path);
     button.createSpan({ text: node.basename });
     button.createSpan({ text: node.role === "source" ? t("@neighborhood.source") : formatSemanticScore(node.similarity!) });
     buttons.set(node.id, button);

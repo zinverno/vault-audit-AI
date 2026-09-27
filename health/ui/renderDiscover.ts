@@ -3,18 +3,22 @@ import { t } from "../../i18n";
 import { healthButton } from "./renderHealthHome";
 import type { DiscoverAction, DiscoverViewModel } from "./discoverViewModel";
 
-export function renderDiscover(parent: HTMLElement, model: DiscoverViewModel, action: (action: DiscoverAction) => void, openNeighborhood?: () => void): void {
+export function renderDiscover(parent: HTMLElement, model: DiscoverViewModel, action: (action: DiscoverAction) => void, openNeighborhood?: () => void, openGlobalMap?: () => void): void {
   const section = parent.createEl("section", { cls: "veynrel-health-home veynrel-discover",
     attr: { "aria-label": model.title, "aria-busy": String(model.busy) } });
   section.createEl("h1", { text: model.title, attr: { tabindex: "-1", "data-health-heading": "true" } });
   section.createEl("p", { text: model.introduction });
-  if (model.state === "ready" && openNeighborhood) {
-    const card = section.createEl("section", { cls: "veynrel-neighborhood-card" });
-    card.createEl("h2", { text: t("@neighborhood.title") });
-    card.createEl("p", { text: t("@neighborhood.tagline"), cls: "veynrel-neighborhood-card-lead" });
-    card.createEl("p", { text: t("@neighborhood.card-description") });
-    healthButton(card, t("@neighborhood.open"), openNeighborhood, "neighborhood-open", model.busy).addClass("mod-cta");
-    card.createEl("p", { text: t("@neighborhood.index-only"), cls: "veynrel-health-muted" });
+  if (model.state === "ready" && (openNeighborhood || openGlobalMap)) {
+    section.createEl("h2", { text: t("@global-map.exploration") });
+    const exploration = section.createDiv({ cls: "veynrel-semantic-exploration" });
+    for (const [key, open, actionKey] of [["neighborhood", openNeighborhood, "neighborhood-open"], ["global-map", openGlobalMap, "global-map-open"]] as const) {
+      if (!open) continue;
+      const card = exploration.createEl("section", { cls: "veynrel-neighborhood-card" });
+      card.createEl("h3", { text: t(`@${key}.title`) });
+      card.createEl("p", { text: t(`@${key}.tagline`), cls: "veynrel-neighborhood-card-lead" });
+      healthButton(card, t(`@${key}.open`), open, actionKey, model.busy);
+    }
+    section.createEl("p", { text: t("@neighborhood.index-only"), cls: "veynrel-health-muted" });
   }
   if (model.workflows.length) {
     section.createEl("h2", { text: model.exploreTitle });

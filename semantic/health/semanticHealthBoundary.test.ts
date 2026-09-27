@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 describe("semantic Health adapter dependency boundary", () => {
   it("uses only Health contracts/helpers and the existing controller result API", () => {
     const allowed = new Set(["../../health/domain/identity", "../../health/domain/finding", "../../health/analyzers/local/cancellation",
-      "../../health/semanticHealthAnalysisPort", "../types"]);
+      "../../health/semanticHealthAnalysisPort", "../types", "../semanticIndexRevision"]);
     for (const file of readdirSync("semantic/health").filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))) {
       const source = readFileSync(`semantic/health/${file}`, "utf8");
       const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
