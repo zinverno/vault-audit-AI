@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SemanticIndexState } from "../types";
-import type { GlobalSemanticAnalysis, GlobalSemanticOptions } from "../globalSemanticMap";
+import type { GlobalSemanticAnalysis, GlobalSemanticOptions, SemanticFocusAnalysis } from "../globalSemanticMap";
 import { semanticIndexRevision } from "../semanticIndexRevision";
 import { SemanticGlobalMapController } from "./semanticGlobalMapController";
 import { projectGlobalSemanticMap } from "./semanticGlobalMapModel";
@@ -20,6 +20,7 @@ function analysis(size = 8) {
 function fixture() {
   let state = { ...ready }; const listeners = new Set<() => void>();
   const engine = { getCachedIndexState: () => state, subscribeStatus: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+    analyzeSemanticFocus: vi.fn(async (path: string): Promise<SemanticFocusAnalysis | undefined> => ({ path, scores: analysis().nodes.map((node) => ({ path: node.path, score: node.path === path ? 1 : 0.4 })) })),
     analyzeGlobalSemanticMap: vi.fn(async (_options?: GlobalSemanticOptions): Promise<GlobalSemanticAnalysis> => analysis()) };
   const port = new SemanticGlobalMapController(engine);
   return { port, engine, listeners, update: (patch: Partial<SemanticIndexState>) => { state = { ...state, ...patch }; for (const l of listeners) l(); } };
@@ -69,6 +70,64 @@ describe("Global map session ownership", () => {
     f.engine.analyzeGlobalSemanticMap.mockRejectedValueOnce(Error("secret transport details")); await f.port.refresh();
     expect(f.port.getSnapshot()).toMatchObject({ state: "error", reason: "failed" }); expect(JSON.stringify(f.port.getSnapshot())).not.toContain("secret");
     f.update({ kind: "disabled" }); await f.port.refresh(); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledTimes(3); f.port.dispose();
+  });
+});
+
+describe("Global map focus ownership", () => {
+  const path = "Folder/Note 00.md";
+  it("requires a loaded mapped note, freezes scores, keeps the global map, and resets locally", async () => {
+    const f = fixture(); await f.port.focus(path); expect(f.engine.analyzeSemanticFocus).not.toHaveBeenCalled();
+    await f.port.load(); const map = f.port.getSnapshot().map;
+    await f.port.focus("Excluded.md"); expect(f.port.getSnapshot().focusError).toBe(true); expect(f.engine.analyzeSemanticFocus).not.toHaveBeenCalled();
+    await f.port.focus(path); const focus = f.port.getSnapshot().focus!;
+    expect(focus.path).toBe(path); expect(focus.scores).toHaveLength(8); expect(f.port.getSnapshot().map).toBe(map);
+    for (const value of [focus, focus.scores, ...focus.scores]) expect(Object.isFrozen(value)).toBe(true);
+    f.port.resetFocus(); expect(f.port.getSnapshot().focus).toBeUndefined(); expect(f.port.getSnapshot().map).toBe(map);
+    expect(f.engine.analyzeSemanticFocus).toHaveBeenCalledOnce(); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
+    await f.port.focus(path); await f.port.refresh(); expect(f.port.getSnapshot().focus).toBeUndefined(); f.port.dispose();
+  });
+  it.each(["vectorGeneration", "vectorCount", "dimensions", "provider", "model", "configurationRevision", "runtimeRevision", "kind"] as const)("marks map and focus stale on %s without computation", async field => {
+    const f = fixture(); await f.port.load(); await f.port.focus(path); const before = f.port.getSnapshot();
+    f.update({ [field]: typeof ready[field] === "number" ? Number(ready[field]) + 1 : field === "kind" ? "disabled" : "changed" });
+    expect(f.port.getSnapshot()).toMatchObject({ state: "stale", map: before.map, focus: before.focus });
+    await f.port.load(); await f.port.focus(path);
+    expect(f.engine.analyzeSemanticFocus).toHaveBeenCalledOnce(); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce(); f.port.dispose();
+  });
+  it.each(["notified-revision", "silent-revision", "reset", "dispose"])("rejects late focus publication after %s", async action => {
+    const f = fixture(); await f.port.load();
+    const gate = deferred<SemanticFocusAnalysis>(); f.engine.analyzeSemanticFocus.mockReturnValueOnce(gate.promise);
+    const run = f.port.focus(path); expect(f.port.focus(path)).toBe(run); await Promise.resolve();
+    if (action === "silent-revision") f.listeners.clear();
+    if (action.includes("revision")) f.update({ vectorGeneration: 2 });
+    else if (action === "reset") f.port.resetFocus(); else f.port.dispose();
+    const before = f.port.getSnapshot();
+    gate.resolve({ path, scores: analysis().nodes.map(n => ({ path: n.path, score: 1 })) }); await run;
+    expect(f.port.getSnapshot().focus).toBeUndefined();
+    if (action === "dispose") { expect(f.port.getSnapshot()).toBe(before); expect(f.listeners.size).toBe(0); }
+    else expect(f.port.getSnapshot()).toMatchObject({ state: action === "reset" ? "ready" : "stale", busy: false });
+    expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce(); f.port.dispose();
+  });
+  it("reset and a new focus own publication even while an old focus is pending", async () => {
+    const f = fixture(); await f.port.load(); const gate = deferred<SemanticFocusAnalysis>();
+    f.engine.analyzeSemanticFocus.mockReturnValueOnce(gate.promise); const old = f.port.focus(path); await Promise.resolve();
+    f.port.resetFocus(); await f.port.focus("Folder/Note 01.md"); const snapshot = f.port.getSnapshot();
+    gate.resolve({ path, scores: [] }); await old; expect(f.port.getSnapshot()).toBe(snapshot); f.port.dispose();
+  });
+  it.each(["missing", "duplicate", "unknown", "NaN", "range", "self", "source", "ineligible", "throw"])("rejects malformed focus (%s) without losing the current map/focus", async kind => {
+    const f = fixture(); await f.port.load(); await f.port.focus(path); const before = f.port.getSnapshot();
+    const result = { path, scores: analysis().nodes.map(n => ({ path: n.path, score: 1 })) };
+    if (kind === "missing") result.scores.pop();
+    if (kind === "duplicate") result.scores[1] = result.scores[0];
+    if (kind === "unknown") result.scores[1].path = "../bad.md";
+    if (kind === "NaN") result.scores[1].score = NaN;
+    if (kind === "range") result.scores[1].score = -1.1;
+    if (kind === "self") result.scores[0].score = 0.9;
+    if (kind === "source") result.path = "Other.md";
+    if (kind === "throw") f.engine.analyzeSemanticFocus.mockRejectedValueOnce(Error("private provider details"));
+    else f.engine.analyzeSemanticFocus.mockResolvedValueOnce(kind === "ineligible" ? undefined : result);
+    await f.port.focus(path); expect(f.port.getSnapshot()).toMatchObject({ state: "ready", focusError: true, busy: false });
+    expect(f.port.getSnapshot().map).toBe(before.map); expect(f.port.getSnapshot().focus).toBe(before.focus);
+    expect(JSON.stringify(f.port.getSnapshot())).not.toContain("private"); f.port.dispose();
   });
 });
 

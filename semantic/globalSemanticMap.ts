@@ -2,6 +2,7 @@
 export const GLOBAL_SEMANTIC_NEIGHBORS = 5;
 export const GLOBAL_SEMANTIC_DOCUMENT_CAP = 500;
 export interface GlobalSemanticNeighbor { readonly path: string; readonly score: number }
+export interface SemanticFocusAnalysis { readonly path: string; readonly scores: readonly GlobalSemanticNeighbor[] }
 export interface GlobalSemanticDocument {
   readonly path: string;
   readonly coreSimilarity: number;

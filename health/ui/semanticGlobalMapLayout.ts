@@ -1,9 +1,20 @@
 import { compareStrings } from "../domain/validation";
-import type { SemanticGlobalMap } from "../semanticGlobalMapPort";
+import type { SemanticGlobalFocus, SemanticGlobalMap } from "../semanticGlobalMapPort";
 
 /** Fixed cosine encodings, never rank-scaled. Layout affects angles only. */
 export const semanticCoreRadius = (score: number): number => 120 + (1 - (score + 1) / 2) * 290;
 export const semanticNodeRadius = (score: number | null): number => score === null ? 4 : 4 + 10 * ((score + 1) / 2) ** 3;
+
+/** Reuse captured angles/sectors and sizes. Reset returns the exact original layout. */
+export function semanticFocusLayout(core: ReturnType<typeof semanticGlobalMapLayout>, focus?: SemanticGlobalFocus) {
+  if (!focus) return core;
+  const scores = new Map(focus.scores.map((item) => [item.path, item.score]));
+  return Object.freeze(core.map((point) => {
+    const distance = point.path === focus.path ? 0 : semanticCoreRadius(scores.get(point.path)!);
+    return Object.freeze({ ...point, distance,
+      x: 500 + Math.cos(point.angle) * distance, y: 500 + Math.sin(point.angle) * distance });
+  }));
+}
 
 /** Summarize the captured map, excluding undefined connectedness for a singleton. */
 export function semanticScoreSummary(scores: readonly (number | null)[]) {

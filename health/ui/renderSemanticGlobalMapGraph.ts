@@ -1,27 +1,28 @@
 import { t } from "../../i18n";
-import type { SemanticGlobalMap } from "../semanticGlobalMapPort";
+import type { SemanticGlobalFocus, SemanticGlobalMap } from "../semanticGlobalMapPort";
 import { compareStrings } from "../domain/validation";
 import { bindGraphViewport } from "./bindGraphViewport";
 import { fitGraph, panGraph } from "./graphViewport";
 import type { Viewport } from "./graphViewport";
 import { semanticGraphBasename, semanticGraphLabel, separateSemanticLabels } from "./semanticGraphLabel";
-import { semanticCoreRadius, semanticGlobalMapLayout } from "./semanticGlobalMapLayout";
+import { semanticCoreRadius, semanticFocusLayout, semanticGlobalMapLayout } from "./semanticGlobalMapLayout";
 
 const layouts = new WeakMap<SemanticGlobalMap, ReturnType<typeof semanticGlobalMapLayout>>();
-export interface SemanticGlobalMapViewState { query: string; selected?: string; map?: SemanticGlobalMap; viewport: Viewport }
+export interface SemanticGlobalMapViewState { query: string; selected?: string; map?: SemanticGlobalMap; viewport: Viewport; focusAction?: "global-map-focus" | "global-map-search" }
 export const newSemanticGlobalMapViewState = (): SemanticGlobalMapViewState => ({ query: "", viewport: fitGraph() });
 
-export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticGlobalMap, state: SemanticGlobalMapViewState, onSelect: (path: string) => void) {
+export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticGlobalMap, state: SemanticGlobalMapViewState, onSelect: (path: string) => void, focus?: SemanticGlobalFocus) {
   const started = performance.now();
   let layout = layouts.get(map);
   if (!layout) { layout = semanticGlobalMapLayout(map); layouts.set(map, layout); }
+  layout = semanticFocusLayout(layout, focus);
   const laidOut = performance.now();
   const positions = new Map(layout.map((point) => [point.path, point]));
   const nodes = new Map(map.nodes.map((node) => [node.path, node]));
   const labeled = [...map.nodes].sort((a, b) => (b.semanticConnectedness ?? -1) - (a.semanticConnectedness ?? -1) || compareStrings(a.path, b.path)).slice(0, 5).map((node) => node.path);
   const svg = parent.createSvg("svg", { cls: "veynrel-global-map-svg", attr: { viewBox: "0 0 1000 1000", "aria-hidden": "true", focusable: "false" } });
   const scene = svg.createSvg("g");
-  const labelObstacles = [{ left: 365, right: 635, top: 527, bottom: 557 }, { left: 474, right: 526, top: 474, bottom: 526 }];
+  const labelObstacles = [{ left: focus ? 340 : 365, right: focus ? 660 : 635, top: 527, bottom: focus ? 587 : 557 }, { left: 474, right: 526, top: 474, bottom: 526 }];
   for (const score of [1, 0, -1]) {
     const radius = semanticCoreRadius(score), y = 500 - radius - 12;
     scene.createSvg("circle", { cls: "veynrel-global-map-guide", attr: { cx: "500", cy: "500", r: String(radius) } });
@@ -33,15 +34,20 @@ export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticG
     return { edge, element: scene.createSvg("line", { cls: "veynrel-global-map-edge", attr: {
       x1: String(a.x), y1: String(a.y), x2: String(b.x), y2: String(b.y), "data-mutual": String(edge.mutual) } }) };
   });
-  const core = scene.createSvg("g", { cls: "veynrel-global-map-core" });
-  core.createSvg("path", { attr: { d: "M500 478 L522 500 L500 522 L478 500 Z" } });
-  core.createSvg("circle", { attr: { cx: "500", cy: "500", r: "7" } });
-  core.createSvg("title").textContent = t("@global-map.core");
-  core.createSvg("text", { attr: { x: "500", y: "547", "text-anchor": "middle" } }).textContent = t("@global-map.core");
+  const center = scene.createSvg("g", { cls: focus ? "veynrel-global-map-focused-center" : "veynrel-global-map-core" });
+  if (focus) {
+    center.createSvg("circle", { attr: { cx: "500", cy: "500", r: String(positions.get(focus.path)!.radius + 5) } });
+    center.createSvg("text", { attr: { x: "500", y: "573", "text-anchor": "middle" } }).textContent = semanticGraphBasename(nodes.get(focus.path)!.basename);
+  } else {
+    center.createSvg("path", { attr: { d: "M500 478 L522 500 L500 522 L478 500 Z" } });
+    center.createSvg("circle", { attr: { cx: "500", cy: "500", r: "7" } });
+  }
+  center.createSvg("title").textContent = focus ? focus.path : t("@global-map.core");
+  center.createSvg("text", { attr: { x: "500", y: "547", "text-anchor": "middle" } }).textContent = t(focus ? "@global-map.focused-note" : "@global-map.core");
   const groups = layout.map((point) => {
     const node = nodes.get(point.path)!;
     const group = scene.createSvg("g", { cls: "veynrel-global-map-node", attr: {
-      "data-global-map-node": node.path, "data-label-rank": String(labeled.indexOf(node.path) + 1) } });
+      "data-global-map-node": node.path, "data-focused": String(node.path === focus?.path), "data-label-rank": String(labeled.indexOf(node.path) + 1) } });
     group.createSvg("title").textContent = node.path;
     const connector = group.createSvg("line", { cls: "veynrel-global-map-label-link" });
     group.createSvg("circle", { cls: "veynrel-global-map-hit", attr: { cx: String(point.x), cy: String(point.y), r: String(point.radius + 5) } });
@@ -61,7 +67,7 @@ export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticG
     }
     for (const { path, group } of groups) group.setAttribute("data-selected", String(path === state.selected));
     for (const { label, connector } of groups) { label.element.setAttribute("x", String(label.x)); label.element.setAttribute("y", String(label.y)); connector.setAttribute("data-linked", "false"); }
-    const permanent = groups.filter((item) => labeled.includes(item.path) || item.path === state.selected)
+    const permanent = groups.filter((item) => item.path !== focus?.path && (labeled.includes(item.path) || item.path === state.selected))
       .sort((a, b) => Number(b.path === state.selected) - Number(a.path === state.selected) || labeled.indexOf(a.path) - labeled.indexOf(b.path));
     const placement = separateSemanticLabels(permanent.map((item) => ({ path: item.path, ...item.label,
       width: item.label.element.getComputedTextLength?.() })), labelObstacles);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SemanticGlobalMap } from "../semanticGlobalMapPort";
-import { semanticCoreRadius, semanticGlobalMapLayout, semanticNodeRadius, semanticScoreSummary } from "./semanticGlobalMapLayout";
+import { semanticCoreRadius, semanticFocusLayout, semanticGlobalMapLayout, semanticNodeRadius, semanticScoreSummary } from "./semanticGlobalMapLayout";
 import { semanticGraphLabel, separateSemanticLabels } from "./semanticGraphLabel";
 function fixture(bridge: boolean): SemanticGlobalMap {
   return { revision: { vectorGeneration: 1, vectorCount: 6, dimensions: 3, provider: "test", model: "test", configurationRevision: 0, runtimeRevision: 0 },
@@ -11,6 +11,19 @@ function fixture(bridge: boolean): SemanticGlobalMap {
       ...(bridge ? [["C", "D", 0.01]] : [])].map(([left, right, score]) => ({ left: left + ".md", right: right + ".md", score: Number(score), mutual: true })) };
 }
 describe("deterministic semantic angular forest", () => {
+  it("changes only radii on focus, centers the note, and restores exact core coordinates on reset", () => {
+    const map = fixture(true), original = JSON.stringify(map), core = semanticGlobalMapLayout(map);
+    const focus = { path: "C.md", scores: map.nodes.map((n, i) => ({ path: n.path, score: n.path === "C.md" ? 1 : -1 + i * 0.35 })) };
+    const points = semanticFocusLayout(core, focus);
+    const center = points.find(p => p.path === focus.path)!;
+    expect(center).toMatchObject({ x: 500, y: 500, distance: 0 });
+    for (const [i, point] of points.entries()) {
+      expect([point.angle, point.sectorStart, point.sectorEnd, point.radius]).toEqual([core[i].angle, core[i].sectorStart, core[i].sectorEnd, core[i].radius]);
+      if (point !== center) expect(point.distance).toBe(semanticCoreRadius(focus.scores[i].score));
+      for (const [j, other] of points.entries()) if (focus.scores[i].score > focus.scores[j].score) expect(point.distance).toBeLessThanOrEqual(other.distance);
+    }
+    expect(points).not.toEqual(core); expect(semanticFocusLayout(core)).toBe(core); expect(JSON.stringify(map)).toBe(original);
+  });
   it.each([false, true])("preserves fixed semantic radii, bounds, sizes and contiguous strong branches (bridge %s)", (bridge) => {
     const map = fixture(bridge); const positions = semanticGlobalMapLayout(map);
     expect(positions).toEqual(semanticGlobalMapLayout(map));

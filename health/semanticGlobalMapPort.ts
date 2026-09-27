@@ -31,6 +31,14 @@ export interface SemanticGlobalMapProductSnapshot {
   readonly mappedNoteCount?: number;
   readonly progress?: Readonly<{ completedPairs: number; totalPairs: number }>;
   readonly map?: SemanticGlobalMap;
+  /** Belongs to map.revision; the enclosing stale state also applies to these scores. */
+  readonly focus?: SemanticGlobalFocus;
+  readonly focusing?: boolean;
+  readonly focusError?: boolean;
+}
+export interface SemanticGlobalFocus {
+  readonly path: string;
+  readonly scores: readonly Readonly<{ path: string; score: number }>[];
 }
 export interface SemanticGlobalSearchResult { readonly nodes: readonly SemanticGlobalNode[]; readonly total: number }
 /** Explicit, read-only, session-only exploration. No setup, persistence or index mutation API. */
@@ -39,6 +47,8 @@ export interface SemanticGlobalMapPort {
   subscribe(listener: () => void): () => void;
   load(): Promise<void>;
   refresh(): Promise<void>;
+  focus(path: string): Promise<void>;
+  resetFocus(): void;
   search(query: string): SemanticGlobalSearchResult;
   dispose(): void;
 }
