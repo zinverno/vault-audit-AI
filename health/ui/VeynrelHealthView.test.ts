@@ -9,6 +9,7 @@ import type { SemanticIntelligenceSnapshot } from "../semanticIntelligencePort";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => {
   class Element {
+    open = false;
     children: Element[] = []; text = ""; cls = ""; tag = "div"; disabled = false; value = "";
     parentElement?: Element; scrollTop = 0; scrollLeft = 0; focusOptions?: FocusOptions;
     attrs: Record<string, string> = {}; listeners: Array<() => void> = [];
@@ -24,14 +25,19 @@ const mocks = vi.hoisted(() => {
     createEl(tag: string, opts: { text?: string; cls?: string; attr?: Record<string, string> } = {}): Element { return this.append(tag, opts); }
     createDiv(opts: { cls?: string; attr?: Record<string, string> } = {}): Element { return this.append("div", opts); }
     createSpan(opts: { text?: string; cls?: string; attr?: Record<string, string> } = {}): Element { return this.append("span", opts); }
-    addClass(cls: string): void { this.cls += ` ${cls}`; }
+    addClass(...classes: string[]): void { this.cls += ` ${classes.join(" ")}`; }
     toggleClass(cls: string, enabled: boolean): void { if (enabled) this.addClass(cls); }
     empty(): void { this.children = []; this.text = ""; }
     setText(text: string): void { this.text = text; }
     setAttribute(key: string, value: string): void { this.attrs[key] = value; }
     getAttribute(key: string): string | null { return this.attrs[key] ?? null; }
     contains(child: Element): boolean { return this.all().includes(child); }
+    querySelectorAll(selector: string): Element[] {
+      if (selector === "details[data-health-disclosure]") return this.all().filter(e => e.tag === "details" && e.attrs["data-health-disclosure"] !== undefined);
+      throw new Error(`Unsupported test selector: ${selector}`);
+    }
     querySelector(selector: string): Element | undefined {
+      if (selector === "summary") return this.all().find(e => e.tag === "summary");
       const attribute = selector.match(/^\[([\w-]+)\]$/u)?.[1];
       if (attribute) return this.all().find((e) => e.attrs[attribute] !== undefined);
       const action = selector.match(/="([^"]+)"/u)?.[1];
@@ -193,6 +199,19 @@ describe("inline Deep Intelligence boundaries", () => {
     expect(f.vault.getMarkdownFiles).not.toHaveBeenCalled(); expect(f.vault.read).not.toHaveBeenCalled();
     expect(f.cachedRead).not.toHaveBeenCalled(); expect(f.adapter.write).not.toHaveBeenCalled(); expect(f.save).not.toHaveBeenCalled();
   }
+  it("retains a disclosure and its keyboard focus on notification, but resets it on navigation", async () => {
+    const f = deepFixture(); await f.view.onOpen();
+    const summary = f.content.action("deep-about");
+    summary.parentElement!.open = true; summary.focus(); f.content.scrollTop = 700;
+    f.change({ model: "another-model" });
+    expect(f.content.action("deep-about").parentElement!.open).toBe(true);
+    expect(f.content.ownerDocument.activeElement).toBe(f.content.action("deep-about"));
+    expect(f.content.ownerDocument.activeElement?.focusOptions).toEqual({ preventScroll: true });
+    expect(f.content.scrollTop).toBe(700); noWork(f);
+    f.content.action("nav-tools").click(); f.content.action("nav-health").click();
+    expect(f.content.action("deep-about").parentElement!.open).toBe(false);
+    await f.view.onClose(); f.deep.dispose(); f.controller.dispose();
+  });
   function knowledgeFixture() {
     const result: DeepKnowledgeAnalysis = { revision: { token: "opaque" }, complete: true, totalFiles: 1, analyzedFiles: 1,
       candidates: [candidate({ analyzerId: "knowledge-quality", dimension: "knowledge", source: "deep-ai", type: "knowledge-draft", impact: "review", confidence: "medium",
@@ -745,7 +764,7 @@ describe("integrated Health onboarding", () => {
     setLanguage("ru"); const f = fixture({ profileChosen: true }); await f.view.onOpen(); await f.controller.runLocalScan();
     expect(f.content.texts()).toContain("Заметка без связей"); expect(f.content.texts()).not.toContain("Note has no");
     const finding = f.controller.getState().recommendationFinding!;
-    expect(finding.title).not.toMatch(/[А-Яа-яЁё]/u); expect(f.content.action("continue").text).toBe("Перейти в Health");
+    expect(finding.title).not.toMatch(/[А-Яа-яЁё]/u); expect(f.content.action("continue").text).toBe("Перейти к состоянию");
   });
 });
 
@@ -1369,7 +1388,8 @@ describe("real topology child route", () => {
     expect(header.texts()).toContain(t("@topology.partial"));
     expect(header.texts()).toContain(t("@topology.partial-explanation"));
     expect(header.all().filter((e) => e.tag === "button").map((e) => e.attrs["data-health-action"])).toEqual(["topology-refresh"]);
-    expect(parent.action("topology-refresh").cls).toContain("mod-cta");
+    expect(parent.action("topology-refresh").cls).toContain("veynrel-quiet");
+    expect(parent.action("topology-refresh").cls).not.toContain("mod-cta");
     const metrics = find("veynrel-topology-metrics");
     expect(metrics.all().filter((e) => e.tag === "dd").map((e) => e.text)).toEqual(["24", "44", "2", t("@topology.unknown"), t("@topology.unknown"), "44"]);
     expect(metrics.children.filter((e) => e.attrs["data-unknown"] === "true")).toHaveLength(2);

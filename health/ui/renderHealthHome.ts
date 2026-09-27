@@ -19,6 +19,13 @@ export function healthButton(parent: HTMLElement, text: string, action: () => vo
   return element;
 }
 
+/** Native disclosure; the view retains open/focus state only during a same-page render. */
+export function healthDetails(parent: HTMLElement, label: string, key: string): HTMLDetailsElement {
+  const details = parent.createEl("details", { cls: "veynrel-details", attr: { "data-health-disclosure": key } });
+  details.createEl("summary", { text: label, attr: { "data-health-action": key } });
+  return details;
+}
+
 function renderHealthCard(parent: HTMLElement, card: HealthCardModel, actions: HealthHomeActions): void {
   const article = parent.createEl("article", { cls: "veynrel-health-card", attr: { "data-dimension": card.id,
     "data-state": card.signal, "data-complete": String(card.complete) } });
@@ -40,7 +47,7 @@ export function renderHealthHome(parent: HTMLElement, model: HealthHomeViewModel
   const home = parent.createDiv({ cls: "veynrel-health-home" });
   const header = home.createEl("header", { cls: "veynrel-health-header" });
   const title = header.createDiv();
-  title.createEl("h1", { text: t("@health.title"), attr: { tabindex: "-1", "data-health-heading": "true" } });
+  title.createEl("h1", { text: t("@findings.health"), attr: { tabindex: "-1", "data-health-heading": "true" } });
   if (model.recovery) {
     const section = home.createEl("section", { cls: "veynrel-health-recovery", attr: { role: "alert" } });
     section.createEl("h2", { text: model.recovery.title });
@@ -57,12 +64,12 @@ export function renderHealthHome(parent: HTMLElement, model: HealthHomeViewModel
     section.createEl("h2", { text: t("@dashboard.recommended"), cls: "veynrel-dashboard-eyebrow" });
     section.createEl("h3", { text: model.recommendation.title });
     section.createEl("p", { text: model.recommendation.explanation });
-    if (model.recommendation.canOpenNote) healthButton(section, t("@health.open-note"), actions.openNote, "open-note");
+    if (model.recommendation.canOpenNote) healthButton(section, t("@health.open-note"), actions.openNote, "open-note").addClass("veynrel-quiet");
     const id = model.recommendation.findingId;
     if (id && actions.reviewFinding) healthButton(section, t("@findings.review"), () => actions.reviewFinding?.(id), "review-finding");
   }
   const health = home.createEl("section", { cls: "veynrel-health-dimensions" });
-  health.createEl("h2", { text: t("@health.health") });
+  health.createEl("h2", { text: t("@ui.dimensions") });
   const grid = health.createDiv({ cls: "veynrel-health-grid" });
   for (const card of model.cards) renderHealthCard(grid, card, actions);
   renderHealthInsights(home, model.dashboard, actions);
@@ -71,7 +78,7 @@ export function renderHealthHome(parent: HTMLElement, model: HealthHomeViewModel
   if (model.profile && !model.recovery) {
     const profile = controls.createDiv({ cls: "veynrel-health-profile-control" });
     profile.createSpan({ text: t("@health.profile.current", { name: healthProfileName(model.profile.value) }), cls: "veynrel-health-muted" });
-    healthButton(profile, t(changingProfile ? "@health.cancel" : "@health.profile.change"), actions.changeProfile, "change-profile", model.profile.saving);
+    healthButton(profile, t(changingProfile ? "@health.cancel" : "@health.profile.change"), actions.changeProfile, "change-profile", model.profile.saving).addClass("veynrel-quiet");
     if (changingProfile) renderHealthProfileOptions(controls, model.profile.value, model.profile.saving, actions.chooseProfile);
   }
 }

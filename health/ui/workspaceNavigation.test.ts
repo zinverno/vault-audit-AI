@@ -44,4 +44,13 @@ describe("workspace presentation contract", () => {
     expect(rule(".veynrel-topology-preview")).toContain("border-bottom: 1px solid var(--background-modifier-border);");
     expect(rule(".veynrel-topology-svg")).toContain("background: var(--background-secondary);");
   });
+  it("shares theme-owned presentation and disables nonessential motion throughout the workspace", () => {
+    const shared = css.split("/* Shared workspace presentation")[1];
+    expect(shared).not.toMatch(/#[\da-f]{3,8}\b|\brgba?\(|\bhsla?\(/iu);
+    expect(shared).toContain(".veynrel-workspace *");
+    expect(shared).toContain("animation: none !important; transition: none !important;");
+    expect(shared).toContain(".veynrel-semantic-exploration, .veynrel-connect-overview { grid-template-columns: minmax(0, 1fr); }");
+    expect(shared).toContain(".veynrel-connections-overview { grid-template-columns: minmax(0, 1fr);");
+    expect(css).not.toContain(".veynrel-findings-row-explanation");
+  });
 });

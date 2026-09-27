@@ -38,20 +38,21 @@ export function renderRecall(parent: HTMLElement, model: RecallViewModel, action
     review.createEl("p", { text: session.count, cls: "veynrel-health-muted" });
     const question = review.createEl("section", { attr: { "aria-label": t("@recall.question") } });
     question.createEl("h2", { text: card.question, attr: { tabindex: "-1", "data-recall-question": "true" } });
-    healthButton(review, `${t("@recall.from")} ${card.path}`, actions.source, "recall-source").addClass("veynrel-recall-source");
+    healthButton(review, `${t("@recall.from")} ${card.path}`, actions.source, "recall-source").addClass("veynrel-quiet", "veynrel-recall-source");
     if (session.revealed && card.answer !== undefined) {
       const answer = review.createEl("section", { cls: "veynrel-recall-answer", attr: { "aria-label": t("@recall.answer") } });
       answer.createEl("h2", { text: t("@recall.answer"), attr: { tabindex: "-1", "data-recall-answer": "true" } });
       answer.createEl("p", { text: card.answer });
       const ratings = review.createDiv({ cls: "veynrel-recall-ratings", attr: { "aria-label": t("@recall.rate") } });
-      for (const preview of session.previews ?? []) {
+      for (const [index, preview] of (session.previews ?? []).entries()) {
         const button = healthButton(ratings, "", () => actions.rate(preview.rating), `recall-${preview.rating}`, model.busy || model.mode === "recovery");
         button.setAttribute("title", preview.help);
         button.createSpan({ text: preview.label, cls: "veynrel-recall-rating-label" });
+        button.createEl("kbd", { text: String(index + 1), attr: { "aria-hidden": "true" } });
         button.createSpan({ text: preview.interval, cls: "veynrel-recall-interval" });
       }
     } else healthButton(review, t("@recall.show-answer"), actions.reveal, "recall-reveal", model.busy || model.mode === "recovery", true);
-    healthButton(review, t("@recall.back"), actions.back, "recall-back").addClass("veynrel-recall-back");
+    healthButton(review, t("@recall.back"), actions.back, "recall-back").addClass("veynrel-quiet", "veynrel-recall-back");
     const keydown = (event: KeyboardEvent): void => {
       if (!session.revealed || model.busy || model.mode === "recovery" || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.repeat ||
         !review.contains(review.ownerDocument.activeElement)) return;
@@ -68,7 +69,7 @@ export function renderRecall(parent: HTMLElement, model: RecallViewModel, action
     section.createEl("h2", { text: t("@recall.caught-up") });
     section.createEl("p", { text: model.session!.count });
     if (model.nextDue) section.createEl("p", { text: t("@recall.next-at", { date: model.nextDue }) });
-    healthButton(section, t("@recall.back"), actions.back, "recall-back");
+    healthButton(section, t("@recall.back"), actions.back, "recall-back").addClass("veynrel-quiet");
     return () => {};
   }
   section.createEl("p", { text: model.mode === "first-run" ? t("@recall.first-run") : model.introduction, cls: "veynrel-health-muted" });
@@ -89,7 +90,7 @@ export function renderRecall(parent: HTMLElement, model: RecallViewModel, action
     if (model.nextDue) section.createEl("p", { text: t("@recall.next-at", { date: model.nextDue }) });
   }
   const controls = section.createDiv({ cls: "veynrel-recall-actions" });
-  healthButton(controls, t(model.mode === "first-run" ? "@recall.find" : "@recall.refresh"), actions.refresh, "recall-refresh", model.busy, model.mode === "first-run");
+  healthButton(controls, t(model.mode === "first-run" ? "@recall.find" : "@recall.refresh"), actions.refresh, "recall-refresh", model.busy, model.mode === "first-run").addClass("veynrel-quiet");
   section.createEl("p", { text: t("@recall.source-help"), cls: "veynrel-health-muted" });
   if (!model.inventoryEstablished && model.mode !== "first-run") section.createEl("p", { text: t("@recall.inventory-not-established"), cls: "veynrel-health-muted" });
   return () => {};

@@ -6,12 +6,14 @@ export function renderProductSettings(parent: HTMLElement, model: ReturnType<typ
   home.createEl("h1", { text: model.title, attr: { tabindex: "-1", "data-health-heading": "true" } });
   home.createEl("p", { text: model.description, cls: "veynrel-health-muted" });
   for (const summary of model.summaries) {
-    const section = home.createEl("section");
-    section.createEl("h2", { text: summary.title });
-    section.createEl("p", { text: summary.status, cls: "veynrel-health-state" });
-    if (summary.details) section.createEl("p", { text: summary.details, cls: "veynrel-health-muted" });
-    if (summary.vectors) section.createEl("p", { text: summary.vectors });
-    healthButton(section, summary.label, () => action(summary.id), `settings-${summary.id}`, summary.disabled);
+    const section = home.createEl("section", { cls: "veynrel-capability-row" });
+    const copy = section.createDiv();
+    copy.createEl("h2", { text: summary.title });
+    const metadata = copy.createDiv({ cls: "veynrel-capability-summary" });
+    metadata.createSpan({ text: summary.status, cls: "veynrel-health-state" });
+    if (summary.details) metadata.createSpan({ text: summary.details, cls: "veynrel-health-muted" });
+    if (summary.vectors) metadata.createSpan({ text: summary.vectors });
+    healthButton(section, summary.label, () => action(summary.id), `settings-${summary.id}`, summary.disabled).addClass("veynrel-quiet");
   }
   const recall = home.createEl("section");
   recall.createEl("h2", { text: model.recall.title });

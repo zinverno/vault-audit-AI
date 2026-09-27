@@ -1,6 +1,6 @@
 import { t } from "../../i18n";
 import type { SemanticIntelligenceSnapshot, SemanticSetupDraft, SemanticSetupMode, SemanticSetupResult } from "../semanticIntelligencePort";
-import { healthButton } from "./renderHealthHome";
+import { healthButton, healthDetails } from "./renderHealthHome";
 import { semanticIntelligenceViewModel, semanticSetupCopy, semanticSetupError } from "./semanticIntelligenceViewModel";
 import type { SemanticAction } from "./semanticIntelligenceViewModel";
 
@@ -60,21 +60,22 @@ export function renderSemanticIntelligence(parent: HTMLElement, snapshot: Semant
     }
   } else {
     section.createEl("p", { text: model.status, cls: "veynrel-health-state" });
-    section.createEl("p", { text: model.description });
+    if (snapshot.state !== "ready") section.createEl("p", { text: model.description });
     renderSemanticRejectedBatch(section, model.rejectedBatch);
     renderSemanticIndexProgress(section, model.progress);
     if (model.details) section.createEl("p", { text: model.details, cls: "veynrel-health-muted" });
     if (setup?.step === "connected") section.createEl("p", { text: t("@semantic.dimensions", { n: setup.dimensions }) });
     if (model.vectors) section.createEl("p", { text: model.vectors });
     if (snapshot.state === "configured" || snapshot.state === "ready") {
-      section.createEl("p", { text: model.privacy, cls: "veynrel-health-muted" });
-      section.createEl("p", { text: t("@semantic.auto-sync"), cls: "veynrel-health-muted" });
+      const privacy = snapshot.state === "ready" ? healthDetails(section, t("@ui.semantic-data"), "semantic-data") : section;
+      privacy.createEl("p", { text: model.privacy, cls: "veynrel-health-muted" });
+      privacy.createEl("p", { text: t("@semantic.auto-sync"), cls: "veynrel-health-muted" });
     }
     const buttons = section.createDiv({ cls: "veynrel-semantic-actions" });
     for (const action of model.actions) healthButton(buttons, action.label, () => actions.action(action.id),
-      `semantic-${action.id}`, snapshot.busy);
+      `semantic-${action.id}`, snapshot.busy, ["enable", "build", "rebuild"].includes(action.id));
   }
-  if (setup) healthButton(section, t("@semantic.back"), actions.back, "semantic-back", snapshot.busy);
+  if (setup) healthButton(section, t("@semantic.back"), actions.back, "semantic-back", snapshot.busy).addClass("veynrel-quiet");
 }
 
 /** Shared by the inline setup and Discover capability section. */

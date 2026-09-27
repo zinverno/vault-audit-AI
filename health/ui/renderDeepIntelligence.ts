@@ -1,6 +1,6 @@
 import { t } from "../../i18n";
 import type { DeepIntelligenceSnapshot, DeepProvider, DeepProviderOption, DeepSetupDraft, DeepSetupResult } from "../deepIntelligencePort";
-import { healthButton } from "./renderHealthHome";
+import { healthButton, healthDetails } from "./renderHealthHome";
 import { deepIntelligenceViewModel, deepProviderKind, deepSetupError } from "./deepIntelligenceViewModel";
 import type { DeepAction } from "./deepIntelligenceViewModel";
 import { canCheckKnowledge } from "./deepIntelligenceViewModel";
@@ -29,7 +29,7 @@ export function renderDeepIntelligence(parent: HTMLElement, snapshot: DeepIntell
   const heading = section.createEl(setup ? "h1" : "h2", { text: model.title });
   if (setup) { heading.setAttribute("tabindex", "-1"); heading.setAttribute("data-health-heading", "true"); }
   section.createEl("p", { text: model.status, cls: "veynrel-health-state" });
-  section.createEl("p", { text: model.description });
+  if (setup) section.createEl("p", { text: model.description });
   if (setup) {
     section.createEl("p", { text: t("@deep.choose") });
     const choices = section.createDiv({ cls: "veynrel-deep-choices" });
@@ -64,13 +64,15 @@ export function renderDeepIntelligence(parent: HTMLElement, snapshot: DeepIntell
       if (error) section.createEl("p", { text: error, cls: "veynrel-health-status-error" });
       healthButton(section, t(snapshot.busy ? "@deep.connecting" : "@deep.connect"), actions.connect, "deep-connect", snapshot.busy, true);
     }
-    healthButton(section, t("@deep.back"), actions.back, "deep-back");
+    healthButton(section, t("@deep.back"), actions.back, "deep-back").addClass("veynrel-quiet");
   } else {
     if (model.details) section.createEl("p", { text: model.details, cls: "veynrel-health-muted" });
+    const explanation = healthDetails(section, t("@ui.deep-about"), "deep-about");
+    explanation.createEl("p", { text: model.description });
     const buttons = section.createDiv({ cls: "veynrel-deep-actions" });
     for (const action of model.actions) {
       if (action.id === "knowledge" && !knowledge.available) continue;
-      healthButton(buttons, action.label, () => actions.action(action.id), `deep-${action.id}`, snapshot.busy || knowledge.busy || Boolean(knowledge.consent));
+      healthButton(buttons, action.label, () => actions.action(action.id), `deep-${action.id}`, snapshot.busy || knowledge.busy || Boolean(knowledge.consent), action.id === "setup" || action.id === "knowledge");
     }
     if (knowledge.status) section.createEl("p", { text: knowledge.status });
     if (knowledge.running) healthButton(section, t("@health.cancel"), actions.cancelKnowledge, "knowledge-cancel");

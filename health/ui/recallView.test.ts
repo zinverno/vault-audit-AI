@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => {
   class Element {
+    open = false;
     children: Element[] = []; text = ""; cls = ""; tag = "div"; disabled = false; parent?: Element;
     attrs: Record<string, string> = {}; listeners = new Map<string, Set<(event: unknown) => void>>();
     ownerDocument: { activeElement: Element | null } = { activeElement: null };
@@ -13,7 +14,7 @@ const mocks = vi.hoisted(() => {
     createDiv(opts: { cls?: string; attr?: Record<string, string> } = {}): Element { return this.append("div", opts); }
     createSpan(opts: { text?: string; cls?: string; attr?: Record<string, string> } = {}): Element { return this.append("span", opts); }
     set textContent(text: string) { this.text = text; }
-    addClass(cls: string): void { this.cls += ` ${cls}`; }
+    addClass(...classes: string[]): void { this.cls += ` ${classes.join(" ")}`; }
     toggleClass(cls: string, on: boolean): void { if (on) this.addClass(cls); }
     empty(): void { this.children = []; this.text = ""; }
     setText(text: string): void { this.text = text; }
@@ -21,7 +22,12 @@ const mocks = vi.hoisted(() => {
     getAttribute(key: string): string | null { return this.attrs[key] ?? null; }
     all(): Element[] { return [this, ...this.children.flatMap((child) => child.all())]; }
     contains(child: Element | null): boolean { return child !== null && this.all().includes(child); }
+    querySelectorAll(selector: string): Element[] {
+      if (selector === "details[data-health-disclosure]") return this.all().filter(e => e.tag === "details" && e.attrs["data-health-disclosure"] !== undefined);
+      throw new Error(`Unsupported test selector: ${selector}`);
+    }
     querySelector(selector: string): Element | undefined {
+      if (selector === "summary") return this.all().find(e => e.tag === "summary");
       const match = selector.match(/^\[([\w-]+)(?:="([^"]+)")?\]$/u);
       return match ? this.all().find((element) => match[2] ? element.attrs[match[1]] === match[2] : element.attrs[match[1]] !== undefined) : undefined;
     }

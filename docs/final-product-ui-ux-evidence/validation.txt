@@ -1,0 +1,100 @@
+Health
+> obsidian-ai-hub@1.9.0 test
+> vitest run health
+
+
+ RUN  v4.1.10 /home/zinvernix/projects/obsidian_ai_hub/plagin_CLAUD
+
+
+ Test Files  47 passed (47)
+      Tests  986 passed (986)
+   Start at  23:21:28
+   Duration  10.30s (transform 23.04s, setup 0ms, import 34.17s, tests 21.66s, environment 18ms)
+
+Semantic
+> obsidian-ai-hub@1.9.0 test
+> vitest run semantic
+
+
+ RUN  v4.1.10 /home/zinvernix/projects/obsidian_ai_hub/plagin_CLAUD
+
+
+ Test Files  21 passed (21)
+      Tests  484 passed (484)
+   Start at  22:57:41
+   Duration  3.78s (transform 16.15s, setup 0ms, import 20.61s, tests 4.21s, environment 5ms)
+
+Recall
+> obsidian-ai-hub@1.9.0 test
+> vitest run recall
+
+
+ RUN  v4.1.10 /home/zinvernix/projects/obsidian_ai_hub/plagin_CLAUD
+
+
+ Test Files  20 passed (20)
+      Tests  557 passed (557)
+   Start at  22:58:09
+   Duration  5.63s (transform 9.78s, setup 0ms, import 17.54s, tests 5.41s, environment 5ms)
+
+Full suite
+> obsidian-ai-hub@1.9.0 test
+> vitest run
+
+
+ RUN  v4.1.10 /home/zinvernix/projects/obsidian_ai_hub/plagin_CLAUD
+
+
+ Test Files  109 passed (109)
+      Tests  2680 passed (2680)
+   Start at  23:40:40
+   Duration  13.36s (transform 26.87s, setup 0ms, import 50.81s, tests 46.17s, environment 31ms)
+
+Settings inventory
+> obsidian-ai-hub@1.9.0 test
+> vitest run settings.test.ts
+
+
+ RUN  v4.1.10 /home/zinvernix/projects/obsidian_ai_hub/plagin_CLAUD
+
+
+ Test Files  6 passed (6)
+      Tests  77 passed (77)
+   Start at  23:39:28
+   Duration  2.52s (transform 5.12s, setup 0ms, import 5.43s, tests 4.28s, environment 1ms)
+
+Focused ESLint
+PASS (no output)
+
+Repository lint including typecheck and build
+> obsidian-ai-hub@1.9.0 lint
+> npm run lint:obsidian
+
+
+> obsidian-ai-hub@1.9.0 lint:obsidian
+> npm run typecheck && npm run build && node scripts/lint-obsidian.mjs
+
+
+> obsidian-ai-hub@1.9.0 typecheck
+> tsc --noEmit --module ES2020 --ignoreDeprecations 5.0 && tsc --project health/tsconfig.json
+
+
+> obsidian-ai-hub@1.9.0 build
+> node esbuild.config.mjs production
+
+
+/home/zinvernix/projects/obsidian_ai_hub/plagin_CLAUD/api.ts
+  402:22  warning  Unexpected use of 'fetch'. Use the built-in `requestUrl` function instead of `fetch` for network requests in Obsidian  no-restricted-globals
+
+✖ 1 problem (0 errors, 1 warning)
+
+Proposal mutation audit
+> obsidian-ai-hub@1.9.0 audit:proposals
+> node scripts/proposal-mutation-audit.mjs
+
+B: KILLED — approval skips base hash precondition
+D: KILLED — Vault write precedes successful claim
+E: KILLED — approval performs two Vault mutations
+F: KILLED — changed Vault content is applied after claim
+H: KILLED — Reject modifies Vault
+5/5 Stage 11 mutations killed; every restored test passed.

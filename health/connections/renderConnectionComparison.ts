@@ -1,7 +1,7 @@
 import { t } from "../../i18n";
 import { formatSemanticScore } from "../../utils/semanticPresentation";
 import type { ConnectionComparisonCategory, ConnectionComparisonPair, ConnectionComparisonPort, ConnectionComparisonProductSnapshot } from "../connectionComparisonPort";
-import { healthButton } from "../ui/renderHealthHome";
+import { healthButton, healthDetails } from "../ui/renderHealthHome";
 import { candidateReviewSummary, filteredConnectionPairs, isExcalidrawPair, reviewCandidate, syncConnectionComparison } from "./connectionComparisonViewState";
 import type { ConnectionComparisonViewState } from "./connectionComparisonViewState";
 export { newConnectionComparisonViewState } from "./connectionComparisonViewState";
@@ -33,29 +33,28 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
   const snapshot = port.getSnapshot(), comparison = snapshot.comparison;
   syncConnectionComparison(state, comparison);
   const section = parent.createEl("section", { cls: "veynrel-connections", attr: { "aria-label": t("@connections.title"), "aria-busy": String(snapshot.state === "loading") } });
-  healthButton(section, t("@global-map.back"), () => actions.back(), "connections-back");
+  healthButton(section, t("@global-map.back"), () => actions.back(), "connections-back").addClass("veynrel-quiet");
   section.createEl("h1", { text: t("@connections.title"), attr: { tabindex: "-1", "data-health-heading": "true" } });
   section.createEl("p", { text: t("@connections.description"), cls: "veynrel-connections-lead" });
   const status = connectionComparisonStatus(snapshot);
   if (status) section.createEl("p", { text: status, cls: "veynrel-connections-status" });
-  healthButton(section, t("@connections.refresh"), () => { void port.refresh(); }, "connections-refresh", snapshot.state === "loading");
+  healthButton(section, t("@connections.refresh"), () => { void port.refresh(); }, "connections-refresh", snapshot.state === "loading").addClass("veynrel-quiet");
   if (!comparison) return;
-  const metrics = section.createEl("dl", { cls: "veynrel-connections-metrics" });
-  for (const [key, count] of [["mapped", comparison.semanticMappedNoteCount], ["comparable", comparison.comparableNoteCount], ["semantic-pairs", comparison.semanticPairCount]] as const) {
-    const metric = metrics.createDiv(); metric.createEl("dt", { text: t(`@connections.${key}`) }); metric.createEl("dd", { text: String(count) });
-  }
-  const categories = ["candidate", "aligned", "explicit-only"] as const;
-  const overview = section.createDiv({ cls: "veynrel-connections-overview" });
+  const overview = section.createDiv({ cls: "veynrel-connections-overview", attr: { role: "group", "aria-label": t("@connections.categories") } });
+  const filterButtons = new Map<ConnectionComparisonCategory, HTMLButtonElement>();
   for (const [category, count] of [["candidate", comparison.candidateCount], ["aligned", comparison.alignedCount], ["explicit-only", comparison.explicitOnlyCount]] as const) {
-    const card = overview.createDiv({ cls: "veynrel-connections-count" });
-    card.createEl("strong", { text: String(count) }); card.createSpan({ text: t(`@connections.${category}-count`) });
+    const button = healthButton(overview, "", () => {
+      state.category = category; state.visibleLimit = 50; state.selectedPair = undefined; update();
+    }, `connections-${category}`);
+    button.addClass("veynrel-connections-count");
+    button.createEl("strong", { text: String(count) }); button.createSpan({ text: t(`@connections.${category}`) });
+    filterButtons.set(category, button);
   }
-  section.createEl("p", { text: `${t("@connections.unclassified")}: ${comparison.unclassifiedSemanticPairCount} · ${t("@connections.explicit-outside")}: ${comparison.explicitOutsideSemanticMapCount}`,
-    cls: "veynrel-health-muted" });
-  const coverage = section.createEl("details", { cls: "veynrel-connections-coverage" });
-  coverage.createEl("summary", { text: t("@connections.coverage") });
+  const coverage = healthDetails(section, t("@connections.coverage"), "connections-coverage");
+  coverage.addClass("veynrel-connections-coverage");
   const coverageMetrics = coverage.createEl("dl", { cls: "veynrel-connections-coverage-metrics" });
-  for (const [key, count] of [["topology-notes", comparison.topologyNoteCount], ["unclassified-explicit", comparison.unclassifiedExplicitPairCount],
+  for (const [key, count] of [["mapped", comparison.semanticMappedNoteCount], ["comparable", comparison.comparableNoteCount], ["semantic-pairs", comparison.semanticPairCount],
+    ["unclassified", comparison.unclassifiedSemanticPairCount], ["explicit-outside", comparison.explicitOutsideSemanticMapCount], ["topology-notes", comparison.topologyNoteCount], ["unclassified-explicit", comparison.unclassifiedExplicitPairCount],
     ["missing-topology", comparison.semanticNotesMissingTopologyCount], ["unavailable-links", comparison.semanticNotesUnavailableLinksCount]] as const) {
     const item = coverageMetrics.createDiv(); item.createEl("dt", { text: t(`@connections.${key}`) }); item.createEl("dd", { text: String(count) });
   }
@@ -63,15 +62,9 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
     section.createEl("p", { text: t("@connections.coverage-notice"), cls: "veynrel-health-muted" });
   }
   section.createEl("p", { text: t("@connections.exploratory"), cls: "veynrel-health-muted" });
-  const filters = section.createDiv({ cls: "veynrel-connections-filters", attr: { role: "group", "aria-label": t("@connections.categories") } });
-  const filterButtons = new Map<ConnectionComparisonCategory, HTMLButtonElement>();
-  for (const category of categories) {
-    const button = healthButton(filters, t(`@connections.${category}`), () => {
-      state.category = category; state.visibleLimit = 50; state.selectedPair = undefined; update();
-    }, `connections-${category}`);
-    filterButtons.set(category, button);
-  }
-  const rankFilters = section.createDiv({ cls: "veynrel-connections-filters veynrel-connections-secondary", attr: { role: "group", "aria-label": t("@connections.rank-filter") } });
+  const filters = healthDetails(section, t("@ui.filters"), "connections-filters");
+  filters.addClass("veynrel-connections-filter-details");
+  const rankFilters = filters.createDiv({ cls: "veynrel-connections-filters veynrel-connections-secondary", attr: { role: "group", "aria-label": t("@connections.rank-filter") } });
   rankFilters.createSpan({ text: t("@connections.rank-filter") });
   const rankButtons = new Map<ConnectionComparisonViewState["rankFilter"], HTMLButtonElement>();
   for (const rank of ["all", "mutual-top-3", "mutual-top-5", "one-sided-top-5"] as const) {
@@ -79,8 +72,8 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
       state.rankFilter = rank; state.visibleLimit = 50; update();
     }, `connections-rank-${rank}`));
   }
-  const reviewSummary = section.createEl("p", { cls: "veynrel-health-muted veynrel-connections-review-summary", attr: { role: "status", "aria-live": "polite" } });
-  const reviewFilters = section.createDiv({ cls: "veynrel-connections-filters veynrel-connections-secondary", attr: { role: "group", "aria-label": t("@connections.review-filter") } });
+  const reviewSummary = filters.createEl("p", { cls: "veynrel-health-muted veynrel-connections-review-summary" });
+  const reviewFilters = filters.createDiv({ cls: "veynrel-connections-filters veynrel-connections-secondary", attr: { role: "group", "aria-label": t("@connections.review-filter") } });
   reviewFilters.createSpan({ text: t("@connections.review-filter") });
   const reviewFilterButtons = new Map<ConnectionComparisonViewState["reviewFilter"], HTMLButtonElement>();
   for (const review of ["all", "unreviewed", "useful", "not-useful", "unsure"] as const) {
@@ -88,7 +81,7 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
       state.reviewFilter = review; state.visibleLimit = 50; update();
     }, `connections-review-filter-${review}`));
   }
-  const specialFormat = section.createEl("label", { cls: "veynrel-connections-special-format" });
+  const specialFormat = filters.createEl("label", { cls: "veynrel-connections-special-format" });
   const hideExcalidraw = specialFormat.createEl("input", { type: "checkbox", attr: { "data-health-action": "connections-hide-excalidraw" } });
   hideExcalidraw.checked = state.hideExcalidraw;
   specialFormat.createSpan({ text: t("@connections.hide-excalidraw") });
@@ -126,7 +119,7 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
     inspector.createEl("p", { text: markdownText(pair) });
     if (pair.category === "candidate") {
       inspector.createEl("h3", { text: t("@connections.session-review") });
-      const reviews = inspector.createDiv({ cls: "veynrel-connections-actions", attr: { role: "group", "aria-label": t("@connections.session-review") } });
+      const reviews = inspector.createDiv({ cls: "veynrel-connections-actions veynrel-annotations", attr: { role: "group", "aria-label": t("@connections.session-review") } });
       const setReview = (verdict?: "useful" | "not-useful" | "unsure"): void => {
         reviewCandidate(state, pair.id, verdict); update();
         inspector.querySelector<HTMLButtonElement>(`[data-health-action="connections-review-${verdict ?? "useful"}"]`)?.focus({ preventScroll: true });
@@ -137,15 +130,21 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
       }
       healthButton(reviews, t("@connections.clear-review"), () => setReview(), "connections-review-clear", !state.reviewByPairId.has(pair.id));
     }
-    const buttons = inspector.createDiv({ cls: "veynrel-connections-actions" });
-    if (actions.openPair) healthButton(buttons, t("@connections.open-pair"), () => actions.openPair!(pair.leftPath, pair.rightPath), "connections-open-pair");
+    const buttons = inspector.createDiv({ cls: "veynrel-connections-note-actions" });
+    if (actions.openPair) healthButton(buttons, t("@connections.open-pair"), () => actions.openPair!(pair.leftPath, pair.rightPath), "connections-open-pair").addClass("veynrel-quiet");
     for (const [side, path] of [["left", pair.leftPath], ["right", pair.rightPath]] as const) {
       healthButton(buttons, t(`@connections.open-${side}`), () => actions.openNote(path), `connections-open-${side}`);
-      healthButton(buttons, t(`@connections.explore-${side}`), () => actions.explore(path), `connections-explore-${side}`, snapshot.state !== "ready");
+      healthButton(buttons, t(`@connections.explore-${side}`), () => actions.explore(path), `connections-explore-${side}`, snapshot.state !== "ready").addClass("veynrel-quiet");
     }
   };
   const update = (): void => {
     for (const [category, button] of filterButtons) button.setAttribute("aria-pressed", String(category === state.category));
+    filters.hidden = state.category === "explicit-only";
+    filters.querySelector("summary")!.textContent = [t("@ui.filters"),
+      ...(state.rankFilter !== "all" ? [t(`@connections.${state.rankFilter}`)] : []),
+      ...(state.category === "candidate" && state.reviewFilter !== "all" ? [t(`@connections.${state.reviewFilter}`)] : []),
+      ...(state.category === "candidate" && state.hideExcalidraw ? [t("@connections.hide-excalidraw")] : []),
+    ].join(" · ");
     rankFilters.hidden = state.category === "explicit-only";
     reviewFilters.hidden = specialFormat.hidden = state.category !== "candidate";
     for (const [rank, button] of rankButtons) {
@@ -160,18 +159,20 @@ export function renderConnectionComparison(parent: HTMLElement, port: Connection
     hiddenCount.setText(t("@connections.excalidraw-hidden", { count: state.hideExcalidraw ? comparison.pairs.filter(pair => pair.category === "candidate" && isExcalidrawPair(pair)).length : 0 }));
     const matches = filteredConnectionPairs(state);
     const visible = matches.slice(0, state.visibleLimit);
-    showing.setText(t("@connections.showing", { shown: visible.length, total: matches.length }));
+    showing.setText(t("@connections.showing", { shown: visible.length, total: matches.length }) + (state.category === "candidate" ? ` · ${t("@connections.reviewed")} ${counts.reviewed}` : ""));
     list.empty(); rowButtons.clear();
     visible.forEach((pair, index) => {
       const button = healthButton(list, "", () => { state.selectedPair = pair.id; inspect(); inspector.focus(); }, `connections-pair-${index}`);
       button.setAttribute("title", `${pair.leftPath} ↔ ${pair.rightPath}`);
       button.createEl("strong", { text: `${pair.leftBasename} ↔ ${pair.rightBasename}` });
+      const metadata = button.createSpan({ cls: "veynrel-connections-row-meta" });
       if (pair.semantic) {
-        const ranks = pair.semantic.mutualTopK ? `#${pair.semantic.leftRank} ↔ #${pair.semantic.rightRank}` : rankDetails(pair).join(" · ");
-        button.createSpan({ text: `${t("@connections.similarity")} ${formatSemanticScore(pair.semantic.score)} · ${ranks}` });
-        button.createSpan({ text: `${rankingText(pair)} · ${t("@connections.shared-neighbors", { count: pair.semantic.sharedNeighborPaths.length })}` });
-      } else button.createSpan({ text: rankingText(pair) });
-      button.createSpan({ text: markdownText(pair) });
+        const ranks = `#${pair.semantic.leftRank ?? "—"} ↔ #${pair.semantic.rightRank ?? "—"}`;
+        metadata.createSpan({ text: `${t("@connections.similarity")} ${formatSemanticScore(pair.semantic.score)}` });
+        metadata.createSpan({ text: ranks, attr: { title: rankDetails(pair).join(" · ") } });
+        metadata.createSpan({ text: t("@connections.shared-neighbors", { count: pair.semantic.sharedNeighborPaths.length }) });
+      } else metadata.createSpan({ text: rankingText(pair) });
+      metadata.createSpan({ text: markdownText(pair) });
       const review = state.reviewByPairId.get(pair.id);
       if (pair.category === "candidate" && review) button.createSpan({ text: t(`@connections.${review}`), cls: "veynrel-connections-review-marker" });
       button.setAttribute("aria-label", [`${pair.leftBasename} ↔ ${pair.rightBasename}`,

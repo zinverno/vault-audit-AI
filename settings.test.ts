@@ -6,7 +6,7 @@ import type { App } from "obsidian";
 import type AIHubPlugin from "./main";
 
 vi.mock("obsidian", () => ({
-  PluginSettingTab: class {}, Setting: class { setName() { return this; } setDesc() { return this; } }, Notice: class {},
+  PluginSettingTab: class {}, Setting: class { setName() { return this; } setDesc() { return this; } setHeading() { return this; } }, Notice: class {},
   requireApiVersion: vi.fn(() => false), setIcon: vi.fn(), requestUrl: vi.fn(),
 }));
 vi.mock("./api", () => ({ testConnection: vi.fn(), fetchOllamaModels: vi.fn(), fetchOpenRouterFreeModels: vi.fn() }));
@@ -129,7 +129,7 @@ it.each(["en", "ru"] as const)("keeps product and technical search aliases and b
   const definitions = groups.map((group) => ({ ...group, items: group.items.map((row) => ({ ...row,
     control: undefined, render: () => { rendered.push(row.name); } })) }));
   vi.spyOn(f.tab, "getSettingDefinitions").mockReturnValue(definitions);
-  const element = { createDiv: () => element, createSpan: () => element, empty: vi.fn() };
+  const element = { createDiv: () => element, createSpan: () => element, createEl: () => element, empty: vi.fn() };
   Object.assign(f.tab, { containerEl: element });
   f.tab.display();
   expect(rendered).toEqual(visible.map((row) => row.name));
@@ -141,7 +141,7 @@ it.each(["en", "ru"] as const)("keeps product and technical search aliases and b
 // any existing control callback, helper, default or durable schema. Release fixes
 // localize the custom key placeholder and defer semantic reconciliation until persistence; the latter has
 // separate pending/failure regressions in releaseSettingsDurability.test.ts.
-it("preserves baseline controls except the verified release fixes", () => {
+it("preserves baseline controls except the verified release and native markup fixes", () => {
   const source = ts.createSourceFile("settings.ts", readFileSync("settings.ts", "utf8"), ts.ScriptTarget.Latest, true);
   const printer = ts.createPrinter({ removeComments: true });
   const hash = (node: ts.Node) => createHash("sha256").update(printer.printNode(ts.EmitHint.Unspecified, node, source)).digest("hex");
@@ -157,5 +157,10 @@ it("preserves baseline controls except the verified release fixes", () => {
     ts.forEachChild(node, visit);
   }
   visit(source);
-  expect(callbacks).toEqual({ ...baseline.controlCallbacks, ...releaseSafety });
+  expect(callbacks).toEqual({ ...baseline.controlCallbacks, ...releaseSafety,
+    // UI consolidation: native headings/buttons and the existing free-model translation; durable callbacks stay frozen.
+    "method:addHeading": "df027728a56e192c246af36f41a110d960275b1b72843329a5be90cff14e8e0c",
+    "method:renderModelOptions": "f40d324dcb6ecf783cec2013b750afae4acb38adade1a9a7cffd46ffa1379466",
+    "method:renderProviderCards": "3b19426d826726e3317259123552832846115a9e20c38e61418cf8e7a059a0e5",
+  });
 });
