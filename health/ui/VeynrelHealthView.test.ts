@@ -1,3 +1,7 @@
+import { ConnectionComparisonController } from "../connections/connectionComparisonController";
+import { deriveConnectionComparison } from "../connections/deriveConnectionComparison";
+import { semanticMap as comparisonSemanticMap, topologyMap as comparisonTopologyMap } from "../connections/testFixtures";
+import { renderConnectionComparison, newConnectionComparisonViewState } from "../connections/renderConnectionComparison";
 import { renderDiscover } from "./renderDiscover";
 import { discoverViewModel } from "./discoverViewModel";
 import { renderSemanticIntelligence } from "./renderSemanticIntelligence";
@@ -1394,7 +1398,7 @@ describe("real topology child route", () => {
 describe("Semantic Neighborhood Discover child surface", () => {
   beforeEach(() => { vi.stubGlobal("window", { setTimeout, clearTimeout }); });
   afterEach(() => vi.unstubAllGlobals());
-  async function neighborhoodFixture() {
+  async function neighborhoodFixture(withComparison = false) {
     const { SemanticGlobalMapController } = await import("../../semantic/product/semanticGlobalMapController");
     const { SemanticNeighborhoodController } = await import("../../semantic/product/semanticNeighborhoodController");
     let index = { kind: "ready" as SemanticStatus["kind"], vectorCount: 9, vectorGeneration: 1, dimensions: 3,
@@ -1415,13 +1419,49 @@ describe("Semantic Neighborhood Discover child surface", () => {
     const semantic = new SemanticIntelligenceController(settings, engine);
     const neighborhood = new SemanticNeighborhoodController(engine);
     const globalMap = new SemanticGlobalMapController(engine);
+    const topology = new VaultTopologyController({ captureMetadata: async () => snapshot([note("A.md", { resolvedOutgoing: ["B.md"] }), note("B.md")]),
+      captureRevision: async () => (await deriveTopology(snapshot([note("A.md"), note("B.md")]), 1, new AbortController().signal)).revision });
+    const comparison = withComparison ? new ConnectionComparisonController(globalMap, topology) : undefined;
     const f = fixture();
     const cachedRead = vi.fn(); Object.assign(f.vault, { cachedRead });
-    const view = new VeynrelHealthView({ app: f.app } as never, f.controller, f.tools, semantic, undefined, undefined, undefined, undefined, undefined, neighborhood, globalMap);
+    const view = new VeynrelHealthView({ app: f.app } as never, f.controller, f.tools, semantic, undefined, undefined, undefined, undefined, withComparison ? topology : undefined, neighborhood, globalMap, comparison);
     const content = view.contentEl as unknown as InstanceType<typeof mocks.Element>;
     await view.onOpen();
-    return { ...f, cachedRead, view, content, engine, semantic, neighborhood, globalMap, change: () => { index = { ...index, vectorGeneration: 2 }; for (const l of listeners) l(); } };
+    return { ...f, cachedRead, view, content, engine, semantic, neighborhood, globalMap, topology, comparison, change: () => { index = { ...index, vectorGeneration: 2 }; for (const l of listeners) l(); } };
   }
+  it.each(["en", "ru"] as const)("comparison stays passive and preserves its category/query/pair/limit across A-B-C Neighborhood round-trip in %s", async lang => {
+    setLanguage(lang); const f = await neighborhoodFixture(true), comparison = f.comparison!;
+    const loadSemantic = vi.spyOn(f.globalMap, "load"), loadTopology = vi.spyOn(f.topology, "load"), loadComparison = vi.spyOn(comparison, "load");
+    const fetch = vi.fn(), xhr = vi.fn(); vi.stubGlobal("fetch", fetch); vi.stubGlobal("XMLHttpRequest", xhr);
+    f.vault.read.mockClear(); f.cachedRead.mockClear(); f.adapter.write.mockClear(); mocks.requestUrl.mockClear();
+    f.content.action("nav-discover").click();
+    expect(f.content.action("connections-open")).toBeDefined();
+    for (const spy of [loadSemantic, loadTopology, loadComparison]) expect(spy).not.toHaveBeenCalled();
+    await f.globalMap.load(); // Normal usage reuses the Global Map already computed by its owner.
+    f.content.action("connections-open").click(); await comparison.load();
+    expect(comparison.getSnapshot().state).toBe("ready"); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
+    expect(loadSemantic).toHaveBeenCalledOnce(); expect(loadTopology).toHaveBeenCalledOnce();
+    expect(f.content.action("nav-discover").attrs["aria-current"]).toBe("page"); expect(f.content.action("nav-connection-opportunities")).toBeUndefined();
+    f.content.action("connections-aligned").click(); f.content.action("connections-pair-0").click();
+    f.content.action("connections-search").input("join");
+    const state = (f.view as unknown as { comparisonView: ReturnType<typeof newConnectionComparisonViewState> }).comparisonView;
+    state.visibleLimit = 100;
+    const before = { ...state }, loads = loadComparison.mock.calls.length, captured = comparison.getSnapshot().comparison;
+    f.content.action("connections-explore-left").click(); await f.neighborhood.load("A.md");
+    expect(f.content.action("neighborhood-back").text).toBe(t("@connections.back-comparison"));
+    f.content.action("neighborhood-select-1").click(); f.content.action("neighborhood-explore").click(); await f.neighborhood.load("B.md");
+    expect(f.neighborhood.getSnapshot().sourcePath).toBe("B.md");
+    // Recenter again through the same existing product operation; origin belongs to the route.
+    await f.neighborhood.load("C.md"); expect(f.neighborhood.getSnapshot().sourcePath).toBe("C.md");
+    f.content.action("neighborhood-back").click();
+    expect(state).toEqual(before); expect(f.content.action("connections-search").value).toBe("join");
+    expect(f.content.action("connections-aligned").attrs["aria-pressed"]).toBe("true");
+    expect(loadComparison).toHaveBeenCalledTimes(loads); expect(comparison.getSnapshot().comparison).toBe(captured);
+    expect(f.content.texts()).not.toMatch(/@connections\./);
+    for (const spy of [f.vault.read, f.cachedRead, f.adapter.write, mocks.requestUrl, fetch, xhr]) expect(spy).not.toHaveBeenCalled();
+    f.content.action("connections-open-left").click(); await flush(); expect(f.openFile).toHaveBeenCalledOnce();
+    await f.view.onClose(); comparison.dispose(); f.topology.dispose(); f.globalMap.dispose(); f.neighborhood.dispose(); f.controller.dispose();
+  });
   it("keeps passive Discover free of catalog/similarity/body/network/write work, and preserves existing launchers", async () => {
     const f = await neighborhoodFixture();
     f.vault.read.mockClear(); f.cachedRead.mockClear(); f.adapter.write.mockClear();
@@ -1650,5 +1690,28 @@ describe("safe rejected-batch UI", () => {
     const parent = new mocks.Element();
     renderSemanticIntelligence(parent as never, { ...snapshot, busy: true, operation: "build" }, undefined, actions);
     expect(parent.texts()).not.toContain("4700");
+  });
+});
+
+
+describe("bounded connection pair presentation", () => {
+  it.each(["en", "ru"] as const)("filters before limiting, shows exact counts, preserves text and accessible selection in %s", async lang => {
+    setLanguage(lang);
+    const original = deriveConnectionComparison(comparisonSemanticMap(), await comparisonTopologyMap(), 1);
+    const template = original.pairs.find(p => p.category === "candidate")!;
+    const pairs = Array.from({ length: 120 }, (_, i) => ({ ...template, id: String(i), leftPath: `Folder/Join ${i}.md`, leftBasename: `<svg onload=alert(1)> Join ${i}` }));
+    const comparison = { ...original, pairs, candidateCount: 120 };
+    const port = { getSnapshot: () => ({ state: "ready" as const, comparison }), load: vi.fn(), refresh: vi.fn(), subscribe: vi.fn(), dispose: vi.fn() };
+    const parent = new mocks.Element(), state = newConnectionComparisonViewState();
+    renderConnectionComparison(parent as never, port, state, { back: vi.fn(), openNote: vi.fn(), explore: vi.fn() });
+    const rows = () => parent.all().filter(e => e.attrs["data-health-action"]?.startsWith("connections-pair-"));
+    expect(rows()).toHaveLength(50); expect(parent.texts()).toContain(t("@connections.showing", { shown: 50, total: 120 }));
+    parent.action("connections-more").click(); expect(rows()).toHaveLength(100);
+    parent.action("connections-search").input("JOIN 11"); expect(rows()).toHaveLength(11); expect(state.visibleLimit).toBe(50);
+    expect(parent.texts()).toContain(t("@connections.showing", { shown: 11, total: 11 }));
+    parent.action("connections-pair-0").click(); expect(parent.action("connections-pair-0").attrs["aria-pressed"]).toBe("true");
+    expect(parent.texts()).toContain("<svg onload=alert(1)> Join 11");
+    expect(parent.texts()).not.toMatch(/@connections\./);
+    expect(port.load).not.toHaveBeenCalled(); expect(port.refresh).not.toHaveBeenCalled();
   });
 });

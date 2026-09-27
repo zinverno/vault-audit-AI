@@ -1,3 +1,6 @@
+import { ConnectionComparisonController } from "../health/connections/connectionComparisonController";
+import { VaultTopologyController } from "../health/topology/vaultTopologyController";
+import { ObsidianLocalVaultSource } from "../health/analyzers/local/obsidianLocalVaultSource";
 import { SemanticGlobalMapController } from "./product/semanticGlobalMapController";
 import {
   afterAll,
@@ -549,6 +552,35 @@ describe("semantic read/write barrier with real services and store", () => {
       for (const spy of [embed, fetchSpy, xhr, obsidianMocks.requestUrl, read, harness.plugin.app.vault.cachedRead,
         harness.plugin.app.vault.getMarkdownFiles, write, writeBinary, save]) expect(spy).not.toHaveBeenCalled();
     } finally { port.dispose(); embed.mockRestore(); vi.unstubAllGlobals(); vi.stubGlobal("window", testWindow); }
+  });
+
+  it("comparison composes real map/topology owners with zero embeddings, transports, note-body reads or writes", async () => {
+    const harness = createHarness();
+    harness.setContent("# Alpha\n\nalpha synthetic semantic content with enough meaningful characters for discovery");
+    harness.createFile("Near.md", "# Near\n\nalpha synthetic semantic content with enough meaningful characters for discovery");
+    await harness.controller.indexVault();
+    const port = new SemanticGlobalMapController(harness.controller), neighborhood = new SemanticNeighborhoodController(harness.controller);
+    const files = harness.plugin.app.vault.getMarkdownFiles();
+    for (const file of files) Object.assign(file, { basename: file.path.replace(/\.md$/, ""), stat: { mtime: 1 } });
+    const metadata = { getFileCache: vi.fn(() => ({ links: [] })), getFirstLinkpathDest: vi.fn() };
+    const read = vi.fn(), vault = Object.assign(harness.plugin.app.vault, { read });
+    const topology = new VaultTopologyController(new ObsidianLocalVaultSource({ vault, metadataCache: metadata }));
+    const comparison = new ConnectionComparisonController(port, topology);
+    const embed = vi.spyOn(BaseEmbeddingProvider.prototype, "embed"), fetchSpy = vi.fn(), xhr = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy); vi.stubGlobal("XMLHttpRequest", xhr);
+    vault.cachedRead.mockClear(); obsidianMocks.requestUrl.mockClear();
+    const writes = [vi.spyOn(harness.adapter, "write"), vi.spyOn(harness.adapter, "writeBinary"), vi.spyOn(harness.plugin, "saveSettings")];
+    const store = runtimeStore(activeSlot(harness.controller).runtime), mutation = vi.spyOn(store, "applyChanges");
+    try {
+      expect(metadata.getFileCache).not.toHaveBeenCalled();
+      await comparison.load(); expect(comparison.getSnapshot().comparison?.candidateCount).toBe(1);
+      const captured = comparison.getSnapshot(); await port.focus("Alpha.md"); port.resetFocus(); expect(comparison.getSnapshot()).toBe(captured);
+      topology.markStale(); expect(comparison.getSnapshot().state).toBe("stale");
+      await comparison.refresh(); expect(comparison.getSnapshot().state).toBe("ready");
+      await neighborhood.load("Alpha.md"); await neighborhood.load("Near.md"); await comparison.load();
+      expect(metadata.getFileCache).toHaveBeenCalledTimes(4);
+      for (const spy of [embed, fetchSpy, xhr, obsidianMocks.requestUrl, read, vault.cachedRead, mutation, ...writes]) expect(spy).not.toHaveBeenCalled();
+    } finally { comparison.dispose(); topology.dispose(); port.dispose(); neighborhood.dispose(); embed.mockRestore(); vi.unstubAllGlobals(); vi.stubGlobal("window", testWindow); }
   });
 
   it("holds the shared lease for focus while Clear waits", async () => {
