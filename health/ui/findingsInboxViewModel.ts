@@ -39,7 +39,7 @@ export function findingsInboxViewModel({ findings, route, mutatingFindingId, bus
     .sort((a, b) => impact[a.impact] - impact[b.impact] || b.lastSeenAt - a.lastSeenAt || compareStrings(a.id, b.id));
   const rows = visible.map((finding) => {
     const { affectedCount } = findingEvidencePresentation(finding);
-    return { id: finding.id, ...findingPresentation(finding), dimension: t(`@health.${finding.dimension}`),
+    return { id: finding.id, ...findingPresentation(finding), dimension: t(`@health.${finding.dimension}`), impact: t(`@dashboard.${finding.impact}`),
       noteSummary: affectedCount === 1 && finding.notePaths.length === 1 ? finding.notePaths[0] : t("@findings.notes", { n: affectedCount }),
       selected: finding.id === route.selectedFindingId };
   });

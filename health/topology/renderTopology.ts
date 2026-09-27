@@ -25,7 +25,7 @@ function renderEmpty(parent: HTMLElement, map: VaultTopologySnapshot): void {
 }
 function refreshButton(parent: HTMLElement, port: VaultTopologyPort, snapshot: VaultTopologyProductSnapshot, primary = false): void {
   healthButton(parent, t(snapshot.error ? "@topology.retry" : snapshot.map ? "@topology.refresh" : "@topology.load"),
-    () => { void port.refresh(); }, "topology-refresh", snapshot.state === "loading", primary);
+    () => { void port.refresh(); }, "topology-refresh", snapshot.state === "loading", primary).addClass("veynrel-quiet");
 }
 
 export function renderTopologyPreview(parent: HTMLElement, port: VaultTopologyPort, open: () => void): void {
@@ -52,13 +52,13 @@ export function renderTopology(parent: HTMLElement, port: VaultTopologyPort, sta
   actions: { back(): void; openNote(path: string): void }): () => void {
   const snapshot = port.getSnapshot();
   const section = parent.createEl("section", { cls: "veynrel-topology-detail" });
-  healthButton(section, t("@topology.back"), () => actions.back(), "topology-back").addClass("veynrel-topology-back");
+  healthButton(section, t("@topology.back"), () => actions.back(), "topology-back").addClass("veynrel-quiet", "veynrel-topology-back");
   const header = section.createEl("header", { cls: "veynrel-topology-header" });
   const title = header.createDiv({ cls: "veynrel-topology-heading" });
   title.createEl("h1", { text: t("@topology.title"), attr: { tabindex: "-1", "data-health-heading": "true" } });
   renderStatus(title, snapshot);
   if (!snapshot.map && snapshot.state === "idle") title.createEl("p", { text: t("@topology.description"), cls: "veynrel-health-muted" });
-  refreshButton(header, port, snapshot, true);
+  refreshButton(header, port, snapshot, !snapshot.map);
   const map = snapshot.map;
   if (!map) return () => {};
   const content = section.createDiv({ cls: "veynrel-topology-content" });
@@ -117,12 +117,12 @@ export function renderTopology(parent: HTMLElement, port: VaultTopologyPort, sta
     const list = unresolved.createEl("ul");
     for (const target of broken.slice(0, TOPOLOGY_LIST_LIMIT)) list.createEl("li", { text: `${target.target} (${target.count})` });
     if (broken.length > TOPOLOGY_LIST_LIMIT) unresolved.createEl("p", { text: t("@topology.showing-items", { shown: TOPOLOGY_LIST_LIMIT, total: broken.length }) });
-    if (hadFocus) heading.focus();
+    if (hadFocus) heading.focus({ preventScroll: true });
   };
   const renderer = renderTopologyMap(mapPanel, map, state, select);
-  healthButton(toolbar, t("@topology.fit"), renderer.fit, "topology-fit");
-  const legend = mapPanel.createEl("details", { cls: "veynrel-topology-legend" });
-  legend.createEl("summary", { text: t("@topology.legend-title") });
+  healthButton(toolbar, t("@topology.fit"), renderer.fit, "topology-fit").addClass("veynrel-quiet");
+  const legend = mapPanel.createEl("details", { cls: "veynrel-topology-legend", attr: { "data-health-disclosure": "topology-legend" } });
+  legend.createEl("summary", { text: t("@topology.legend-title"), attr: { "data-health-action": "topology-legend" } });
   legend.createEl("p", { text: t("@topology.legend") });
   if (state.selected && byPath.has(state.selected)) select(state.selected);
   else {

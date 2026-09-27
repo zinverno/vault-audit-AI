@@ -207,6 +207,10 @@ export class VeynrelHealthView extends ItemView {
     const enteringPage = this.body.getAttribute("data-page") !== this.route.page;
     const scrollTop = this.contentEl.scrollTop;
     const scrollLeft = this.contentEl.scrollLeft;
+    const disclosures = new Map<string, boolean>();
+    if (!enteringPage && normal) for (const detail of Array.from(this.body.querySelectorAll<HTMLDetailsElement>("details[data-health-disclosure]"))) {
+      disclosures.set(detail.getAttribute("data-health-disclosure")!, detail.open);
+    }
     this.body.setAttribute("data-page", this.route.page);
     this.body.empty();
     if (normal) {
@@ -338,6 +342,10 @@ export class VeynrelHealthView extends ItemView {
         skip: () => { void this.savePreferences({ profile: "mixed", profileChosen: true, onboardingCompleted: true }); },
         complete: () => { void this.savePreferences({ onboardingCompleted: true }); },
       });
+    }
+    for (const detail of Array.from(this.body.querySelectorAll<HTMLDetailsElement>("details[data-health-disclosure]"))) {
+      const open = disclosures.get(detail.getAttribute("data-health-disclosure")!);
+      if (open !== undefined) detail.open = open;
     }
     const status = onboarding.step === "scan" ? onboarding.status : model.status;
     const mutationError = this.findingMutationErrorRoute === this.route;

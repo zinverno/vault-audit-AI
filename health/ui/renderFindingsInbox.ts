@@ -21,7 +21,7 @@ export function renderFindingsInbox(parent: HTMLElement, model: FindingsInboxVie
   const inbox = parent.createDiv({ cls: "veynrel-findings-inbox" });
   const header = inbox.createEl("header", { cls: "veynrel-health-header" });
   header.createEl("h1", { text: t("@findings.title"), attr: { tabindex: "-1", "data-health-heading": "true" } });
-  healthButton(header, t("@health.tools"), actions.tools, "tools");
+  healthButton(header, t("@health.tools"), actions.tools, "tools").addClass("veynrel-quiet");
   const workspace = inbox.createDiv({ cls: `veynrel-findings-workspace${model.selected ? " veynrel-findings-has-detail" : ""}` });
   const listPane = workspace.createEl("section", { cls: "veynrel-findings-list-pane", attr: { "aria-label": t("@findings.title") } });
   const states = listPane.createDiv({ cls: "veynrel-findings-filters", attr: { role: "group", "aria-label": t("@findings.states") } });
@@ -46,8 +46,7 @@ export function renderFindingsInbox(parent: HTMLElement, model: FindingsInboxVie
     button.addClass("veynrel-findings-row");
     button.setAttribute("aria-pressed", String(row.selected));
     button.createSpan({ text: row.title, cls: "veynrel-findings-row-title" });
-    button.createSpan({ text: `${row.dimension} · ${row.noteSummary}`, cls: "veynrel-findings-row-meta" });
-    button.createSpan({ text: row.explanation, cls: "veynrel-findings-row-explanation" });
+    button.createSpan({ text: `${row.dimension} · ${row.impact} · ${row.noteSummary}`, cls: "veynrel-findings-row-meta" });
     if (row.selected) button.createSpan({ text: `✓ ${t("@findings.selected")}`, cls: "veynrel-findings-selected" });
   }
   if (model.selected) renderDetail(workspace, model.selected, actions, expandedPaths, expandedSnooze);
@@ -56,29 +55,29 @@ export function renderFindingsInbox(parent: HTMLElement, model: FindingsInboxVie
 function renderDetail(parent: HTMLElement, detail: NonNullable<FindingsInboxViewModel["selected"]>, actions: FindingsInboxActions,
   expandedPaths: boolean, expandedSnooze: boolean): void {
   const article = parent.createEl("article", { cls: "veynrel-findings-detail" });
-  healthButton(article, t("@findings.back"), actions.back, "findings-back");
+  healthButton(article, t("@findings.back"), actions.back, "findings-back").addClass("veynrel-quiet");
   article.createEl("h2", { text: detail.title, attr: { tabindex: "-1", "data-findings-heading": "true" } });
   article.createEl("p", { text: [detail.dimension, detail.state, detail.source].filter(Boolean).join(" · "), cls: "veynrel-health-muted" });
   article.createEl("p", { text: detail.explanation });
   if (detail.snoozedUntil) article.createEl("p", { text: detail.snoozedUntil });
-  const notes = article.createEl("section");
-  notes.createEl("h3", { text: t("@findings.affected") });
-  notes.createEl("p", { text: detail.affectedSummary });
-  if (detail.representativeSummary) notes.createEl("p", { text: detail.representativeSummary, cls: "veynrel-health-muted" });
-  const paths = notes.createEl("ul", { cls: "veynrel-findings-paths" });
-  for (const [index, path] of detail.notes.slice(0, expandedPaths ? detail.notes.length : 10).entries()) {
-    healthButton(paths.createEl("li"), path, () => actions.openNote(path), `finding-note-${index}`);
-  }
-  if (detail.notes.length > 10) {
-    healthButton(notes, t(expandedPaths ? "@findings.show-less" : "@findings.show-all", { n: detail.notes.length }), actions.togglePaths, "finding-paths")
-      .setAttribute("aria-expanded", String(expandedPaths));
-  }
   const evidence = article.createEl("section");
   evidence.createEl("h3", { text: t("@findings.why") });
   if (detail.facts.length) {
     const list = evidence.createEl("ul");
     for (const fact of detail.facts) list.createEl("li", { text: fact });
   } else evidence.createEl("p", { text: t("@findings.no-evidence"), cls: "veynrel-health-muted" });
+  const notes = article.createEl("section");
+  notes.createEl("h3", { text: t("@findings.affected") });
+  notes.createEl("p", { text: detail.affectedSummary });
+  if (detail.representativeSummary) notes.createEl("p", { text: detail.representativeSummary, cls: "veynrel-health-muted" });
+  const paths = notes.createEl("ul", { cls: "veynrel-findings-paths" });
+  for (const [index, path] of detail.notes.slice(0, expandedPaths ? detail.notes.length : 10).entries()) {
+    healthButton(paths.createEl("li"), path, () => actions.openNote(path), `finding-note-${index}`).addClass("veynrel-quiet");
+  }
+  if (detail.notes.length > 10) {
+    healthButton(notes, t(expandedPaths ? "@findings.show-less" : "@findings.show-all", { n: detail.notes.length }), actions.togglePaths, "finding-paths")
+      .setAttribute("aria-expanded", String(expandedPaths));
+  }
   const lifecycle = article.createEl("section");
   lifecycle.createEl("h3", { text: t("@findings.actions") });
   if (detail.resolved) lifecycle.createEl("p", { text: t("@findings.resolved-help") });

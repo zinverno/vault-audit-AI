@@ -154,7 +154,7 @@ export class AIHubSettingTab extends PluginSettingTab {
     const wrapper = this.containerEl.createDiv({ cls: "ai-hub-section-head" });
     const iconWrap = wrapper.createSpan({ cls: "ai-hub-section-icon" });
     setIcon(iconWrap, icon);
-    wrapper.createDiv({ text, cls: "ai-hub-section-label" });
+    new Setting(wrapper).setName(text).setHeading();
   }
 
   private setEmbeddingTestStatus(text: string, color: string) {
@@ -767,14 +767,13 @@ export class AIHubSettingTab extends PluginSettingTab {
     const setActive = (p: LLMProvider) => {
       cards.forEach((card, id) => {
         card.toggleClass("ai-hub-active", id === p);
+        card.setAttribute("aria-pressed", String(id === p));
       });
     };
 
     for (const p of providers) {
       const profile = PROVIDER_PROFILES[p];
-      const card = grid.createDiv({ cls: "ai-hub-provider-card" });
-      card.setAttribute("tabindex", "0");
-      card.setAttribute("role", "button");
+      const card = grid.createEl("button", { cls: "ai-hub-provider-card", attr: { type: "button" } });
       card.setAttribute("aria-label", tr("Провайдер: {p}", { p: tr(profile.label) }));
       cards.set(p, card);
 
@@ -799,12 +798,6 @@ export class AIHubSettingTab extends PluginSettingTab {
       };
 
       card.addEventListener("click", () => void onClick());
-      card.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          void onClick();
-        }
-      });
     }
 
     setActive(this.plugin.settings.provider);

@@ -20,15 +20,15 @@ export function renderSemanticNeighborhood(parent: HTMLElement, port: SemanticNe
   actions: { returnTo?: "discover" | "semantic-map" | "connection-opportunities"; back(): void; openNote(path: string): void }): void {
   const snapshot = port.getSnapshot();
   const section = parent.createEl("section", { cls: "veynrel-neighborhood", attr: { "aria-label": t("@neighborhood.title"), "aria-busy": String(snapshot.busy) } });
-  healthButton(section, t(actions.returnTo === "connection-opportunities" ? "@connections.back-comparison" : actions.returnTo === "semantic-map" ? "@neighborhood.back-global" : "@neighborhood.back"), () => actions.back(), "neighborhood-back");
+  healthButton(section, t(actions.returnTo === "connection-opportunities" ? "@connections.back-comparison" : actions.returnTo === "semantic-map" ? "@neighborhood.back-global" : "@neighborhood.back"), () => actions.back(), "neighborhood-back").addClass("veynrel-quiet");
   const header = section.createDiv({ cls: "veynrel-neighborhood-header" });
   header.createEl("h1", { text: t("@neighborhood.title"), attr: { tabindex: "-1", "data-health-heading": "true" } });
-  header.createEl("p", { text: t("@neighborhood.description") });
+  if (!snapshot.map) header.createEl("p", { text: t("@neighborhood.description") });
   const status = neighborhoodStatus(snapshot);
   if (status) section.createEl("p", { text: status, cls: "veynrel-neighborhood-status" });
   const controls = section.createDiv({ cls: "veynrel-neighborhood-actions" });
   if (snapshot.sourcePath || snapshot.map) healthButton(controls, t("@neighborhood.choose-another"), () => { state.query = ""; state.focusAction = "neighborhood-search"; port.chooseAnother(); }, "neighborhood-choose", snapshot.busy);
-  if (snapshot.state !== "choosing") healthButton(controls, t(snapshot.state === "error" ? "@neighborhood.retry" : "@neighborhood.refresh"), () => { void port.refresh(); }, "neighborhood-refresh", snapshot.busy);
+  if (snapshot.state !== "choosing") healthButton(controls, t(snapshot.state === "error" ? "@neighborhood.retry" : "@neighborhood.refresh"), () => { void port.refresh(); }, "neighborhood-refresh", snapshot.busy).addClass("veynrel-quiet");
   if (snapshot.state === "choosing") {
     section.createEl("h2", { text: t("@neighborhood.choose") });
     section.createEl("p", { text: t("@neighborhood.indexed-count", { count: snapshot.indexedNoteCount }) });

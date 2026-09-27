@@ -1,7 +1,7 @@
 import { t } from "../../i18n";
 import type { ConnectDraft, ConnectResult, ConnectSnapshot, ConnectSyncConfirmation } from "../connectPort";
 import { connectResultMessage, connectViewModel } from "./connectViewModel";
-import { healthButton } from "./renderHealthHome";
+import { healthButton, healthDetails } from "./renderHealthHome";
 
 export type ConnectSetupState = { step: "choose" } | { step: "form"; draft: ConnectDraft; result?: ConnectResult };
 interface Actions {
@@ -58,18 +58,17 @@ export function renderConnect(parent: HTMLElement, snapshot: ConnectSnapshot, se
     return;
   }
 
-  const connection = section.createEl("section");
+  const overview = section.createDiv({ cls: "veynrel-connect-overview" });
+  const connection = overview.createEl("section");
   connection.createEl("h2", { text: t("@connect.connection") });
   connection.createEl("p", { text: `${t("@connect.companion")} · ${model.location}` });
   if (model.endpointLabel) connection.createEl("p", { text: model.endpointLabel, cls: "veynrel-connect-endpoint" });
   if (model.lastSuccess) connection.createEl("p", { text: model.lastSuccess, cls: "veynrel-health-muted" });
   const buttons = connection.createDiv({ cls: "veynrel-connect-actions" });
   if (model.configured) healthButton(buttons, t("@connect.check"), actions.check, "connect-check", snapshot.busy);
-  healthButton(buttons, t(model.configured ? "@connect.change" : "@connect.setup"), actions.setup, "connect-setup", snapshot.busy);
-  if (snapshot.enabled) healthButton(buttons, t("@connect.disable"), actions.disable, "connect-disable", snapshot.operation === "disable");
-  connection.createEl("p", { text: t("@connect.disable-disclosure"), cls: "veynrel-health-muted" });
+  healthButton(buttons, t(model.configured ? "@connect.change" : "@connect.setup"), actions.setup, "connect-setup", snapshot.busy, !model.configured);
 
-  const mirror = section.createEl("section");
+  const mirror = overview.createEl("section");
   mirror.createEl("h2", { text: t("@connect.mirror") });
   mirror.createEl("p", { text: model.mirror });
   mirror.createEl("p", { text: t("@connect.automatic") });
@@ -92,14 +91,18 @@ export function renderConnect(parent: HTMLElement, snapshot: ConnectSnapshot, se
     healthButton(actionsRow, t("@connect.confirm"), actions.confirmSync, "connect-sync-confirm", snapshot.busy, true);
   }
 
-  const access = section.createEl("section");
-  access.createEl("h2", { text: t("@connect.access") });
+  const proposals = section.createEl("section", { cls: "veynrel-capability-row" });
+  const copy = proposals.createDiv();
+  copy.createEl("h2", { text: t("@connect.access") });
+  copy.createEl("p", { text: `${t("@connect.direct-writes")} · ${t("@connect.not-allowed")}`, cls: "veynrel-health-state" });
+  copy.createEl("p", { text: t("@connect.approval"), cls: "veynrel-health-muted" });
+  healthButton(proposals, t("@connect.review"), actions.review, "connect-review", !model.configured);
+  const access = healthDetails(section, t("@ui.connect-data"), "connect-data");
   access.createEl("p", { text: t("@connect.protocol") });
   const capabilities = access.createEl("ul", { cls: "veynrel-connect-capabilities" });
   for (const capability of ["read", "search", "propose"]) capabilities.createEl("li", { text: t(`@connect.capability.${capability}`) });
   access.createEl("p", { text: t("@connect.mirror-only") });
-  access.createEl("h3", { text: `${t("@connect.direct-writes")} · ${t("@connect.not-allowed")}` });
-  access.createEl("p", { text: t("@connect.approval") });
   access.createEl("p", { text: t("@connect.mcp-credential"), cls: "veynrel-health-muted" });
-  healthButton(access, t("@connect.review"), actions.review, "connect-review", !model.configured);
+  access.createEl("p", { text: t("@connect.disable-disclosure"), cls: "veynrel-health-muted" });
+  if (snapshot.enabled) healthButton(access, t("@connect.disable"), actions.disable, "connect-disable", snapshot.operation === "disable").addClass("veynrel-quiet");
 }

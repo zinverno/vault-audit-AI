@@ -1,6 +1,6 @@
 import { t } from "../../i18n";
 import type { RecallAuthoringSnapshot } from "../../recall/product/recallAuthoringPort";
-import { healthButton } from "./renderHealthHome";
+import { healthButton, healthDetails } from "./renderHealthHome";
 
 export function recallAuthoringStatus(snapshot: RecallAuthoringSnapshot): string | undefined {
   if (snapshot.state === "generating" || snapshot.state === "ingesting") return t(`@recall.authoring.${snapshot.state}`);
@@ -28,7 +28,8 @@ export function renderRecallAuthoring(parent: HTMLElement, snapshot: RecallAutho
     healthButton(controls, t("@recall.authoring.generate"), actions.generate, "recall-authoring-generate", false, true);
     return;
   }
-  section.createEl("p", { text: t("@recall.authoring.description"), cls: "veynrel-health-muted" });
+  const help = healthDetails(section, t("@ui.authoring-about"), "recall-authoring-about");
+  help.createEl("p", { text: t("@recall.authoring.description"), cls: "veynrel-health-muted" });
   if (!snapshot.configured) {
     section.createEl("p", { text: t("@recall.authoring.unconfigured") });
     healthButton(section, t("@recall.authoring.configure"), actions.configure, "recall-authoring-configure");
