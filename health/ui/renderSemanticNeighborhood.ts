@@ -17,10 +17,10 @@ export function neighborhoodStatus(snapshot: SemanticNeighborhoodProductSnapshot
 
 /** All note text, including stored previews, uses native text sinks. */
 export function renderSemanticNeighborhood(parent: HTMLElement, port: SemanticNeighborhoodPort, state: SemanticNeighborhoodViewState,
-  actions: { returnTo?: "discover" | "semantic-map"; back(): void; openNote(path: string): void }): void {
+  actions: { returnTo?: "discover" | "semantic-map" | "connection-opportunities"; back(): void; openNote(path: string): void }): void {
   const snapshot = port.getSnapshot();
   const section = parent.createEl("section", { cls: "veynrel-neighborhood", attr: { "aria-label": t("@neighborhood.title"), "aria-busy": String(snapshot.busy) } });
-  healthButton(section, t(actions.returnTo === "semantic-map" ? "@neighborhood.back-global" : "@neighborhood.back"), () => actions.back(), "neighborhood-back");
+  healthButton(section, t(actions.returnTo === "connection-opportunities" ? "@connections.back-comparison" : actions.returnTo === "semantic-map" ? "@neighborhood.back-global" : "@neighborhood.back"), () => actions.back(), "neighborhood-back");
   const header = section.createDiv({ cls: "veynrel-neighborhood-header" });
   header.createEl("h1", { text: t("@neighborhood.title"), attr: { tabindex: "-1", "data-health-heading": "true" } });
   header.createEl("p", { text: t("@neighborhood.description") });

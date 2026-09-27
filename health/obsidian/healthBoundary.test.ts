@@ -13,6 +13,7 @@ describe("Health production dependency boundary", () => {
   it("keeps one construction site per persistent MVP owner, outside views and actions", () => {
     const owners: Record<string, string> = {
       HealthPluginController: "health/obsidian/registerHealth.ts",
+      ConnectionComparisonController: "health/obsidian/registerHealth.ts",
       HealthService: "health/obsidian/healthPluginController.ts",
       FindingStore: "health/obsidian/healthPluginController.ts",
       ObsidianSemanticController: "main.ts",
