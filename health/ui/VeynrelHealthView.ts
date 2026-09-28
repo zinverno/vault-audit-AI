@@ -36,7 +36,7 @@ import type { DeepIntelligencePort } from "../deepIntelligencePort";
 import type { DeepKnowledgeConsent } from "../deepHealthAnalysisPort";
 import { renderDeepIntelligence } from "./renderDeepIntelligence";
 import type { DeepSetupState } from "./renderDeepIntelligence";
-import { canCheckKnowledge, deepIntelligenceViewModel, deepSetupError, knowledgeScanStatus } from "./deepIntelligenceViewModel";
+import { canCheckKnowledge, deepIntelligenceViewModel, deepSetupError, knowledgeScanStatus, knowledgeElapsed } from "./deepIntelligenceViewModel";
 
 import type { ConnectPort, ConnectResult, ConnectSyncConfirmation } from "../connectPort";
 import { renderConnect } from "./renderConnect";
@@ -79,6 +79,7 @@ export class VeynrelHealthView extends ItemView {
   private connectConfirmation?: ConnectSyncConfirmation;
   private connectResult?: ConnectResult;
   private deepSetup?: DeepSetupState;
+  private knowledgeElapsedTimer?: number;
   private knowledgeConfirmation?: DeepKnowledgeConsent;
   private cleanupRecall?: () => void;
   private recallFocusKey?: string;
@@ -155,6 +156,7 @@ export class VeynrelHealthView extends ItemView {
   }
 
   async onClose(): Promise<void> {
+    this.clearKnowledgeElapsedTimer();
     this.unsubscribeComparison?.(); this.unsubscribeComparison = undefined; this.comparisonView = newConnectionComparisonViewState();
     this.unsubscribeGlobalMap?.(); this.unsubscribeGlobalMap = undefined;
     this.cleanupGlobalMap?.(); this.cleanupGlobalMap = undefined; this.globalMapView = newSemanticGlobalMapViewState();
@@ -180,6 +182,7 @@ export class VeynrelHealthView extends ItemView {
 
   private render(): void {
     if (!this.body || !this.status) return;
+    this.clearKnowledgeElapsedTimer();
     const state = this.controller.getState();
     const model = healthHomeViewModel(state, Boolean(resolveHealthNote(this.app, this.controller.getRecommendationPath())));
     const onboarding = healthOnboardingViewModel(state, model);
@@ -569,7 +572,18 @@ export class VeynrelHealthView extends ItemView {
       cancelKnowledge: () => this.controller.cancelDeepScan(),
       dismissConfirmation: () => { this.knowledgeConfirmation = undefined; this.focusDestination = "heading"; this.render(); },
     }, { consent: this.knowledgeConfirmation, available: Boolean(this.controller.getKnowledgeConsent()), running: Boolean(this.controller.getState().deepScanRunning),
-      busy: this.controller.getState().busy, status: knowledgeScanStatus(this.controller.getState()) });
+      busy: this.controller.getState().busy, status: knowledgeScanStatus(this.controller.getState()), progress: this.controller.getState().deepProgress });
+    const progress = this.controller.getState().deepProgress;
+    const elapsed = surface.querySelector<HTMLElement>("[data-knowledge-elapsed]");
+    if (progress && elapsed) {
+      // Presentation clock only: no polling, progress increments, state writes or provider work.
+      this.knowledgeElapsedTimer = window.setInterval(() => elapsed.setText(knowledgeElapsed(progress.startedAt)), 1000);
+    }
+  }
+
+  private clearKnowledgeElapsedTimer(): void {
+    if (this.knowledgeElapsedTimer !== undefined) window.clearInterval(this.knowledgeElapsedTimer);
+    this.knowledgeElapsedTimer = undefined;
   }
 
   private async connectDeep(): Promise<void> {

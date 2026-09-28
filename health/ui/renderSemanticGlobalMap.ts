@@ -84,6 +84,9 @@ export function renderSemanticGlobalMap(parent: HTMLElement, port: SemanticGloba
     if (heldFocus) inspector.focus({ preventScroll: true });
   };
   const graph = renderSemanticGlobalMapGraph(visual, map, state, inspect, focus);
+  healthButton(controls, t("@global-map.zoom-in"), () => graph.zoom(1.5), "global-map-zoom-in").addClass("veynrel-quiet");
+  healthButton(controls, t("@global-map.zoom-out"), () => graph.zoom(1 / 1.5), "global-map-zoom-out").addClass("veynrel-quiet");
+  healthButton(controls, t("@global-map.reset-view"), graph.reset, "global-map-reset-view").addClass("veynrel-quiet");
   healthButton(controls, t("@global-map.fit"), graph.fit, "global-map-fit").addClass("veynrel-quiet");
   inspect(state.selected);
   const legend = healthDetails(visual, t("@global-map.relationships"), "global-map-legend");

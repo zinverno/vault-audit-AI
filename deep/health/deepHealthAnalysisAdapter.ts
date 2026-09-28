@@ -12,6 +12,7 @@ import { createFindingFingerprint } from "../../health/domain/identity";
 import type { FindingCandidate } from "../../health/domain/finding";
 import { isVaultPath, compareStrings } from "../../health/domain/validation";
 import { throwIfAborted, withAbort } from "../../health/analyzers/local/cancellation";
+import type { DeepKnowledgeProgress } from "../../health/deepHealthAnalysisPort";
 
 export type DeepKnowledgeSettings = LanguageModelSettingsSnapshot & Pick<AIHubSettings, "deepAudit" | "language">;
 export interface DeepKnowledgeConfiguration { settings: DeepKnowledgeSettings; revision: number; current: boolean }
@@ -54,7 +55,7 @@ export class DeepHealthAnalysisAdapter implements DeepHealthAnalysisPort {
     } catch { return undefined; }
   }
 
-  async analyzeKnowledge(signal: AbortSignal, consent: DeepKnowledgeConsent): Promise<DeepKnowledgeAnalysis> {
+  async analyzeKnowledge(signal: AbortSignal, consent: DeepKnowledgeConsent, onProgress?: (progress: DeepKnowledgeProgress) => void): Promise<DeepKnowledgeAnalysis> {
     throwIfAborted(signal);
     let totalFiles: number | undefined;
     try {
@@ -73,15 +74,19 @@ export class DeepHealthAnalysisAdapter implements DeepHealthAnalysisPort {
         batchSize: settings.deepAudit.batchSize, maxConcurrent: settings.deepAudit.maxConcurrent,
         delayBetweenBatchesMs: settings.deepAudit.delayMs,
       });
+      engine.onProgress = (stage, current, total) => {
+        if (!signal.aborted && (stage === "reading" || stage === "mapping")) onProgress?.({ stage, current, total });
+      };
       const abort = (): void => engine.abort();
       signal.addEventListener("abort", abort, { once: true });
       try {
         throwIfAborted(signal);
         const result = await withAbort(engine.runMapOnly(files), signal);
+        onProgress?.({ stage: "verifying" });
         await this.verifyCurrent(revision, signal);
         return { revision, candidates: result.summaries.filter((summary) => summary.quality === "draft").map((summary) => draftCandidate(summary.path)),
           totalFiles: result.totalFiles, analyzedFiles: result.analyzedFiles, complete: result.complete };
-      } finally { signal.removeEventListener("abort", abort); }
+      } finally { engine.onProgress = undefined; signal.removeEventListener("abort", abort); }
     } catch (error) {
       if (signal.aborted) throw new DeepHealthAnalysisError("deep-cancelled", totalFiles);
       if (error instanceof DeepHealthAnalysisError) throw new DeepHealthAnalysisError(error.code, totalFiles);

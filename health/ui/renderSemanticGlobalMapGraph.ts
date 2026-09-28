@@ -2,12 +2,13 @@ import { t } from "../../i18n";
 import type { SemanticGlobalFocus, SemanticGlobalMap } from "../semanticGlobalMapPort";
 import { compareStrings } from "../domain/validation";
 import { bindGraphViewport } from "./bindGraphViewport";
-import { fitGraph, panGraph } from "./graphViewport";
+import { clampZoom, fitGraph, panGraph, zoomGraph } from "./graphViewport";
 import type { Viewport } from "./graphViewport";
 import { semanticGraphBasename, semanticGraphLabel, separateSemanticLabels } from "./semanticGraphLabel";
 import { semanticCoreRadius, semanticFocusLayout, semanticGlobalMapLayout } from "./semanticGlobalMapLayout";
 
 const layouts = new WeakMap<SemanticGlobalMap, ReturnType<typeof semanticGlobalMapLayout>>();
+export const SEMANTIC_MAP_MAX_ZOOM = 24;
 export interface SemanticGlobalMapViewState { query: string; selected?: string; map?: SemanticGlobalMap; viewport: Viewport; focusAction?: "global-map-focus" | "global-map-search" }
 export const newSemanticGlobalMapViewState = (): SemanticGlobalMapViewState => ({ query: "", viewport: fitGraph() });
 
@@ -58,7 +59,12 @@ export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticG
       "dominant-baseline": "middle" } }); element.textContent = text;
     return { path: node.path, point, group, connector, label: { ...label, text, element } };
   });
-  const update = (): void => { scene.setAttribute("transform", `translate(${state.viewport.x} ${state.viewport.y}) scale(${state.viewport.zoom})`); };
+  const update = (): void => {
+    scene.setAttribute("transform", `translate(${state.viewport.x} ${state.viewport.y}) scale(${state.viewport.zoom})`);
+    // Enlarge spacing, not markers/hit targets/text: otherwise zoom preserves every overlap.
+    for (const { point, group } of groups) group.setAttribute("transform",
+      `translate(${point.x} ${point.y}) scale(${1 / Math.max(1, state.viewport.zoom)}) translate(${-point.x} ${-point.y})`);
+  };
   const highlight = (): void => {
     const nearest = new Set(nodes.get(state.selected ?? "")?.neighbors.map((neighbor) => neighbor.path));
     for (const { edge, element } of lines) {
@@ -88,12 +94,20 @@ export function renderSemanticGlobalMapGraph(parent: HTMLElement, map: SemanticG
   const select = (path: string, center = false): void => {
     const point = positions.get(path); if (!point) return;
     state.selected = path;
-    if (center) { state.viewport = panGraph({ ...state.viewport, x: 0, y: 0 }, 500 - point.x * state.viewport.zoom, 500 - point.y * state.viewport.zoom); update(); }
+    if (center) { state.viewport = panGraph({ ...state.viewport, x: 0, y: 0 }, 500 - point.x * state.viewport.zoom, 500 - point.y * state.viewport.zoom, SEMANTIC_MAP_MAX_ZOOM); update(); }
     highlight(); onSelect(path);
   };
   update(); highlight();
-  const dispose = bindGraphViewport(svg, state, update, "data-global-map-node", (path) => select(path));
+  const dispose = bindGraphViewport(svg, state, update, "data-global-map-node", (path) => select(path), SEMANTIC_MAP_MAX_ZOOM);
   svg.setAttribute("data-layout-ms", String(laidOut - started));
   svg.setAttribute("data-render-ms", String(performance.now() - laidOut));
-  return { select, dispose, fit: () => { state.viewport = fitGraph(); update(); } };
+  return { select, dispose,
+    zoom: (factor: number) => { state.viewport = zoomGraph(state.viewport, factor, 500, 500, SEMANTIC_MAP_MAX_ZOOM); update(); },
+    reset: () => { state.viewport = fitGraph(); update(); },
+    fit: () => {
+      const xs = [500, ...groups.map(({ point }) => point.x)], ys = [500, ...groups.map(({ point }) => point.y)];
+      const left = Math.min(...xs), right = Math.max(...xs), top = Math.min(...ys), bottom = Math.max(...ys);
+      const zoom = clampZoom(880 / Math.max(120, right - left, bottom - top), SEMANTIC_MAP_MAX_ZOOM);
+      state.viewport = { zoom, x: 500 - (left + right) / 2 * zoom, y: 500 - (top + bottom) / 2 * zoom }; update();
+    } };
 }

@@ -74,6 +74,18 @@ describe("deterministic semantic angular forest", () => {
     expect(semanticScoreSummary([1])).toEqual({ min: 1, max: 1, median: 1 });
     expect(semanticScoreSummary([null])).toBeUndefined(); expect(semanticScoreSummary([])).toBeUndefined();
   });
+  it("separates even 500 identical high-similarity nodes at 24x with fixed-size markers, preserving domain values", () => {
+    const base = fixture(true);
+    const nodes = Array.from({ length: 500 }, (_, i) => ({ ...base.nodes[0], id: `${i}.md`, path: `${i}.md`, coreSimilarity: 1, semanticConnectedness: 1 }));
+    const map = { ...base, nodes, edges: [], mappedNoteCount: 500, indexedNoteCount: 500 }, before = JSON.stringify(map);
+    const layout = semanticGlobalMapLayout(map);
+    expect(layout).toEqual(semanticGlobalMapLayout(map));
+    for (let i = 0; i < layout.length; i++) for (let j = i + 1; j < layout.length; j++) {
+      const a = layout[i], b = layout[j];
+      expect(Math.hypot(a.x - b.x, a.y - b.y) * 24).toBeGreaterThan(a.radius + b.radius);
+    }
+    expect(JSON.stringify(map)).toBe(before);
+  });
   it("places labels radially without moving nodes", () => {
     expect(semanticGraphLabel({ x: 500, y: 500 }, 35)).toEqual({ x: 500, y: 447, anchor: "middle" });
     expect(semanticGraphLabel({ x: 700, y: 500 }, 18)).toEqual({ x: 730, y: 500, anchor: "start" });

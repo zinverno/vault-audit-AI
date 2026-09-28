@@ -34,6 +34,35 @@ function fixture() {
 }
 
 describe("Deep Knowledge Health reconciliation", () => {
+  it("propagates engine progress through preparation, real work, verification and durable saving without persisting progress", async () => {
+    const f = fixture(); await f.service.initialize();
+    const seen: NonNullable<ReturnType<typeof f.service.getSnapshot>["deepProgress"]>[] = [];
+    f.service.subscribe(() => { const progress = f.service.getSnapshot().deepProgress; if (progress) seen.push(progress); });
+    const provider = vi.mocked(callOpenRouter).getMockImplementation()!;
+    vi.mocked(callOpenRouter).mockImplementation(async (...args) => {
+      expect(f.service.getSnapshot().deepProgress?.stage).toBe("mapping");
+      return provider(...args);
+    });
+    const write = f.storage.write.bind(f.storage);
+    vi.spyOn(f.storage, "write").mockImplementation(async (file, bytes) => {
+      expect(f.service.getSnapshot().deepProgress?.stage).toBe("saving"); await write(file, bytes);
+    });
+    await f.service.runDeepScan(signal(), f.adapter.getConsent()!);
+    expect([...new Set(seen.map(p => p.stage))]).toEqual(["preparing", "reading", "mapping", "verifying", "saving"]);
+    for (const stage of ["reading", "mapping"]) {
+      const counts = seen.filter(p => p.stage === stage).map(p => "current" in p ? p.current : -1);
+      expect(counts[0]).toBe(0); expect(counts.at(-1)).toBe(3);
+      expect(counts).toEqual([...counts].sort((a, b) => a - b));
+    }
+    for (const progress of seen) if ("current" in progress) {
+      expect(progress.current).toBeGreaterThanOrEqual(0); expect(progress.current).toBeLessThanOrEqual(progress.total);
+    }
+    expect(f.service.getSnapshot()).toMatchObject({ deepScanRunning: false, deepProgress: undefined });
+    expect([...f.storage.files.values()].join()).not.toMatch(/deepProgress|mapping|preparing/);
+    seen.length = 0; await f.service.runDeepScan(signal(), f.adapter.getConsent()!);
+    expect(seen[0].stage).toBe("preparing");
+  });
+
   it("records current Deep analyzer, actual notesSeen and committed owner receipt; persists no content or configuration", async () => {
     const f = fixture(); await f.service.initialize(); const result = await f.service.runDeepScan(signal(), f.adapter.getConsent()!);
     expect(result).toMatchObject({ findingsCommitted: true, historyRecorded: true, freshness: "verified", diagnostics: [],
@@ -83,6 +112,7 @@ describe("Deep Knowledge Health reconciliation", () => {
     const result = await f.service.runDeepScan(signal(), f.adapter.getConsent()!);
     expect(result).toMatchObject({ findingsCommitted: false, scan: { status: "failed", notesSeen: 3, reconciliationReceipts: {} }, diagnostics: ["deep-analysis-failed"] });
     expect(f.storage.files.get("findings.json")).toBe(bytes); expect(f.store.getReconciliationReceipts()).toEqual(receipt);
+    expect(f.service.getSnapshot()).toMatchObject({ deepScanRunning: false, deepProgress: undefined });
     expect(JSON.stringify(result)).not.toContain("PRIVATE");
   });
 

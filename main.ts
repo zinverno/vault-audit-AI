@@ -1,3 +1,5 @@
+import { auditModeViewModel } from "./deep/auditModeViewModel";
+import { collectDeepAuditFiles } from "./deep/deepScope";
 import { SemanticGlobalMapController } from "./semantic/product/semanticGlobalMapController";
 import { t as tr, tAll, setLanguage, dateLocale } from "./i18n";
 import {
@@ -42,7 +44,6 @@ import {
   DeepAuditProgressModal,
   FinalAuditReport,
   DeepAuditConfig,
-  DEFAULT_DEEP_AUDIT_CONFIG,
   SingleAuditEngine,
   SingleAuditProgressModal,
   SingleAuditReport,
@@ -510,16 +511,8 @@ export default class AIHubPlugin extends Plugin {
       return;
     }
 
-    // Подтверждение с оценкой стоимости
-    const files = this.app.vault.getMarkdownFiles().filter((f) => {
-      const p = f.path.toLowerCase();
-      const cfg = this.app.vault.configDir.toLowerCase() + "/";
-      return (
-        !p.startsWith(cfg) &&
-        !p.startsWith("templates/") &&
-        !p.startsWith(".ai-backup")
-      );
-    });
+    const index = await this.getIndex();
+    const files = index.getStaleFiles(collectDeepAuditFiles(this.app));
 
     // ✅ Собираем config из настроек пользователя + дефолты для незаданных полей
     const config: Partial<DeepAuditConfig> = {
@@ -528,29 +521,9 @@ export default class AIHubPlugin extends Plugin {
       delayBetweenBatchesMs: this.settings.deepAudit.delayMs,
     };
 
-    // Для оценки используем финальные значения (с fallback на дефолты)
-    const effectiveConfig = { ...DEFAULT_DEEP_AUDIT_CONFIG, ...config };
-    const estimatedBatches = Math.ceil(
-      files.length / effectiveConfig.batchSize,
-    );
-    const estimatedRequests =
-      estimatedBatches +
-      Math.ceil(estimatedBatches / effectiveConfig.reduceGroupSize) +
-      1;
-    const estimatedMinutes = Math.ceil(
-      (estimatedBatches * (effectiveConfig.delayBetweenBatchesMs + 3000)) /
-      effectiveConfig.maxConcurrent /
-      60000,
-    );
-    const confirmed = await this.confirmDeepAudit(
-      files.length,
-      estimatedRequests,
-      estimatedMinutes,
-    );
+    const confirmed = await this.confirmDeepAudit(files.length);
     if (!confirmed) return;
 
-    // Запускаем
-    const index = await this.getIndex();
     const engine = new DeepAuditEngine(this.app, this.settings, config, index);
     const progressModal = new DeepAuditProgressModal(this.app);
     progressModal.attachEngine(engine);
@@ -618,8 +591,6 @@ export default class AIHubPlugin extends Plugin {
 
   private confirmDeepAudit(
     fileCount: number,
-    requests: number,
-    minutes: number,
   ): Promise<boolean> {
     return new Promise((resolve) => {
       const modal = new Modal(this.app);
@@ -627,14 +598,12 @@ export default class AIHubPlugin extends Plugin {
       const c = modal.contentEl;
 
       c.createEl("p", {
-        text: tr("Эта операция прочитает содержимое каждой заметки и отправит пакетами в ЛЛМ для детального анализа."),
+        text: tr("@audit.confirm"),
       });
 
       const stats = c.createDiv({ cls: "ai-hub-query-box" });
       const statsData: Array<{ icon: string; label: string; value: string }> = [
         { icon: "file-text", label: tr("Файлов"), value: String(fileCount) },
-        { icon: "zap", label: tr("Запросов к API"), value: `~${requests}` },
-        { icon: "clock", label: tr("Примерное время"), value: `~${minutes} мин` },
       ];
       statsData.forEach(({ icon, label, value }) => {
         const row = stats.createDiv({ cls: "ai-hub-cost-row" });
@@ -649,7 +618,7 @@ export default class AIHubPlugin extends Plugin {
       });
 
       c.createDiv({
-        text: tr("На бесплатном тире OpenRouter возможны ошибки rate-limit. Ничего в хранилище не изменяется."),
+        text: tr("@audit.outputs"),
         cls: "ai-hub-warning",
       });
 
@@ -2612,7 +2581,6 @@ class AuditModeModal extends Modal {
   // Присваивается в onOpen из общего экземпляра плагина
   private index!: NoteIndexManager;
   private files: TFile[] = [];
-  private statsEl: HTMLElement | null = null;
 
   constructor(
     app: App,
@@ -2623,6 +2591,7 @@ class AuditModeModal extends Modal {
 
   async onOpen() {
     this.titleEl.setText(tr("Аудит хранилища"));
+    this.modalEl.addClass("ai-hub-audit-modal");
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("ai-hub-modal-content");
@@ -2639,15 +2608,7 @@ class AuditModeModal extends Modal {
 
     // Берём общий экземпляр индекса плагина (уже загружен) и считаем статистику
     this.index = await this.plugin.getIndex();
-    this.files = this.app.vault.getMarkdownFiles().filter((f) => {
-      const p = f.path.toLowerCase();
-      const cfg = this.app.vault.configDir.toLowerCase() + "/";
-      return (
-        !p.startsWith(cfg) &&
-        !p.startsWith("templates/") &&
-        !p.startsWith(".ai-backup")
-      );
-    });
+    this.files = collectDeepAuditFiles(this.app);
 
     const stats = this.index.stats(this.files);
 
@@ -2691,96 +2652,17 @@ class AuditModeModal extends Modal {
     );
     addStat(tr("Последний запуск"), this.index.getUpdatedAt() || tr("никогда"));
 
-    // Карточки режимов
-    const modesGrid = contentEl.createDiv({ cls: "ai-hub-grid" });
-
-    // ── BATCH режим ──────────────────────────────────────────────────
-    // this.createModeCard(modesGrid, {
-    //   icon: "layers",
-    //   title: tr("Batch Аудит"),
-    //   badge:
-    //     batchToProcess > 0 ? tr("{n} к обработке", { n: batchToProcess }) : tr("Всё актуально"),
-    //   badgeColor:
-    //     batchToProcess > 0
-    //       ? "var(--interactive-accent)"
-    //       : "var(--color-green,#4caf50)",
-    //   lines: [
-    //     tr("По {n} файлов за запрос", { n: this.plugin.settings.deepAudit.batchSize }),
-    //     tr("Параллельные запросы к API"),
-    //     tr("Инкрементальный (пропускает кэш)"),
-    //     tr("Финальный отчёт + Canvas-карта"),
-    //   ],
-    //   speed: tr("Быстрый"),
-    //   context: tr("~4 000 симв./файл"),
-    //   onClick: () => {
-    //     this.close();
-    //     void this.plugin.runDeepVaultAudit();
-    //   },
-    // });
-
-    // ── SINGLE режим ─────────────────────────────────────────────────
-    const singleToProcess = this.index.getStaleFiles(this.files).length;
-    const estMinSingle = Math.ceil(
-      (singleToProcess * (this.plugin.settings.deepAudit.delayMs + 5000)) /
-      60000,
-    );
-
-    this.createModeCard(modesGrid, {
-      icon: "scan-text",
-      title: tr("Single Аудит"),
-      badge: tr("~{n} мин", { n: estMinSingle }),
-      badgeColor: "var(--text-muted)",
-      lines: [
-        tr("По одной заметке за запрос"),
-        tr("Максимальный контекст файла"),
-        tr("Детальный анализ каждой заметки"),
-        tr("Обновляет индекс по ходу"),
-      ],
-      speed: tr("Медленный"),
-      context: tr("~15 000 симв./файл"),
+    const model = auditModeViewModel(stats);
+    contentEl.createEl("p", { text: model.context, cls: "ai-hub-audit-context" });
+    const modesGrid = contentEl.createDiv({ cls: "ai-hub-audit-modes" });
+    for (const card of model.cards) this.createModeCard(modesGrid, {
+      icon: card.mode === "changes" ? "scan-text" : card.mode === "full" ? "refresh-cw" : "brain",
+      title: card.title, subtitle: card.subtitle, badge: card.work, lines: card.lines,
+      disabled: card.count === 0,
       onClick: () => {
         this.close();
-        void this.plugin.runSingleAudit(this.index, true);
-      },
-    });
-
-    // ── SINGLE (полный пересчёт) ──────────────────────────────────────
-    this.createModeCard(modesGrid, {
-      icon: "refresh-cw",
-      title: tr("Single — Полный"),
-      badge: tr("{n} файлов", { n: this.files.length }),
-      badgeColor: "var(--text-muted)",
-      lines: [
-        tr("Анализирует ВСЕ заметки"),
-        tr("Игнорирует кэш"),
-        tr("Для первого запуска или сброса"),
-        tr("Занимает больше всего времени"),
-      ],
-      speed: tr("Очень медленный"),
-      context: tr("~15 000 симв./файл"),
-      onClick: () => {
-        this.close();
-        void this.plugin.runSingleAudit(this.index, false);
-      },
-    });
-
-    // ── Batch + финальный синтез ─────────────────────────────────────
-    this.createModeCard(modesGrid, {
-      icon: "brain",
-      title: tr("Batch + Отчёт"),
-      badge: tr("Рекомендуется"),
-      badgeColor: "var(--interactive-accent)",
-      lines: [
-        tr("Batch анализ с кластеризацией"),
-        tr("Глобальные инсайты по базе"),
-        tr("Markdown-отчёт + Canvas"),
-        tr("Полный MapReduce pipeline"),
-      ],
-      speed: tr("Средний"),
-      context: tr("~4 000 симв./файл"),
-      onClick: () => {
-        this.close();
-        void this.plugin.runDeepVaultAudit();
+        if (card.mode === "overview") void this.plugin.runDeepVaultAudit();
+        else void this.plugin.runSingleAudit(this.index, card.mode === "changes");
       },
     });
   }
@@ -2791,15 +2673,15 @@ class AuditModeModal extends Modal {
       icon: string;
       title: string;
       badge: string;
-      badgeColor: string;
+      subtitle: string;
+      disabled: boolean;
       lines: string[];
-      speed: string;
-      context: string;
       onClick: () => void;
     },
   ): void {
-    const card = container.createDiv({ cls: "ai-hub-card" });
+    const card = container.createDiv({ cls: "ai-hub-card ai-hub-audit-mode" });
     card.setAttribute("tabindex", "0");
+    card.setAttribute("aria-disabled", String(opts.disabled));
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", tr("Режим: {m}", { m: opts.title }));
 
@@ -2812,9 +2694,11 @@ class AuditModeModal extends Modal {
       text: opts.badge,
       cls: "ai-hub-card-badge",
     });
-    badge.setCssProps({ "--ai-badge-color": opts.badgeColor });
+    badge.addClass("ai-hub-audit-count");
 
     card.createDiv({ text: opts.title, cls: "ai-hub-card-title" });
+
+    card.createEl("p", { text: opts.subtitle, cls: "ai-hub-card-desc" });
 
     // Список особенностей
     const ul = card.createEl("ul", { cls: "ai-hub-card-ul" });
@@ -2822,18 +2706,11 @@ class AuditModeModal extends Modal {
       ul.createEl("li", { text: line });
     }
 
-    // Метаданные скорость/контекст
-    const meta = card.createDiv({ cls: "ai-hub-card-meta" });
-    const sp = meta.createSpan({ text: "⚡ " + opts.speed });
-    const ct = meta.createSpan({ text: "📄 " + opts.context });
-    void sp;
-    void ct;
-
-    card.addEventListener("click", opts.onClick);
+    card.addEventListener("click", () => { if (!opts.disabled) opts.onClick(); });
     card.addEventListener("keydown", (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        opts.onClick();
+        if (!opts.disabled) opts.onClick();
       }
     });
   }

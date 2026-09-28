@@ -86,7 +86,7 @@ import { DeepIntelligenceController } from "../../deep/product/deepIntelligenceC
 import type { LanguageModelSettingsSnapshot } from "../../deep/product/languageModelSettingsPort";
 import type { DeepIntelligencePort } from "../deepIntelligencePort";
 import { deepIntelligenceViewModel, deepSetupError } from "./deepIntelligenceViewModel";
-import type { DeepHealthAnalysisPort, DeepKnowledgeAnalysis } from "../deepHealthAnalysisPort";
+import type { DeepHealthAnalysisPort, DeepKnowledgeAnalysis, DeepKnowledgeConsent, DeepKnowledgeProgress } from "../deepHealthAnalysisPort";
 import { candidate } from "../store/testSupport";
 import { withAbort } from "../analyzers/local/cancellation";
 import { VaultTopologyController } from "../topology/vaultTopologyController";
@@ -181,6 +181,9 @@ describe("native Health view lifecycle", () => {
 });
 
 describe("inline Deep Intelligence boundaries", () => {
+  const elapsedTimers = { setInterval: vi.fn((_callback: () => void, _delay: number) => 1), clearInterval: vi.fn((_id: number) => {}) };
+  beforeEach(() => { elapsedTimers.setInterval.mockClear(); elapsedTimers.clearInterval.mockClear(); vi.stubGlobal("window", { setTimeout, clearTimeout, ...elapsedTimers }); });
+  afterEach(() => vi.unstubAllGlobals());
   function deepFixture(configured = true, deepAnalysis?: DeepHealthAnalysisPort) {
     let current: LanguageModelSettingsSnapshot = { provider: "openrouter", model: "legacy-model", baseUrl: "https://llm.example/v1",
       apiKey: configured ? "synthetic-DO-NOT-EXPOSE-key" : "", temperature: 0.5, topK: 8 };
@@ -217,7 +220,7 @@ describe("inline Deep Intelligence boundaries", () => {
       candidates: [candidate({ analyzerId: "knowledge-quality", dimension: "knowledge", source: "deep-ai", type: "knowledge-draft", impact: "review", confidence: "medium",
         notePaths: ["A.md"], title: "Knowledge note may need development", explanation: "Deep analysis suggests this note may be incomplete or underdeveloped.",
         evidence: [{ kind: "deep-quality", value: "draft", path: "A.md" }], actions: [{ kind: "open-note", path: "A.md" }] })] };
-    const analysis = { getConsent: () => ({ configurationRevision: 1, providerKind: "cloud" as const }), analyzeKnowledge: vi.fn(async (_signal: AbortSignal) => {
+    const analysis = { getConsent: () => ({ configurationRevision: 1, providerKind: "cloud" as const }), analyzeKnowledge: vi.fn(async (_signal: AbortSignal, _consent: DeepKnowledgeConsent, _onProgress?: (progress: DeepKnowledgeProgress) => void) => {
       f.vault.getMarkdownFiles(); await f.cachedRead(); mocks.requestUrl(); return result;
     }), verifyCurrent: vi.fn(async () => {}) };
     const f = deepFixture(true, analysis); return { ...f, analysis, result };
@@ -251,13 +254,43 @@ describe("inline Deep Intelligence boundaries", () => {
     const f = knowledgeFixture(); await f.view.onOpen(); await f.second.onOpen(); let release!: (value: DeepKnowledgeAnalysis) => void;
     f.analysis.analyzeKnowledge.mockImplementationOnce((signal) => withAbort(new Promise<DeepKnowledgeAnalysis>((resolve) => { release = resolve; }), signal));
     f.content.action("deep-knowledge").click(); f.content.action("knowledge-start").click(); await flush();
-    expect(f.content.texts()).toContain("Checking knowledge…"); expect(f.secondContent.action("knowledge-cancel")).toBeDefined();
+    expect(f.content.texts()).toContain("Preparing analysis…"); expect(f.secondContent.action("knowledge-cancel")).toBeDefined();
     expect(f.content.action("scan").disabled).toBe(true); expect(f.content.action("deep-check").disabled).toBe(true);
     f.content.action("knowledge-cancel").click(); await flush();
     expect(f.controller.getState().deepScanRunning).toBe(false); expect(f.content.texts()).toContain("Knowledge check cancelled");
     expect(f.controller.listFindings()).toEqual([]); expect(f.controller.getState().deepOutcome?.scan.status).toBe("failed");
     await f.view.onClose(); release(f.result); await flush(); expect(f.content.children).toHaveLength(0);
     expect(f.controller.listFindings()).toEqual([]); expect(f.connection.test).not.toHaveBeenCalled();
+  });
+  it("renders real counters in both views, updates elapsed only, and cleans up on failure/restart/close", async () => {
+    const f = knowledgeFixture(); await f.view.onOpen(); await f.second.onOpen();
+    let progress!: (progress: DeepKnowledgeProgress) => void;
+    let fail!: (reason: Error) => void;
+    f.analysis.analyzeKnowledge.mockImplementationOnce((_signal, _consent, onProgress) => {
+      progress = onProgress!; return new Promise((_resolve, reject) => { fail = reject; });
+    });
+    f.content.action("deep-knowledge").click(); f.content.action("knowledge-start").click(); await flush();
+    progress({ stage: "reading", current: 327, total: 500 });
+    for (const content of [f.content, f.secondContent]) expect(content.texts()).toContain("327 / 500 notes processed");
+    progress({ stage: "mapping", current: 47, total: 100 });
+    expect(f.content.texts()).toContain("47 / 100 batches processed");
+    expect(f.content.texts()).toContain("Notes are not modified");
+    const started = f.controller.getState().deepProgress!.startedAt;
+    const now = vi.spyOn(Date, "now").mockReturnValue(started + 258000);
+    const tick = elapsedTimers.setInterval.mock.calls.at(-1)![0]; tick();
+    expect(f.secondContent.texts()).toContain("Elapsed: 4m 18s");
+    expect(f.analysis.analyzeKnowledge).toHaveBeenCalledTimes(1);
+    fail(new Error("PRIVATE_PROVIDER")); await flush();
+    expect(f.controller.getState()).toMatchObject({ deepScanRunning: false, deepProgress: undefined });
+    expect(f.content.texts()).not.toContain("47 / 100"); expect(f.content.texts()).not.toContain("PRIVATE_PROVIDER");
+    let finish!: (result: DeepKnowledgeAnalysis) => void;
+    f.analysis.analyzeKnowledge.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    f.content.action("deep-knowledge").click(); f.content.action("knowledge-start").click(); await flush();
+    expect(f.content.texts()).toContain("Preparing analysis…"); expect(f.content.texts()).toContain("Elapsed: 0m 00s");
+    const clear = elapsedTimers.clearInterval.mock.calls.length;
+    await f.view.onClose(); await f.second.onClose();
+    expect(elapsedTimers.clearInterval.mock.calls.length).toBeGreaterThan(clear);
+    finish(f.result); await flush(); now.mockRestore(); f.controller.dispose();
   });
   it("Configured can analyze after restart, while Unconfigured/Busy/Error cannot; Check and Connect never analyze", async () => {
     const f = knowledgeFixture(); await f.view.onOpen();
@@ -1593,6 +1626,26 @@ describe("Semantic Neighborhood Discover child surface", () => {
     expect(f.engine.analyzeSemanticFocus).toHaveBeenCalledOnce(); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledOnce();
     expect(f.content.texts()).not.toMatch(/@(?:global-map|neighborhood)\./u);
     await f.view.onClose(); f.globalMap.dispose(); f.neighborhood.dispose(); f.controller.dispose();
+  });
+  it("visible zoom, fit and reset preserve selection, real scores and the captured map without recomputation", async () => {
+    const f = await neighborhoodFixture();
+    f.content.action("nav-discover").click(); f.content.action("global-map-open").click(); await f.globalMap.load();
+    const map = f.globalMap.getSnapshot().map!, before = JSON.stringify(map);
+    const state = (f.view as unknown as { globalMapView: { viewport: { x: number; y: number; zoom: number } } }).globalMapView;
+    const group = () => f.content.all().find(e => e.attrs["data-global-map-node"] === "A.md")!;
+    for (let i = 0; i < 15; i++) f.content.action("global-map-zoom-in").click();
+    expect(state.viewport.zoom).toBe(24); expect(group().attrs.transform).toContain(`scale(${1 / 24})`);
+    f.content.action("global-map-search").input("A.md"); f.content.action("global-map-result-0").click();
+    expect(group().attrs["data-selected"]).toBe("true"); expect(f.content.texts()).toContain("0.960");
+    f.content.action("global-map-open-note").click(); await flush(); expect(f.openFile).toHaveBeenCalledTimes(1);
+    f.content.action("global-map-fit").click(); expect(state.viewport.zoom).toBeGreaterThan(1);
+    f.content.action("global-map-reset-view").click(); expect(state.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
+    expect(group().attrs.transform).toContain("scale(1)");
+    for (let i = 0; i < 15; i++) f.content.action("global-map-zoom-out").click();
+    expect(state.viewport.zoom).toBe(0.4); expect(group().attrs["data-selected"]).toBe("true");
+    expect(JSON.stringify(map)).toBe(before); expect(f.engine.analyzeGlobalSemanticMap).toHaveBeenCalledTimes(1);
+    expect(f.engine.analyzeSemanticFocus).not.toHaveBeenCalled(); expect(f.cachedRead).not.toHaveBeenCalled();
+    await f.view.onClose();
   });
   it.each(["en", "ru"] as const)("selects without querying, recenters explicitly, preserves viewport, and renders literal evidence in %s", async (lang) => {
     setLanguage(lang); const f = await neighborhoodFixture();

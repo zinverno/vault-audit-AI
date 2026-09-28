@@ -9,6 +9,12 @@ export interface DeepKnowledgeRevision { readonly token: string }
 /** Transient content-sharing consent, bound to the committed configuration shown to the user. */
 export interface DeepKnowledgeConsent { configurationRevision: number; providerKind: "local" | "cloud" | "custom" }
 
+/** Transient, content-free progress. Counters represent settled notes/batches, including failures. */
+export type DeepKnowledgeProgress =
+  | { stage: "preparing" | "verifying" | "saving" }
+  | { stage: "reading" | "mapping"; current: number; total: number };
+export type DeepKnowledgeRunProgress = DeepKnowledgeProgress & { startedAt: number };
+
 export interface DeepKnowledgeAnalysis {
   revision: DeepKnowledgeRevision;
   candidates: FindingCandidate[];
@@ -31,6 +37,6 @@ export interface DeepHealthAnalysisPort {
   /** Metadata only: no note enumeration, reads, provider calls or persistence. */
   getConsent(): DeepKnowledgeConsent | undefined;
   /** Must settle promptly on abort, preserving captured totalFiles in a safe error. */
-  analyzeKnowledge(signal: AbortSignal, consent: DeepKnowledgeConsent): Promise<DeepKnowledgeAnalysis>;
+  analyzeKnowledge(signal: AbortSignal, consent: DeepKnowledgeConsent, onProgress?: (progress: DeepKnowledgeProgress) => void): Promise<DeepKnowledgeAnalysis>;
   verifyCurrent(revision: DeepKnowledgeRevision, signal: AbortSignal): Promise<void>;
 }

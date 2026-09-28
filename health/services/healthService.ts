@@ -19,7 +19,7 @@ import { SEMANTIC_DUPLICATES_ANALYZER, SemanticHealthAnalysisError } from "../se
 import type { SemanticHealthAnalysisPort } from "../semanticHealthAnalysisPort";
 import type { RecallHealthSnapshot } from "../recallHealthPort";
 import { KNOWLEDGE_QUALITY_ANALYZER, DeepHealthAnalysisError } from "../deepHealthAnalysisPort";
-import type { DeepHealthAnalysisPort, DeepKnowledgeConsent } from "../deepHealthAnalysisPort";
+import type { DeepHealthAnalysisPort, DeepKnowledgeConsent, DeepKnowledgeProgress, DeepKnowledgeRunProgress } from "../deepHealthAnalysisPort";
 import type { DeepHealthScanOutcome } from "./types";
 
 type HealthScanType = "local" | "semantic" | "deep";
@@ -53,6 +53,7 @@ export class HealthService {
   private initialization?: HealthInitializationResult;
   private initializing?: Promise<HealthInitializationResult>;
   private running?: HealthScanType;
+  private deepProgress?: DeepKnowledgeRunProgress;
   private readonly listeners = new Set<() => void>();
   private readonly lastAttempts: Partial<Record<HealthScanType, ScanRun>> = {};
   private lastObservation = -1;
@@ -105,6 +106,7 @@ export class HealthService {
       lastSemanticScanReconciled: semanticReconciled, semanticScanRunning: this.isSemanticScanRunning(),
       lastDeepScan: deepScan ? cloneScanRun(deepScan) : undefined,
       lastDeepScanReconciled: deepReconciled, deepScanRunning: this.isDeepScanRunning(),
+      deepProgress: this.deepProgress ? { ...this.deepProgress } : undefined,
       initialization: { ...initialization, storage: { ...initialization.storage } },
     };
   }
@@ -137,6 +139,7 @@ export class HealthService {
       analyzerVersions: {}, reconciliationReceipts: {}, status: "failed" };
     const outcome: LocalHealthScanOutcome = { scan, freshness: "not-checked", findingsCommitted: false, historyRecorded: false, diagnostics: [] };
     this.running = type;
+    this.deepProgress = type === "deep" ? { stage: "preparing", startedAt } : undefined;
     this.notify();
     try {
       if (type === "semantic") await this.reconcileSemanticAnalysis(outcome, signal);
@@ -170,6 +173,7 @@ export class HealthService {
       return outcome;
     } finally {
       this.running = undefined;
+      this.deepProgress = undefined;
       this.notify();
     }
   }
@@ -182,11 +186,14 @@ export class HealthService {
       const port = this.options.deepAnalysis;
       if (!port || !consent) throw new DeepHealthAnalysisError("deep-unavailable");
       // The Deep port bridges abort into MAP and retains the captured count on cancellation.
-      const analysis = await port.analyzeKnowledge(signal, consent);
+      const analysis = await port.analyzeKnowledge(signal, consent, (progress) => {
+        if (!signal.aborted) this.reportDeepProgress(progress);
+      });
       scan.notesSeen = analysis.totalFiles;
       throwIfAborted(signal);
       if (analysis.totalFiles > 0 && analysis.analyzedFiles === 0) throw new DeepHealthAnalysisError("deep-analysis-failed");
       analyzed = true;
+      this.reportDeepProgress({ stage: "verifying" });
       const counts = await this.store.reconcileBatch([{
         scope: { source: "deep-ai", analyzerIds: [KNOWLEDGE_QUALITY_ANALYZER.id] },
         candidates: analysis.candidates, complete: analysis.complete, seenAt: scan.startedAt,
@@ -194,6 +201,7 @@ export class HealthService {
         await withAbort(port.verifyCurrent(analysis.revision, signal), signal);
         throwIfAborted(signal);
         outcome.freshness = "verified";
+        this.reportDeepProgress({ stage: "saving" });
       } });
       outcome.findingsCommitted = true;
       scan.findingsCreated = counts.created; scan.findingsUpdated = counts.updated; scan.findingsResolved = counts.resolved;
@@ -211,6 +219,12 @@ export class HealthService {
         if (error.code === "deep-vault-changed" || error.code === "deep-config-changed") outcome.freshness = "stale";
       } else outcome.diagnostics.push(analyzed ? "deep-reconciliation-failed" : "deep-analysis-failed");
     }
+  }
+
+  private reportDeepProgress(progress: DeepKnowledgeProgress): void {
+    if (this.running !== "deep" || !this.deepProgress) return;
+    this.deepProgress = { ...progress, startedAt: this.deepProgress.startedAt };
+    this.notify();
   }
 
   private async reconcileSemanticAnalysis(outcome: SemanticHealthScanOutcome, signal: AbortSignal): Promise<void> {
