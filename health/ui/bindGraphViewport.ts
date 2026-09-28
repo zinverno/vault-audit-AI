@@ -3,7 +3,7 @@ import type { Viewport } from "./graphViewport";
 
 /** Shared topology/semantic pointer contract; coordinates use the SVG screen transform. */
 export function bindGraphViewport(svg: SVGSVGElement, state: { viewport: Viewport }, update: () => void,
-  nodeAttribute: string, onSelect: (path: string) => void): () => void {
+  nodeAttribute: string, onSelect: (path: string) => void, maxZoom = 4): () => void {
   let pointer: { id: number; startX: number; startY: number; lastX: number; lastY: number; dragged: boolean; node?: string } | undefined;
   const pointInSvg = (event: { clientX: number; clientY: number }): { x: number; y: number } | undefined => {
     const matrix = svg.getScreenCTM();
@@ -24,7 +24,7 @@ export function bindGraphViewport(svg: SVGSVGElement, state: { viewport: Viewpor
     const point = pointInSvg(event); if (!point) return;
     if (Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > 5) pointer.dragged = true;
     if (pointer.dragged) {
-      state.viewport = panGraph(state.viewport, point.x - pointer.lastX, point.y - pointer.lastY); update();
+      state.viewport = panGraph(state.viewport, point.x - pointer.lastX, point.y - pointer.lastY, maxZoom); update();
       pointer.lastX = point.x; pointer.lastY = point.y;
     }
   };
@@ -41,7 +41,7 @@ export function bindGraphViewport(svg: SVGSVGElement, state: { viewport: Viewpor
   const wheel = (event: WheelEvent): void => {
     event.preventDefault(); const point = pointInSvg(event); if (!point) return;
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1);
-    state.viewport = zoomGraph(state.viewport, Math.exp(-Math.max(-300, Math.min(300, delta)) * 0.002), point.x, point.y); update();
+    state.viewport = zoomGraph(state.viewport, Math.exp(-Math.max(-300, Math.min(300, delta)) * 0.002), point.x, point.y, maxZoom); update();
   };
   if (state) {
     svg.addEventListener("pointerdown", down); svg.addEventListener("pointermove", move);

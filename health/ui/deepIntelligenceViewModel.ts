@@ -1,6 +1,7 @@
 import { t } from "../../i18n";
 import type { DeepIntelligenceSnapshot, DeepProvider, DeepSetupResult } from "../deepIntelligencePort";
 import type { HealthControllerState } from "../obsidian/healthPluginController";
+import type { DeepKnowledgeRunProgress } from "../deepHealthAnalysisPort";
 
 export type DeepAction = "setup" | "change" | "check" | "knowledge";
 
@@ -9,7 +10,7 @@ export function canCheckKnowledge(snapshot: DeepIntelligenceSnapshot): boolean {
 }
 
 export function knowledgeScanStatus(state: HealthControllerState): string | undefined {
-  if (state.deepScanRunning) return t("@knowledge.checking");
+  if (state.deepScanRunning) return knowledgeProgressModel(state.deepProgress).status;
   if (state.deepError) return t("@knowledge.failed");
   if (state.deepCancelled) return t("@knowledge.cancelled");
   const outcome = state.deepOutcome;
@@ -19,6 +20,21 @@ export function knowledgeScanStatus(state: HealthControllerState): string | unde
   if (outcome.scan.status === "failed") return t("@knowledge.failed");
   if (outcome.scan.status === "partial") return t("@knowledge.partial");
   return t(outcome.scan.notesSeen === 0 ? "@knowledge.empty" : "@knowledge.completed");
+}
+
+export function knowledgeElapsed(startedAt: number, now = Date.now()): string {
+  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+  return t("@knowledge.elapsed", { minutes: Math.floor(seconds / 60), seconds: String(seconds % 60).padStart(2, "0") });
+}
+
+export function knowledgeProgressModel(progress?: DeepKnowledgeRunProgress) {
+  const stage = progress?.stage ?? "preparing";
+  const count = progress && "current" in progress
+    ? t(stage === "reading" ? "@knowledge.notes-progress" : "@knowledge.batches-progress", { current: progress.current, total: progress.total }) : undefined;
+  const title = t(`@knowledge.stage.${stage}`);
+  return { stage, title, count, status: [title, count].filter(Boolean).join(" · "),
+    explanation: stage === "mapping" ? t("@knowledge.analyzing-description") : undefined,
+    elapsed: progress ? knowledgeElapsed(progress.startedAt) : undefined };
 }
 
 export function deepProviderKind(provider: DeepProvider): "local" | "cloud" | "custom" {

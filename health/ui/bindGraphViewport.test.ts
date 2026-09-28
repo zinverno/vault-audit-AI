@@ -1,8 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { bindGraphViewport } from "./bindGraphViewport";
-import { fitGraph } from "./graphViewport";
+import { fitGraph, panGraph, zoomGraph } from "./graphViewport";
 
 describe("shared graph pointer lifecycle", () => {
+  it("anchors semantic zoom in SVG coordinates, permits access to the whole map at 24x, and resets exactly", () => {
+    let view = panGraph(fitGraph(), 35, -20, 24);
+    const anchor = { x: 200, y: 750 };
+    const world = { x: (anchor.x - view.x) / view.zoom, y: (anchor.y - view.y) / view.zoom };
+    for (const factor of [2, 5, 100, 0.5]) {
+      view = zoomGraph(view, factor, anchor.x, anchor.y, 24);
+      expect(world.x * view.zoom + view.x).toBeCloseTo(anchor.x);
+      expect(world.y * view.zoom + view.y).toBeCloseTo(anchor.y);
+      expect(view.zoom).toBeLessThanOrEqual(24);
+    }
+    expect(zoomGraph(view, 0.0001, 500, 500, 24).zoom).toBe(0.4);
+    expect(panGraph({ x: 0, y: 0, zoom: 24 }, 500 - 900 * 24, 500 - 900 * 24, 24)).toEqual({ x: -21100, y: -21100, zoom: 24 });
+    view = fitGraph(); expect(view).toEqual({ x: 0, y: 0, zoom: 1 });
+  });
   it("uses screen coordinates, clamps zoom, suppresses drag selection, and releases capture/listeners", () => {
     const listeners = new Map<string, (event: unknown) => void>(); let captured: number | undefined;
     const svg = { addEventListener: (name: string, fn: (event: unknown) => void) => listeners.set(name, fn),

@@ -1,10 +1,10 @@
 import { t } from "../../i18n";
 import type { DeepIntelligenceSnapshot, DeepProvider, DeepProviderOption, DeepSetupDraft, DeepSetupResult } from "../deepIntelligencePort";
 import { healthButton, healthDetails } from "./renderHealthHome";
-import { deepIntelligenceViewModel, deepProviderKind, deepSetupError } from "./deepIntelligenceViewModel";
+import { deepIntelligenceViewModel, deepProviderKind, deepSetupError, knowledgeProgressModel } from "./deepIntelligenceViewModel";
 import type { DeepAction } from "./deepIntelligenceViewModel";
 import { canCheckKnowledge } from "./deepIntelligenceViewModel";
-import type { DeepKnowledgeConsent } from "../deepHealthAnalysisPort";
+import type { DeepKnowledgeConsent, DeepKnowledgeRunProgress } from "../deepHealthAnalysisPort";
 
 export type DeepSetupState = { step: "choose" } | { step: "form"; draft: DeepSetupDraft; result?: DeepSetupResult };
 
@@ -19,7 +19,7 @@ interface Actions {
   dismissConfirmation: () => void;
 }
 
-export interface KnowledgeCheckState { consent?: DeepKnowledgeConsent; available: boolean; running: boolean; busy: boolean; status?: string }
+export interface KnowledgeCheckState { consent?: DeepKnowledgeConsent; available: boolean; running: boolean; busy: boolean; status?: string; progress?: DeepKnowledgeRunProgress }
 
 export function renderDeepIntelligence(parent: HTMLElement, snapshot: DeepIntelligenceSnapshot, providers: DeepProviderOption[],
   setup: DeepSetupState | undefined, actions: Actions, knowledge: KnowledgeCheckState): void {
@@ -74,7 +74,14 @@ export function renderDeepIntelligence(parent: HTMLElement, snapshot: DeepIntell
       if (action.id === "knowledge" && !knowledge.available) continue;
       healthButton(buttons, action.label, () => actions.action(action.id), `deep-${action.id}`, snapshot.busy || knowledge.busy || Boolean(knowledge.consent), action.id === "setup" || action.id === "knowledge");
     }
-    if (knowledge.status) section.createEl("p", { text: knowledge.status });
+    if (knowledge.running) {
+      const progress = knowledgeProgressModel(knowledge.progress);
+      const block = section.createDiv({ cls: "veynrel-knowledge-progress", attr: { "data-knowledge-stage": progress.stage } });
+      block.createEl("p", { text: progress.title, cls: "veynrel-health-state" });
+      if (progress.count) block.createEl("p", { text: progress.count });
+      if (progress.explanation) block.createEl("p", { text: progress.explanation, cls: "veynrel-health-muted" });
+      if (progress.elapsed) block.createEl("p", { text: progress.elapsed, attr: { "data-knowledge-elapsed": "true" } });
+    } else if (knowledge.status) section.createEl("p", { text: knowledge.status });
     if (knowledge.running) healthButton(section, t("@health.cancel"), actions.cancelKnowledge, "knowledge-cancel");
     else if (knowledge.consent) {
       const confirmation = section.createEl("section", { attr: { "aria-label": t("@knowledge.confirm") } });

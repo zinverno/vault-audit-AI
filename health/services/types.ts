@@ -7,7 +7,7 @@ import type { LocalVaultSource } from "../analyzers/local/localVaultSource";
 import type { LocalVaultFreshnessProbe } from "../analyzers/local/localVaultRevision";
 import type { SemanticHealthErrorCode } from "../semanticHealthAnalysisPort";
 import type { RecallHealthSnapshot } from "../recallHealthPort";
-import type { DeepHealthErrorCode } from "../deepHealthAnalysisPort";
+import type { DeepHealthErrorCode, DeepKnowledgeRunProgress } from "../deepHealthAnalysisPort";
 
 /** One configured object supplies BOTH capture methods with identical, stable scope policy. */
 export interface HealthLocalVaultSource extends LocalVaultSource, LocalVaultFreshnessProbe {}
@@ -44,6 +44,7 @@ export interface HealthSnapshot {
   lastDeepScan?: ScanRun;
   lastDeepScanReconciled: boolean;
   deepScanRunning: boolean;
+  deepProgress?: DeepKnowledgeRunProgress;
   initialization: HealthInitializationResult;
 }
 

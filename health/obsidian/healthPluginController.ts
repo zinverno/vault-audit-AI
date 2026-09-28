@@ -14,7 +14,7 @@ import { isFindingId } from "../domain/identity";
 import type { SemanticHealthAnalysisPort } from "../semanticHealthAnalysisPort";
 import type { SemanticHealthScanOutcome } from "../services/types";
 import type { RecallHealthPort } from "../recallHealthPort";
-import type { DeepHealthAnalysisPort, DeepKnowledgeConsent } from "../deepHealthAnalysisPort";
+import type { DeepHealthAnalysisPort, DeepKnowledgeConsent, DeepKnowledgeRunProgress } from "../deepHealthAnalysisPort";
 import type { DeepHealthScanOutcome } from "../services/types";
 
 export interface HealthControllerState {
@@ -30,6 +30,7 @@ export interface HealthControllerState {
   semanticError?: boolean;
   deepOutcome?: DeepHealthScanOutcome;
   deepScanRunning?: boolean;
+  deepProgress?: DeepKnowledgeRunProgress;
   deepError?: boolean;
   deepCancelled?: boolean;
   busy: boolean;
@@ -112,6 +113,7 @@ export class HealthPluginController {
       semanticScanRunning: this.activeScanType === "semantic" || Boolean(this.service?.isSemanticScanRunning()), semanticError: this.semanticError,
       deepOutcome: this.deepOutcome ? structuredClone(this.deepOutcome) : undefined,
       deepScanRunning: this.activeScanType === "deep" || Boolean(this.service?.isDeepScanRunning()),
+      deepProgress: snapshot?.deepProgress,
       deepError: this.deepError, deepCancelled: this.deepCancelled,
       busy: Boolean(this.activeScan) || Boolean(this.service?.isScanRunning()) || this.recovering || Boolean(this.mutatingFindingId),
       recovering: this.recovering, error: this.error };

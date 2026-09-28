@@ -1,0 +1,278 @@
+{
+  "checks": [
+    "Fresh 500 / current 0 / changed 12 counts, cache copy, badge containment and scrolling in EN/RU at 1000px and 390px",
+    "Enter on the incremental card preserves onlyStale=true",
+    "500-note real Health pipeline: reading 0–500, MAP 0–100, elapsed, verify/save, success, provider failure, restart and cancel cleanup",
+    "500-node map: global overview, 24x controls, hover/click under transforms, pan without selection, wheel, fit/reset, real inspector scores/neighbors, open note, zero map recomputations"
+  ],
+  "screenshots": [
+    "audit-fresh-en-1000.png",
+    "audit-fresh-en-390.png",
+    "audit-fresh-ru-1000.png",
+    "audit-fresh-ru-390.png",
+    "audit-current-en-1000.png",
+    "audit-current-en-390.png",
+    "audit-current-ru-1000.png",
+    "audit-current-ru-390.png",
+    "audit-changed-en-1000.png",
+    "audit-changed-en-390.png",
+    "audit-changed-ru-1000.png",
+    "audit-changed-ru-390.png",
+    "health-mapping-start.png",
+    "health-mapping-progress.png",
+    "map-overview-500.png",
+    "map-zoomed-500.png"
+  ],
+  "matrix": [
+    {
+      "state": "fresh",
+      "language": "en",
+      "width": 1000,
+      "counts": [
+        500,
+        500,
+        500
+      ],
+      "disabled": [
+        "false",
+        "false",
+        "false"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "First run: both detailed modes process all notes. Later, the changes audit skips current results.",
+      "badgesInside": true
+    },
+    {
+      "state": "fresh",
+      "language": "en",
+      "width": 390,
+      "counts": [
+        500,
+        500,
+        500
+      ],
+      "disabled": [
+        "false",
+        "false",
+        "false"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "First run: both detailed modes process all notes. Later, the changes audit skips current results.",
+      "badgesInside": true
+    },
+    {
+      "state": "fresh",
+      "language": "ru",
+      "width": 1000,
+      "counts": [
+        500,
+        500,
+        500
+      ],
+      "disabled": [
+        "false",
+        "false",
+        "false"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "Первый запуск: оба детальных режима обработают все заметки. В дальнейшем аудит изменений пропускает актуальные результаты.",
+      "badgesInside": true
+    },
+    {
+      "state": "fresh",
+      "language": "ru",
+      "width": 390,
+      "counts": [
+        500,
+        500,
+        500
+      ],
+      "disabled": [
+        "false",
+        "false",
+        "false"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "Первый запуск: оба детальных режима обработают все заметки. В дальнейшем аудит изменений пропускает актуальные результаты.",
+      "badgesInside": true
+    },
+    {
+      "state": "current",
+      "language": "en",
+      "width": 1000,
+      "counts": [
+        0,
+        500,
+        0
+      ],
+      "disabled": [
+        "true",
+        "false",
+        "true"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "No new or changed notes. Full detailed audit deliberately reanalyzes all notes.",
+      "badgesInside": true
+    },
+    {
+      "state": "current",
+      "language": "en",
+      "width": 390,
+      "counts": [
+        0,
+        500,
+        0
+      ],
+      "disabled": [
+        "true",
+        "false",
+        "true"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "No new or changed notes. Full detailed audit deliberately reanalyzes all notes.",
+      "badgesInside": true
+    },
+    {
+      "state": "current",
+      "language": "ru",
+      "width": 1000,
+      "counts": [
+        0,
+        500,
+        0
+      ],
+      "disabled": [
+        "true",
+        "false",
+        "true"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "Новых и изменённых заметок нет. Полный детальный аудит проверит все заметки заново.",
+      "badgesInside": true
+    },
+    {
+      "state": "current",
+      "language": "ru",
+      "width": 390,
+      "counts": [
+        0,
+        500,
+        0
+      ],
+      "disabled": [
+        "true",
+        "false",
+        "true"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "Новых и изменённых заметок нет. Полный детальный аудит проверит все заметки заново.",
+      "badgesInside": true
+    },
+    {
+      "state": "changed",
+      "language": "en",
+      "width": 1000,
+      "counts": [
+        12,
+        500,
+        12
+      ],
+      "disabled": [
+        "false",
+        "false",
+        "false"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "New and changed notes: 12. Full mode reanalyzes everything.",
+      "badgesInside": true
+    },
+    {
+      "state": "changed",
+      "language": "en",
+      "width": 390,
+      "counts": [
+        12,
+        500,
+        12
+      ],
+      "disabled": [
+        "false",
+        "false",
+        "false"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "New and changed notes: 12. Full mode reanalyzes everything.",
+      "badgesInside": true
+    },
+    {
+      "state": "changed",
+      "language": "ru",
+      "width": 1000,
+      "counts": [
+        12,
+        500,
+        12
+      ],
+      "disabled": [
+        "false",
+        "false",
+        "false"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "Новые и изменённые заметки: 12. Полный режим заново проверит всё.",
+      "badgesInside": true
+    },
+    {
+      "state": "changed",
+      "language": "ru",
+      "width": 390,
+      "counts": [
+        12,
+        500,
+        12
+      ],
+      "disabled": [
+        "false",
+        "false",
+        "false"
+      ],
+      "overflow": false,
+      "raw": false,
+      "context": "Новые и изменённые заметки: 12. Полный режим заново проверит всё.",
+      "badgesInside": true
+    }
+  ],
+  "limitations": [
+    "Linux desktop, synthetic notes/vectors, local mock language model; no live provider, mobile OS, popout or screen-reader test"
+  ],
+  "versions": {
+    "obsidian": "Veynrel Health - vault - Obsidian 1.12.7",
+    "electron": "39.8.10"
+  },
+  "health": {
+    "running": false,
+    "outcome": "completed",
+    "stages": [
+      "preparing",
+      "reading",
+      "mapping",
+      "verifying",
+      "saving"
+    ],
+    "countsValid": true,
+    "maxReading": 500,
+    "maxMapping": 100
+  },
+  "artifactSha256": "0eb1a12e8415ced10be27342851407c8dd7e41cd513735f6e3728ae2715f17ea"
+}

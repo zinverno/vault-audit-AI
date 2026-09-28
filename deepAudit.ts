@@ -325,7 +325,7 @@ export class DeepAuditEngine {
       if (this.signal.aborted) throw new Error(tr("Отменено пользователем"));
       this.report(
         "reading",
-        i + 1,
+        i,
         files.length,
         `Чтение: ${files[i].basename}`,
       );
@@ -373,6 +373,7 @@ export class DeepAuditEngine {
     }
 
     flush();
+    this.report("reading", files.length, files.length);
     return batches;
   }
 
@@ -383,6 +384,7 @@ export class DeepAuditEngine {
   ): Promise<BatchSummary[]> {
     const results: BatchSummary[] = new Array<BatchSummary>(batches.length);
     let completed = 0;
+    if (batches.length) this.report("mapping", 0, batches.length);
 
     // Семафор для ограничения параллельности
     const queue = [...batches];
@@ -1074,15 +1076,7 @@ export class SingleAuditEngine {
   }
 
   private collectFiles(): TFile[] {
-    return this.app.vault.getMarkdownFiles().filter((f) => {
-      const p = f.path.toLowerCase();
-      return (
-        !p.startsWith(this.app.vault.configDir.toLowerCase() + "/") &&
-        !p.startsWith("templates/") &&
-        !p.startsWith(".ai-backup") &&
-        !f.basename.startsWith(".")
-      );
-    });
+    return collectDeepAuditFiles(this.app);
   }
 }
 
