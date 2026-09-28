@@ -1,0 +1,47 @@
+{
+  "release": "https://github.com/zinverno/veynrel/releases/tag/1.9.0",
+  "publishedAt": "2026-09-24T20:26:50Z",
+  "tag": "1.9.0",
+  "tagObject": "fb356f6818d9d50018a5654a7e976d9dd6e681fe",
+  "peeledCommit": "a10776422379f77bfc35068cec14a6e2a6ad691d",
+  "assets": {
+    "main.js": {
+      "bytes": 765344,
+      "sha256": "ef5a1deff49120e1fa730c5bcf75d6399f773730523d69ac9392ac841e078c32",
+      "githubDigestMatched": true
+    },
+    "manifest.json": {
+      "bytes": 349,
+      "sha256": "b018c1d54c7a94044007f80e25a330f20e0ebdea9597e3bd56e3a8570489ac9f",
+      "githubDigestMatched": true
+    },
+    "styles.css": {
+      "bytes": 66344,
+      "sha256": "16ca3bf971baf678a13302ab66c47c938ba6c8928fe5af96d16e31b92660247e",
+      "githubDigestMatched": true
+    }
+  },
+  "runtime": {
+    "obsidian": "1.12.7",
+    "electron": "39.8.10"
+  },
+  "method": "Actual downloaded 1.9.0 plugin explicitly built/searched the index, scanned Health, refreshed four Recall cards, rated one Good, and saved legacy cache plus non-default settings. Embedding transport was deterministic and synthetic. No personal notes or credentials. Frozen before replacing only release assets.",
+  "frozenFiles": {
+    "Source.md": "07b7e72513e3f6dc294abee3b2eabc58651914fd0d5e5d8331f8f47537805870",
+    "Orphan.md": "554c6bca77ce47dc125baec723d5cea793287e3efe8a2fc3f6a8ed8aeecde5ba",
+    "Empty.md": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "User data/keep.bin": "caea708fce23b2ef77c1ff04b767c6ac388cd5873a1a0117c3a5b50d8925938d",
+    "Archive/\u0411\u0435\u0442\u0430.md": "57658596cee1a8bc32531782e2d699f789464c3582dc663f0bcb37b2507a4e4c",
+    "Projects/Beta.md": "e53820e1c1456c3ccaaea965c8805420c474057b306e7f01bd6180b62431256f",
+    "Projects/Alpha.md": "d32383f5f2585c23f21429f992439c1657e35fcf76b8cb387b207cfab7c29e7e",
+    ".obsidian/hotkeys.json": "30a7c39f3ff9eeaa9e84506c3820258b1b7953dca6e404ec0b452a96a4fefc9c",
+    ".obsidian/community-plugins.json": "6de396053fe5c4ad109b35e4e3351d0a3de674f1a2beed069ac84fa0ea07583d",
+    ".obsidian/plugins/ai-knowledge-hub/note-index.json": "916575549718b5a3bd5af414222cb35fa29e8908f93cf41aace9340ce487525b",
+    ".obsidian/plugins/ai-knowledge-hub/data.json": "a4d3586705ca994d69cbe19f7554f8d664ba7d34667a1bd87fd543206be81e2d",
+    ".obsidian/plugins/ai-knowledge-hub/recall/cards.json": "c7441e96caa482dbc138aa63f164c917238ff20933add0ad5150cb708e55b3d2",
+    ".obsidian/plugins/ai-knowledge-hub/health/scan-runs.json": "9a1d97e4a563619641d36cc7cc8adfcb9b446e5d31b6d73717bc884eae8bb691",
+    ".obsidian/plugins/ai-knowledge-hub/health/findings.json": "92df119a53629d2c78437bdf10a9eb132b07cb3423a85a1e4cab5a9ce030f2ac",
+    ".obsidian/plugins/ai-knowledge-hub/semantic-index/vector-manifest.json": "757457c2c2361e0b68421fcf316266668f73d334bbceed4bab31a34328cb5e60",
+    ".obsidian/plugins/ai-knowledge-hub/semantic-index/vector-index.bin": "a27adc9eb67e5d5660ea19ebd36663b6c91077b82547bc8e1aa1d093dbf84df9"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": 3,
+  "updatedAt": "2026-09-27T23:32:32.403Z",
+  "notes": {
+    "Projects/Alpha.md": {
+      "mtime": 1790551888729,
+      "analyzedAt": 1700000000000,
+      "mainIdea": "Synthetic release fixture",
+      "keyPoints": [
+        "Preserve the existing cache"
+      ],
+      "entities": [],
+      "quality": "draft",
+      "suggestedTags": [
+        "fixture"
+      ],
+      "wordCount": 20,
+      "mode": "single"
+    }
+  },
+  "clusters": {
+    "createdAt": "2026-09-27T23:32:32.400Z",
+    "items": [
+      {
+        "name": "Published fixture",
+        "description": "Saved 1.9.0 cluster",
+        "filePaths": [
+          "Projects/Alpha.md",
+          "Projects/Beta.md"
+        ]
+      }
+    ]
+  }
+}

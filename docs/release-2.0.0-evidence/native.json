@@ -1,0 +1,553 @@
+{
+  "modern": {
+    "upgrade": {
+      "result": {
+        "runtime": {
+          "obsidian": "1.12.7",
+          "electron": "39.8.10"
+        },
+        "assertions": [
+          "candidate version loaded",
+          "passive operation has no Markdown/provider/write work",
+          "preserved setting provider",
+          "preserved setting apiKey",
+          "preserved setting model",
+          "preserved setting baseUrl",
+          "preserved setting temperature",
+          "preserved setting topK",
+          "preserved setting defaultInsertion",
+          "preserved setting newNoteFolder",
+          "preserved setting filenameTemplate",
+          "preserved setting mocFolder",
+          "preserved setting atomsLocation",
+          "preserved setting atomsFolder",
+          "preserved setting showContextMenu",
+          "preserved setting notifyOnCopy",
+          "preserved setting language",
+          "preserved setting deepAudit",
+          "preserved setting semantic",
+          "preserved setting semanticAutoSyncSuspended",
+          "preserved setting companion",
+          "preserved setting health",
+          "all 21 published command IDs retained",
+          "hotkey sentinel byte identical",
+          "enabled state byte identical",
+          "published Health scan receipt retained",
+          "published Findings retained",
+          "published Recall inventory retained",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on health",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on findings",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on discover",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on recall",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on connect",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on tools",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on settings",
+          "compatible published index loads without rebuild",
+          "passive operation has no Markdown/provider/write work",
+          "legacy Deep Audit cache usable"
+        ],
+        "evidence": {
+          "candidate-startup": {
+            "counts": {
+              "adapter.exists": 3,
+              "adapter.list": 1,
+              "adapter.read": 4
+            },
+            "requests": []
+          },
+          "passive-health": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-findings": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-discover": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-recall": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-connect": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-tools": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-settings": {
+            "counts": {},
+            "requests": []
+          },
+          "index-load": {
+            "counts": {
+              "adapter.exists": 8,
+              "adapter.read": 2,
+              "adapter.readBinary": 1,
+              "adapter.remove": 4
+            },
+            "requests": []
+          }
+        }
+      },
+      "exceptions": []
+    },
+    "acceptance": {
+      "result": {
+        "runtime": {
+          "obsidian": "1.12.7",
+          "electron": "39.8.10"
+        },
+        "assertions": [
+          "semantic search uses the compatible published index",
+          "only the explicit query embeds",
+          "Topology renders natively",
+          "Neighborhood loads published embeddings",
+          "Global Map has real core scores",
+          "Global Map reports the exact 500-note limit",
+          "selected-note focus works",
+          "connection candidates present",
+          "aligned Markdown pair present",
+          "connection categories match existing contracts",
+          "session review recorded",
+          "maps and candidate reviews use no provider, Markdown body or storage mutation",
+          "native workspace split opens both notes",
+          "candidate reviews are not persisted across workspace close",
+          "Finding dismiss works",
+          "Finding reopen works",
+          "explicit local Health scan works",
+          "local Health needs no provider",
+          "four native Recall ratings",
+          "Recall review schedules without Markdown discovery or provider",
+          "saved Connect configuration retained",
+          "native Setting headings render",
+          "native provider controls render"
+        ],
+        "evidence": {
+          "explicit-search": {
+            "counts": {
+              "requestUrl": 1
+            },
+            "requests": [
+              {
+                "kind": "embedding",
+                "model": "release-embedding",
+                "inputCount": 1,
+                "chars": 76,
+                "credentialsCorrect": true
+              }
+            ]
+          },
+          "maps-and-review": {
+            "counts": {
+              "getMarkdownFiles": 2
+            },
+            "requests": []
+          },
+          "explicit-local-scan": {
+            "counts": {
+              "getMarkdownFiles": 2,
+              "read": 6,
+              "adapter.read": 6,
+              "adapter.exists": 8,
+              "adapter.write": 2
+            },
+            "requests": []
+          },
+          "explicit-review": {
+            "counts": {
+              "adapter.exists": 4,
+              "host.write": 1,
+              "adapter.write": 1
+            },
+            "requests": []
+          }
+        },
+        "counts": {
+          "indexed": 5,
+          "mapped": 5,
+          "neighbors": 4,
+          "candidates": 9,
+          "aligned": 1,
+          "explicitOnly": 0
+        },
+        "hostWrites": [
+          ".obsidian/workspace.json"
+        ]
+      },
+      "exceptions": []
+    },
+    "installedAssetsMatchFinalBuild": true
+  },
+  "minimum": {
+    "upgrade": {
+      "result": {
+        "runtime": {
+          "obsidian": "1.8.7",
+          "electron": "33.3.2"
+        },
+        "assertions": [
+          "candidate version loaded",
+          "passive operation has no Markdown/provider/write work",
+          "preserved setting provider",
+          "preserved setting apiKey",
+          "preserved setting model",
+          "preserved setting baseUrl",
+          "preserved setting temperature",
+          "preserved setting topK",
+          "preserved setting defaultInsertion",
+          "preserved setting newNoteFolder",
+          "preserved setting filenameTemplate",
+          "preserved setting mocFolder",
+          "preserved setting atomsLocation",
+          "preserved setting atomsFolder",
+          "preserved setting showContextMenu",
+          "preserved setting notifyOnCopy",
+          "preserved setting language",
+          "preserved setting deepAudit",
+          "preserved setting semantic",
+          "preserved setting semanticAutoSyncSuspended",
+          "preserved setting companion",
+          "preserved setting health",
+          "all 21 published command IDs retained",
+          "hotkey sentinel byte identical",
+          "enabled state byte identical",
+          "published Health scan receipt retained",
+          "published Findings retained",
+          "published Recall inventory retained",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on health",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on findings",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on discover",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on recall",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on connect",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on tools",
+          "passive operation has no Markdown/provider/write work",
+          "seven primary tabs on settings",
+          "compatible published index loads without rebuild",
+          "passive operation has no Markdown/provider/write work",
+          "legacy Deep Audit cache usable"
+        ],
+        "evidence": {
+          "candidate-startup": {
+            "counts": {
+              "adapter.exists": 3,
+              "adapter.list": 1,
+              "adapter.read": 4
+            },
+            "requests": []
+          },
+          "passive-health": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-findings": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-discover": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-recall": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-connect": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-tools": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-settings": {
+            "counts": {},
+            "requests": []
+          },
+          "index-load": {
+            "counts": {
+              "adapter.exists": 8,
+              "adapter.read": 2,
+              "adapter.readBinary": 1,
+              "adapter.remove": 4
+            },
+            "requests": []
+          }
+        }
+      },
+      "exceptions": []
+    },
+    "acceptance": {
+      "result": {
+        "runtime": {
+          "obsidian": "1.8.7",
+          "electron": "33.3.2"
+        },
+        "assertions": [
+          "semantic search uses the compatible published index",
+          "only the explicit query embeds",
+          "Topology renders natively",
+          "Neighborhood loads published embeddings",
+          "Global Map has real core scores",
+          "Global Map reports the exact 500-note limit",
+          "selected-note focus works",
+          "connection candidates present",
+          "aligned Markdown pair present",
+          "connection categories match existing contracts",
+          "session review recorded",
+          "maps and candidate reviews use no provider, Markdown body or storage mutation",
+          "native workspace split opens both notes",
+          "candidate reviews are not persisted across workspace close",
+          "Finding dismiss works",
+          "Finding reopen works",
+          "explicit local Health scan works",
+          "local Health needs no provider",
+          "four native Recall ratings",
+          "Recall review schedules without Markdown discovery or provider",
+          "saved Connect configuration retained",
+          "native Setting headings render",
+          "native provider controls render"
+        ],
+        "evidence": {
+          "explicit-search": {
+            "counts": {
+              "requestUrl": 1
+            },
+            "requests": [
+              {
+                "kind": "embedding",
+                "model": "release-embedding",
+                "inputCount": 1,
+                "chars": 76,
+                "credentialsCorrect": true
+              }
+            ]
+          },
+          "maps-and-review": {
+            "counts": {
+              "getMarkdownFiles": 2
+            },
+            "requests": []
+          },
+          "explicit-local-scan": {
+            "counts": {
+              "getMarkdownFiles": 2,
+              "read": 6,
+              "adapter.read": 6,
+              "adapter.exists": 8,
+              "adapter.write": 2
+            },
+            "requests": []
+          },
+          "explicit-review": {
+            "counts": {
+              "adapter.exists": 4,
+              "host.write": 1,
+              "adapter.write": 1
+            },
+            "requests": []
+          }
+        },
+        "counts": {
+          "indexed": 5,
+          "mapped": 5,
+          "neighbors": 4,
+          "candidates": 9,
+          "aligned": 1,
+          "explicitOnly": 0
+        },
+        "hostWrites": [
+          ".obsidian/workspace.json"
+        ]
+      },
+      "exceptions": []
+    },
+    "installedAssetsMatchFinalBuild": true
+  },
+  "android": {
+    "acceptance": {
+      "result": {
+        "runtime": {
+          "obsidian": "1.13.8",
+          "userAgent": "Mozilla/5.0 (Linux; Android 15; Android SDK built for x86_64 Build/AE3A.240806.019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/124.0.6367.219 Mobile Safari/537.36",
+          "width": 320,
+          "height": 844
+        },
+        "assertions": [
+          "Android final candidate loaded",
+          "Android settings bytes preserved",
+          "Android Recall schedules preserved",
+          "Android seven tabs: health",
+          "Android passive route: health",
+          "Android seven tabs: findings",
+          "Android passive route: findings",
+          "Android seven tabs: discover",
+          "Android passive route: discover",
+          "Android seven tabs: recall",
+          "Android passive route: recall",
+          "Android seven tabs: connect",
+          "Android passive route: connect",
+          "Android seven tabs: tools",
+          "Android passive route: tools",
+          "Android seven tabs: settings",
+          "Android passive route: settings",
+          "Android explicit Health completes",
+          "Android Health local",
+          "Android due queue available",
+          "Android four Recall ratings",
+          "Android Recall no provider or Markdown mutation",
+          "Android Discover presentation",
+          "Android note unchanged: Narrow review.md",
+          "Android note unchanged: Recall fixture.md"
+        ],
+        "evidence": {
+          "passive-health": {
+            "counts": {
+              "adapter.write": 1
+            },
+            "requests": []
+          },
+          "passive-findings": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-discover": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-recall": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-connect": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-tools": {
+            "counts": {},
+            "requests": []
+          },
+          "passive-settings": {
+            "counts": {},
+            "requests": []
+          },
+          "local-scan": {
+            "counts": {
+              "getMarkdownFiles": 2,
+              "read": 2,
+              "adapter.read": 2,
+              "adapter.exists": 8,
+              "adapter.write": 2
+            },
+            "requests": []
+          },
+          "recall": {
+            "counts": {
+              "getMarkdownFiles": 2,
+              "read": 2,
+              "adapter.read": 2,
+              "adapter.exists": 8,
+              "adapter.write": 2
+            },
+            "requests": []
+          }
+        },
+        "limitations": [
+          "Android emulator only, no physical device or iOS",
+          "Semantic graphs not exercised on Android in this release smoke"
+        ]
+      },
+      "exceptions": []
+    },
+    "passiveScopedRecheck": {
+      "result": {
+        "evidence": {
+          "health": {
+            "counts": {},
+            "requests": []
+          },
+          "findings": {
+            "counts": {},
+            "requests": []
+          },
+          "discover": {
+            "counts": {},
+            "requests": []
+          },
+          "recall": {
+            "counts": {},
+            "requests": []
+          },
+          "connect": {
+            "counts": {},
+            "requests": []
+          },
+          "tools": {
+            "counts": {},
+            "requests": []
+          },
+          "settings": {
+            "counts": {},
+            "requests": []
+          }
+        },
+        "hostWrites": []
+      },
+      "exceptions": []
+    },
+    "installedAssetsMatchFinalBuild": true
+  },
+  "passiveFilePreservation": {
+    "files": {
+      "Source.md": "07b7e72513e3f6dc294abee3b2eabc58651914fd0d5e5d8331f8f47537805870",
+      "Orphan.md": "554c6bca77ce47dc125baec723d5cea793287e3efe8a2fc3f6a8ed8aeecde5ba",
+      "Empty.md": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "User data/keep.bin": "caea708fce23b2ef77c1ff04b767c6ac388cd5873a1a0117c3a5b50d8925938d",
+      "Archive/\u0411\u0435\u0442\u0430.md": "57658596cee1a8bc32531782e2d699f789464c3582dc663f0bcb37b2507a4e4c",
+      "Projects/Beta.md": "e53820e1c1456c3ccaaea965c8805420c474057b306e7f01bd6180b62431256f",
+      "Projects/Alpha.md": "d32383f5f2585c23f21429f992439c1657e35fcf76b8cb387b207cfab7c29e7e",
+      ".obsidian/hotkeys.json": "30a7c39f3ff9eeaa9e84506c3820258b1b7953dca6e404ec0b452a96a4fefc9c",
+      ".obsidian/community-plugins.json": "6de396053fe5c4ad109b35e4e3351d0a3de674f1a2beed069ac84fa0ea07583d",
+      ".obsidian/plugins/ai-knowledge-hub/note-index.json": "916575549718b5a3bd5af414222cb35fa29e8908f93cf41aace9340ce487525b",
+      ".obsidian/plugins/ai-knowledge-hub/data.json": "a4d3586705ca994d69cbe19f7554f8d664ba7d34667a1bd87fd543206be81e2d",
+      ".obsidian/plugins/ai-knowledge-hub/recall/cards.json": "c7441e96caa482dbc138aa63f164c917238ff20933add0ad5150cb708e55b3d2",
+      ".obsidian/plugins/ai-knowledge-hub/health/scan-runs.json": "9a1d97e4a563619641d36cc7cc8adfcb9b446e5d31b6d73717bc884eae8bb691",
+      ".obsidian/plugins/ai-knowledge-hub/health/findings.json": "92df119a53629d2c78437bdf10a9eb132b07cb3423a85a1e4cab5a9ce030f2ac",
+      ".obsidian/plugins/ai-knowledge-hub/semantic-index/vector-manifest.json": "757457c2c2361e0b68421fcf316266668f73d334bbceed4bab31a34328cb5e60",
+      ".obsidian/plugins/ai-knowledge-hub/semantic-index/vector-index.bin": "a27adc9eb67e5d5660ea19ebd36663b6c91077b82547bc8e1aa1d093dbf84df9"
+    },
+    "results": {
+      "modern": {
+        "verifiedFiles": 16,
+        "changed": []
+      },
+      "minimum": {
+        "verifiedFiles": 16,
+        "changed": []
+      }
+    }
+  },
+  "probeScope": {
+    "provider": "Injected Obsidian requestUrl transport with deterministic synthetic embeddings; no live paid provider.",
+    "writes": "Desktop/scoped Android checks distinguish host workspace saves from plugin storage. Initial Android broad adapter counter included an unclassified write; scoped recheck is separate.",
+    "indexLoad": "Existing descriptor/binary reads and best-effort temporary-file cleanup are allowed; stored index bytes and all 16 frozen files remain unchanged.",
+    "nativeMapFixture": "5 eligible notes. Actual 500/501 cap behavior is covered by automated tests, not a 500-note native fixture."
+  }
+}

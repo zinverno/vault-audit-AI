@@ -1,0 +1,87 @@
+{
+  "cards": {
+    "recall-21ce5094bc6b57c4": {
+      "answer": "To preserve context",
+      "fingerprint": "v1:[\"Projects/Alpha.md\",\"Why use notes\",\"To preserve context\"]",
+      "firstSeenAt": 1790551952328,
+      "id": "recall-21ce5094bc6b57c4",
+      "lastSeenAt": 1790551952328,
+      "path": "Projects/Alpha.md",
+      "question": "Why use notes",
+      "schedule": {
+        "algorithm": "fsrs-6",
+        "difficulty": 2.118103970459015,
+        "dueAt": 1790552552366,
+        "lapseCount": 0,
+        "lastRating": "good",
+        "lastReviewAt": 1790551952366,
+        "phase": "learning",
+        "policyVersion": 1,
+        "reviewCount": 1,
+        "stability": 2.3065,
+        "step": 1
+      },
+      "state": "active"
+    },
+    "recall-2586f3023e25d708": {
+      "answer": "Repeated retrieval",
+      "fingerprint": "v1:[\"Projects/Alpha.md\",\"What supports learning\",\"Repeated retrieval\"]",
+      "firstSeenAt": 1790551952328,
+      "id": "recall-2586f3023e25d708",
+      "lastSeenAt": 1790551952328,
+      "path": "Projects/Alpha.md",
+      "question": "What supports learning",
+      "schedule": {
+        "algorithm": "fsrs-6",
+        "dueAt": 1790551952328,
+        "lapseCount": 0,
+        "phase": "learning",
+        "policyVersion": 1,
+        "reviewCount": 0,
+        "step": 0
+      },
+      "state": "active"
+    },
+    "recall-4261b3bf52bb9e29": {
+      "answer": "Ответ",
+      "fingerprint": "v1:[\"Archive/Бета.md\",\"Вопрос\",\"Ответ\"]",
+      "firstSeenAt": 1790551952328,
+      "id": "recall-4261b3bf52bb9e29",
+      "lastSeenAt": 1790551952328,
+      "path": "Archive/Бета.md",
+      "question": "Вопрос",
+      "schedule": {
+        "algorithm": "fsrs-6",
+        "dueAt": 1790551952328,
+        "lapseCount": 0,
+        "phase": "learning",
+        "policyVersion": 1,
+        "reviewCount": 0,
+        "step": 0
+      },
+      "state": "active"
+    },
+    "recall-4e26de61effd3e46": {
+      "answer": "Water and light",
+      "fingerprint": "v1:[\"Projects/Beta.md\",\"What do plants need\",\"Water and light\"]",
+      "firstSeenAt": 1790551952328,
+      "id": "recall-4e26de61effd3e46",
+      "lastSeenAt": 1790551952328,
+      "path": "Projects/Beta.md",
+      "question": "What do plants need",
+      "schedule": {
+        "algorithm": "fsrs-6",
+        "dueAt": 1790551952328,
+        "lapseCount": 0,
+        "phase": "learning",
+        "policyVersion": 1,
+        "reviewCount": 0,
+        "step": 0
+      },
+      "state": "active"
+    }
+  },
+  "inventoryCompletedAt": 1790551952328,
+  "updatedAt": 1790551952366,
+  "version": 3
+}
