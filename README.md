@@ -3,11 +3,11 @@
 ![Veynrel](assets/brand/veynrel-readme-cover.png)
 
 <p align="center">
-  <strong>Your notes. Deeper connections.</strong>
+  <strong>See what needs attention in your Obsidian vault. Discover the connections you didn't explicitly create.</strong>
 </p>
 
 <p align="center">
-  A knowledge-health and semantic exploration workspace for Obsidian.
+  Knowledge health, semantic exploration and native spaced repetition for Obsidian.
 </p>
 
 <p align="center">
@@ -16,7 +16,56 @@
   · <a href="LICENSE">MIT License</a>
 </p>
 
-See what needs attention, understand your vault's structure, discover relationships you have not explicitly linked, and remember what you learn. Start with local Health and native spaced repetition; enable AI and external integrations when you need them.
+<p align="center">
+  <img
+    src="assets/showcase/2.0.1/veynrel-demo.gif"
+    width="960"
+    alt="Veynrel Health and semantic exploration workflow">
+</p>
+
+As your knowledge base grows, Veynrel helps you understand its state beyond folders and search results. Three primary concepts guide the workspace:
+
+- **Health** surfaces broken links, structural problems and disconnected areas as reviewable findings.
+- **Discover** offers semantic search, semantic neighborhoods and the Global Semantic Map.
+- **Recall** provides native FSRS-6 spaced repetition.
+
+Local Health and Recall work without an AI provider. Semantic and language-model features are optional and only run when explicitly configured and used.
+
+## A look inside
+
+Veynrel 2.0.1 in Obsidian. Select an image to inspect it at full size.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="assets/showcase/2.0.1/health-dashboard.png"><img src="assets/showcase/2.0.1/health-dashboard.png" width="600" alt="Health dashboard with Vault Pulse, a broken-link recommendation and four areas of attention"></a>
+      <br><strong>Health</strong> — see what needs attention and why.
+    </td>
+    <td width="50%" valign="top">
+      <a href="assets/showcase/2.0.1/semantic-map.png"><img src="assets/showcase/2.0.1/semantic-map.png" width="600" alt="Global Semantic Map with the vault semantic core, a selected note and its nearest semantic neighbors"></a>
+      <br><strong>Semantic Map</strong> — explore the structure of your indexed knowledge.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="assets/showcase/2.0.1/knowledge-progress.png"><img src="assets/showcase/2.0.1/knowledge-progress.png" width="600" alt="Knowledge Health language-model analysis showing the current stage, processed batch count and elapsed time"></a>
+      <br><strong>Knowledge Health</strong> — follow real analysis stages and progress on larger vaults.
+    </td>
+    <td width="50%" valign="top">
+      <a href="assets/showcase/2.0.1/audit-modes.png"><img src="assets/showcase/2.0.1/audit-modes.png" width="600" alt="Vault audit selector with changed-note, full detailed and overview modes, note counts and cache behavior"></a>
+      <br><strong>Vault Audit</strong> — choose between changed-note, full detailed and overview workflows.
+    </td>
+  </tr>
+</table>
+
+## Quick start
+
+1. [Install Veynrel](#installation), then use its ribbon icon or **Open Veynrel Health** command.
+2. Choose a profile and **run local Health**. Inspect the recommendation and Findings; no AI provider is required.
+3. Optionally enable **Semantic Intelligence**: choose an embedding provider/model, test the connection and explicitly build the first index.
+4. Open **Discover** to explore Semantic Neighborhood, Global Semantic Map and Connection Opportunities.
+5. If you want spaced repetition, add flashcards and choose **Find flashcards** in Recall.
+6. Configure **Deep Intelligence** for Knowledge Health or advanced AI workflows, and **Connect** for Companion, only if needed.
 
 ## One workspace
 
@@ -33,42 +82,6 @@ Health | Findings | Discover | Recall | Connect | Tools | Settings
 | **Connect** | Configure Companion, synchronize its mirror and review external proposals. |
 | **Tools** | Launch advanced audits, Ask your Vault, batch processing and MOC generation. |
 | **Settings** | Check capability state and configure the services you use. |
-
-## A look inside
-
-Synthetic vault data, shown in native dark and light themes. Select an image to inspect it at full size.
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/final-product-ui-ux-evidence/after/en-health-1440-dark.png"><img src="docs/final-product-ui-ux-evidence/after/en-health-1440-dark.png" width="600" alt="Health dashboard with Vault Pulse, a recommendation and four dimensions"></a>
-      <br><strong>Health</strong> — attention, evidence and next steps.
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/final-product-ui-ux-evidence/after/en-semantic-map-1440-light.png"><img src="docs/final-product-ui-ux-evidence/after/en-semantic-map-1440-light.png" width="600" alt="Global Semantic Map with the vault semantic core and a selected note inspector"></a>
-      <br><strong>Global Semantic Map</strong> — explore your indexed knowledge.
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/final-product-ui-ux-evidence/after/en-connection-opportunities-1440-light.png"><img src="docs/final-product-ui-ux-evidence/after/en-connection-opportunities-1440-light.png" width="600" alt="Connection Opportunities with category counts, candidate pairs and semantic evidence"></a>
-      <br><strong>Connection Opportunities</strong> — inspect relationships alongside your links.
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/final-product-ui-ux-evidence/after/en-recall-review.png"><img src="docs/final-product-ui-ux-evidence/after/en-recall-review.png" width="600" alt="Native Recall review showing an answer and Again, Hard, Good and Easy ratings"></a>
-      <br><strong>Recall</strong> — a focused review, inside Obsidian.
-    </td>
-  </tr>
-</table>
-
-## Quick start
-
-1. [Install Veynrel](#installation), then use its ribbon icon or **Open Veynrel Health** command.
-2. Choose a profile and **run local Health**. Inspect the recommendation and Findings; no AI provider is required.
-3. Optionally enable **Semantic Intelligence**: choose an embedding provider/model, test the connection and explicitly build the first index.
-4. Open **Discover** to explore Semantic Neighborhood, Global Semantic Map and Connection Opportunities.
-5. If you want spaced repetition, add flashcards and choose **Find flashcards** in Recall.
-6. Configure **Deep Intelligence** for Knowledge Health or advanced AI workflows, and **Connect** for Companion, only if needed.
 
 ## Health and Findings
 
