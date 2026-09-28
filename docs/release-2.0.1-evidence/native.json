@@ -1,0 +1,406 @@
+{
+  "checks": [
+    "Plugin loads as 2.0.1 with 150 synthetic notes",
+    "Health dashboard renders",
+    "Status remains transparent, 1px, out of layout and pointer-inert",
+    "Native accessibility tree exposes the polite atomic status region",
+    "Default Pulse cadence, page entry and card transitions remain active",
+    "All 15 concrete workspace/settings motion probes are disabled, including all Pulse states",
+    "Findings navigation renders",
+    "Discover loads the existing 150-node Global Semantic Map",
+    "Visible zoom controls reach 24x",
+    "Native drag pans the map",
+    "Native wheel zoom works",
+    "Fit updates the viewport",
+    "Reset is exact; map scores/snapshot unchanged; no map recomputation",
+    "Connections retain normal spacing and the <=300px two-column layout",
+    "en Health localization loads",
+    "en native Settings loads",
+    "ru Health localization loads",
+    "ru native Settings loads",
+    "EN/RU audit cards render at normal/narrow widths with actual counts",
+    "Actual Health remains rendered with reduced motion",
+    "Map remains interactive with reduced motion",
+    "Proposal footer and diff remain reachable at normal/short and narrow heights",
+    "No captured startup/reload/runtime exceptions or console errors"
+  ],
+  "matrix": [
+    {
+      "preference": "no-preference",
+      "styles": [
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "veynrel-vault-pulse-sweep",
+          "duration": "7s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "veynrel-vault-pulse-sweep",
+          "duration": "7s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "veynrel-vault-pulse-sweep",
+          "duration": "7s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "veynrel-vault-pulse-sweep",
+          "duration": "4s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-health-card",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.16s"
+        },
+        {
+          "selector": "veynrel-health-page-enter",
+          "animation": "veynrel-page-enter",
+          "duration": "0.16s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-topology-content",
+          "animation": "veynrel-content-enter",
+          "duration": "0.16s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-topology-inspector-content",
+          "animation": "veynrel-content-enter",
+          "duration": "0.12s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-findings-navigation",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.12s, 0.12s, 0.12s"
+        },
+        {
+          "selector": "veynrel-topology-detail",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.12s, 0.12s, 0.12s"
+        },
+        {
+          "selector": "veynrel-neighborhood-list",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.12s"
+        },
+        {
+          "selector": "ai-hub-provider-card",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.12s, 0.12s"
+        },
+        {
+          "selector": "ai-hub-model-chip",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.12s, 0.12s"
+        },
+        {
+          "selector": "ai-hub-test-btn",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.12s, 0.12s"
+        }
+      ]
+    },
+    {
+      "preference": "reduce",
+      "styles": [
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-vault-pulse-accent",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-health-card",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-health-page-enter",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-topology-content",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-topology-inspector-content",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-findings-navigation",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-topology-detail",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "veynrel-neighborhood-list",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "ai-hub-provider-card",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "ai-hub-model-chip",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        },
+        {
+          "selector": "ai-hub-test-btn",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0s"
+        }
+      ]
+    },
+    {
+      "connections": {
+        "width": 1280,
+        "container": 1168,
+        "columns": "357.328px",
+        "row": "4px",
+        "column": "4px",
+        "overflow": 0
+      }
+    },
+    {
+      "connections": {
+        "width": 320,
+        "container": 216,
+        "columns": "50.4688px 137.531px",
+        "row": "4px",
+        "column": "12px",
+        "overflow": 0
+      }
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "audit": {
+        "overflow": 0,
+        "text": "Choose an audit mode\n\nEach mode is optimized for its task\n\nIndex state\nTotal notes\n150\nIndexed (up to date)\n0\nChanged\n0\nNew (not indexed)\n150\nLast run\nnever\n\nFirst run: both detailed modes process all notes. Later, the changes audit skips current results.\n\nNotes to analyze: 150\nDetailed audit of changes\n\nOnly new and changed notes\n\nKeeps current results in the index\nDetailed per-note results in the index; no report\nFor routine updates. One note per request, up to 15,000 characters\nNotes to analyze: 150\nFull detailed audit\n\nAll notes, analyzed again\n\nBypasses cache freshness; replaces results as it runs\nThe same detailed per-note results in the index; no report\nFor a complete reassessment. One note per request, up to 15,000 characters\nNotes to analyze: 150\nOverview audit + report\n\nBatches and clusters of new and changed notes\n\nSkips current notes; they are excluded from the new overview\nUpdates the index; creates a Markdown report and Canvas for processed notes\nFor themes and cross-note findings. Up to 4,000 characters per note",
+        "counts": [
+          150,
+          150,
+          150
+        ]
+      }
+    },
+    {
+      "language": "en",
+      "width": 390,
+      "audit": {
+        "overflow": 0,
+        "text": "Choose an audit mode\n\nEach mode is optimized for its task\n\nIndex state\nTotal notes\n150\nIndexed (up to date)\n0\nChanged\n0\nNew (not indexed)\n150\nLast run\nnever\n\nFirst run: both detailed modes process all notes. Later, the changes audit skips current results.\n\nNotes to analyze: 150\nDetailed audit of changes\n\nOnly new and changed notes\n\nKeeps current results in the index\nDetailed per-note results in the index; no report\nFor routine updates. One note per request, up to 15,000 characters\nNotes to analyze: 150\nFull detailed audit\n\nAll notes, analyzed again\n\nBypasses cache freshness; replaces results as it runs\nThe same detailed per-note results in the index; no report\nFor a complete reassessment. One note per request, up to 15,000 characters\nNotes to analyze: 150\nOverview audit + report\n\nBatches and clusters of new and changed notes\n\nSkips current notes; they are excluded from the new overview\nUpdates the index; creates a Markdown report and Canvas for processed notes\nFor themes and cross-note findings. Up to 4,000 characters per note",
+        "counts": [
+          150,
+          150,
+          150
+        ]
+      }
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "audit": {
+        "overflow": 0,
+        "text": "Выберите режим аудита\n\nКаждый режим оптимизирован под свою задачу\n\nСостояние индекса\nВсего заметок\n150\nВ индексе (актуальные)\n0\nИзменились\n0\nНовые (не в индексе)\n150\nПоследний запуск\nникогда\n\nПервый запуск: оба детальных режима обработают все заметки. В дальнейшем аудит изменений пропускает актуальные результаты.\n\nЗаметок к анализу: 150\nДетальный аудит изменений\n\nТолько новые и изменённые заметки\n\nСохраняет актуальные результаты в индексе\nПодробный анализ каждой заметки в индексе; без отчёта\nДля повседневного обновления. Одна заметка за запрос, до 15 000 символов\nЗаметок к анализу: 150\nПолный детальный аудит\n\nВсе заметки заново\n\nИгнорирует актуальность кэша; заменяет результаты по ходу\nТот же подробный анализ каждой заметки в индексе; без отчёта\nДля полного пересмотра. Одна заметка за запрос, до 15 000 символов\nЗаметок к анализу: 150\nОбзорный аудит + отчёт\n\nБатчи и кластеры новых и изменённых заметок\n\nПропускает актуальные заметки; они не входят в новый обзор\nОбновляет индекс; создаёт Markdown-отчёт и Canvas по обработанным заметкам\nДля обзора тем и общих выводов. До 4 000 символов на заметку",
+        "counts": [
+          150,
+          150,
+          150
+        ]
+      }
+    },
+    {
+      "language": "ru",
+      "width": 390,
+      "audit": {
+        "overflow": 0,
+        "text": "Выберите режим аудита\n\nКаждый режим оптимизирован под свою задачу\n\nСостояние индекса\nВсего заметок\n150\nВ индексе (актуальные)\n0\nИзменились\n0\nНовые (не в индексе)\n150\nПоследний запуск\nникогда\n\nПервый запуск: оба детальных режима обработают все заметки. В дальнейшем аудит изменений пропускает актуальные результаты.\n\nЗаметок к анализу: 150\nДетальный аудит изменений\n\nТолько новые и изменённые заметки\n\nСохраняет актуальные результаты в индексе\nПодробный анализ каждой заметки в индексе; без отчёта\nДля повседневного обновления. Одна заметка за запрос, до 15 000 символов\nЗаметок к анализу: 150\nПолный детальный аудит\n\nВсе заметки заново\n\nИгнорирует актуальность кэша; заменяет результаты по ходу\nТот же подробный анализ каждой заметки в индексе; без отчёта\nДля полного пересмотра. Одна заметка за запрос, до 15 000 символов\nЗаметок к анализу: 150\nОбзорный аудит + отчёт\n\nБатчи и кластеры новых и изменённых заметок\n\nПропускает актуальные заметки; они не входят в новый обзор\nОбновляет индекс; создаёт Markdown-отчёт и Canvas по обработанным заметкам\nДля обзора тем и общих выводов. До 4 000 символов на заметку",
+        "counts": [
+          150,
+          150,
+          150
+        ]
+      }
+    },
+    {
+      "proposal": {
+        "width": 1280,
+        "viewportHeight": 900,
+        "maxHeight": "868px",
+        "height": 757.1875,
+        "top": 71.40625,
+        "bottom": 828.59375,
+        "footer": 811.59375,
+        "overflow": 0,
+        "scrollTop": 3747,
+        "scrollHeight": 4143,
+        "clientHeight": 396,
+        "diffVisible": true
+      }
+    },
+    {
+      "proposal": {
+        "width": 1280,
+        "viewportHeight": 400,
+        "maxHeight": "368px",
+        "height": 368,
+        "top": 16,
+        "bottom": 384,
+        "footer": 367,
+        "overflow": 0,
+        "scrollTop": 3967,
+        "scrollHeight": 4143,
+        "clientHeight": 176,
+        "diffVisible": true
+      }
+    },
+    {
+      "proposal": {
+        "width": 390,
+        "viewportHeight": 700,
+        "maxHeight": "684px",
+        "height": 684,
+        "top": 8,
+        "bottom": 692,
+        "footer": 675,
+        "overflow": 0,
+        "scrollTop": 3835,
+        "scrollHeight": 4143,
+        "clientHeight": 308,
+        "diffVisible": true
+      }
+    },
+    {
+      "proposal": {
+        "width": 390,
+        "viewportHeight": 400,
+        "maxHeight": "384px",
+        "height": 384,
+        "top": 8,
+        "bottom": 392,
+        "footer": 375,
+        "overflow": 0,
+        "scrollTop": 3967,
+        "scrollHeight": 4143,
+        "clientHeight": 176,
+        "diffVisible": true
+      }
+    }
+  ],
+  "errors": [],
+  "assets": {
+    "main.js": {
+      "bytes": 945526,
+      "sha256": "0eb1a12e8415ced10be27342851407c8dd7e41cd513735f6e3728ae2715f17ea"
+    },
+    "manifest.json": {
+      "bytes": 355,
+      "sha256": "3adfa924ce9cbfa749e836c3a05b60ac4f59d3e32b326bdd653c9dea5f7af2cb"
+    },
+    "styles.css": {
+      "bytes": 109810,
+      "sha256": "090874f18246ccb5f79403b91b85b5489f43a70ed0b18f3e420bde2b9f0c911d"
+    }
+  },
+  "environment": {
+    "obsidian": "1.12.7",
+    "electron": "39.8.10",
+    "platform": "linux",
+    "version": "2.0.1",
+    "notes": 150
+  },
+  "statusAX": [
+    {
+      "ignored": false,
+      "role": "status",
+      "properties": [
+        {
+          "name": "live",
+          "value": {
+            "type": "token",
+            "value": "polite"
+          }
+        },
+        {
+          "name": "atomic",
+          "value": {
+            "type": "boolean",
+            "value": true
+          }
+        },
+        {
+          "name": "relevant",
+          "value": {
+            "type": "tokenList",
+            "value": "additions text"
+          }
+        }
+      ]
+    }
+  ]
+}
