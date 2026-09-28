@@ -1580,7 +1580,6 @@
     width: min(860px, calc(100vw - 32px));
     max-width: calc(100vw - 32px);
     max-height: calc(100vh - 32px);
-    max-height: calc(100dvh - 32px);
     min-width: 0;
     min-height: 0;
     display: flex;
@@ -1698,7 +1697,7 @@
 .ai-proposal-empty h3 { margin: 0 0 12px; font-size: var(--font-ui-medium); }
 .ai-proposal-empty p { margin: 0; color: var(--text-muted); line-height: 1.5; }
 @media (max-width: 520px) {
-    .modal.ai-proposal-shell { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); padding: 16px; }
+    .modal.ai-proposal-shell { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); padding: 16px; }
     .ai-proposal-card { padding: 14px; }
     .ai-proposal-created { flex-basis: 100%; margin-left: 0; }
     .ai-proposal-footer { align-items: stretch; }
@@ -1706,6 +1705,12 @@
     .ai-proposal-navigation button, .ai-proposal-decisions button { flex: 1; min-width: 0; }
     .ai-proposal-line-numbers { flex-basis: 13ch; padding-inline: 4px; }
     .ai-proposal-shell .ai-proposal-line-text { padding-inline: 6px; }
+}
+@supports (height: 100dvh) {
+    .modal.ai-proposal-shell { max-height: calc(100dvh - 32px); }
+    @media (max-width: 520px) {
+        .modal.ai-proposal-shell { max-height: calc(100dvh - 16px); }
+    }
 }
 .ai-hub-custom-setting {
   display: block;
@@ -2218,7 +2223,8 @@
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
   white-space: nowrap;
 }
 @container (max-width: 850px) {
@@ -2246,9 +2252,10 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .veynrel-health-page-enter,
-  .veynrel-topology-detail,
-  .veynrel-topology-detail *,
-  .veynrel-findings-navigation button { animation: none; transition: none; }
+  .veynrel-topology-content,
+  .veynrel-topology-inspector-content { animation: none; }
+  .veynrel-findings-navigation button,
+  .veynrel-topology-detail :is(button, input, summary) { transition: none; }
 }
 
 /* Discover: a single semantic center. Fixed radial distance encodes cosine. */
@@ -2307,7 +2314,7 @@
   .veynrel-neighborhood-list button { transition: border-color 120ms ease-out; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .veynrel-neighborhood *, .veynrel-neighborhood-card * { animation: none !important; transition: none !important; }
+  .veynrel-neighborhood-list button { transition: none; }
 }
 
 .veynrel-semantic-progress progress {
@@ -2378,9 +2385,6 @@
 @media (max-width: 600px) {
   .veynrel-semantic-exploration { grid-template-columns: minmax(0, 1fr); }
   .veynrel-neighborhood-node[data-label-rank="3"]:not([data-selected="true"]):not(:hover) .veynrel-neighborhood-label { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .veynrel-global-map * { animation: none !important; transition: none !important; }
 }
 
 /* Read-only connection comparison; counts and text carry all relationship meaning. */
@@ -2487,12 +2491,14 @@
   .veynrel-semantic-exploration, .veynrel-connect-overview { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .veynrel-workspace *, .ai-hub-provider-card, .ai-hub-model-chip { animation: none !important; transition: none !important; }
+  .ai-hub-provider-card,
+  .ai-hub-model-chip,
+  .ai-hub-test-btn { transition: none; }
 }
 
 @container (max-width: 300px) {
   .veynrel-connections-overview { grid-template-columns: minmax(0, 1fr); gap: var(--size-4-1); }
-  .veynrel-health-view .veynrel-connections-count { grid-template-columns: max-content minmax(0, 1fr); align-items: baseline; column-gap: var(--size-4-3); }
+  .veynrel-health-view .veynrel-connections-count { grid-template-columns: max-content minmax(0, 1fr); align-items: baseline; gap: var(--size-4-1) var(--size-4-3); }
 }
 
 .veynrel-connections-count strong { white-space: nowrap; }
