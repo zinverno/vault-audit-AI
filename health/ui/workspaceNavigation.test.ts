@@ -16,7 +16,7 @@ describe("workspace presentation contract", () => {
     expect(css).toContain("max-width: 80ch;");
     expect(css).not.toMatch(/max-width: (?:880|1120)px/u);
     const live = rule(".veynrel-health-view .veynrel-health-status");
-    for (const declaration of ["position: absolute;", "width: 1px;", "height: 1px;", "clip-path: inset(50%);", "overflow: hidden;"])
+    for (const declaration of ["position: absolute;", "width: 1px;", "height: 1px;", "opacity: 0;", "pointer-events: none;", "overflow: hidden;"])
       expect(live).toContain(declaration);
     expect(live).not.toMatch(/display:\s*none|visibility:\s*hidden/u);
     expect(css).not.toContain(".veynrel-health-status:empty");
@@ -47,8 +47,12 @@ describe("workspace presentation contract", () => {
   it("shares theme-owned presentation and disables nonessential motion throughout the workspace", () => {
     const shared = css.split("/* Shared workspace presentation")[1];
     expect(shared).not.toMatch(/#[\da-f]{3,8}\b|\brgba?\(|\bhsla?\(/iu);
-    expect(shared).toContain(".veynrel-workspace *");
-    expect(shared).toContain("animation: none !important; transition: none !important;");
+    expect(css).not.toMatch(/clip-path|column-gap|!important/u);
+    expect(css).not.toMatch(/\.veynrel-(?:workspace|topology-detail|neighborhood|neighborhood-card|global-map)\s+\*/u);
+    for (const selector of [".veynrel-health-page-enter", ".veynrel-topology-content", ".veynrel-topology-inspector-content",
+      ".veynrel-findings-navigation button", ".veynrel-topology-detail :is(button, input, summary)", ".veynrel-neighborhood-list button",
+      ".ai-hub-provider-card", ".ai-hub-model-chip", ".ai-hub-test-btn"])
+      expect(css.split("@media (prefers-reduced-motion: reduce)").slice(1).some((block) => block.split("\n}")[0].includes(selector))).toBe(true);
     expect(shared).toContain(".veynrel-semantic-exploration, .veynrel-connect-overview { grid-template-columns: minmax(0, 1fr); }");
     expect(shared).toContain(".veynrel-connections-overview { grid-template-columns: minmax(0, 1fr);");
     expect(css).not.toContain(".veynrel-findings-row-explanation");
