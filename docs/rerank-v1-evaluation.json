@@ -1,0 +1,37 @@
+{
+  "purpose": "Synthetic manual evaluation only; relevance labels are hypotheses to review, not measured model quality.",
+  "cases": [
+    {
+      "id": "ru-cancellation", "query": "Как не дать старому ответу изменить результаты нового поиска?",
+      "fragments": [
+        {"id": "revision", "relevant": true, "text": "Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."},
+        {"id": "http", "relevant": false, "text": "HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."},
+        {"id": "index", "relevant": false, "text": "Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."}
+      ]
+    },
+    {
+      "id": "ru-offline", "query": "Где заметки об обработке звука без отправки записи в облако?",
+      "fragments": [
+        {"id": "local-asr", "relevant": true, "text": "Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."},
+        {"id": "cloud-asr", "relevant": false, "text": "Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."},
+        {"id": "local-player", "relevant": false, "text": "Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."}
+      ]
+    },
+    {
+      "id": "en-rollback", "query": "How can a failed settings write avoid losing a newer edit?",
+      "fragments": [
+        {"id": "conditional-restore", "relevant": true, "text": "Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."},
+        {"id": "reset-all", "relevant": false, "text": "The reset button restores every setting to its factory default. All custom preferences are removed."},
+        {"id": "ui-style", "relevant": false, "text": "Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."}
+      ]
+    },
+    {
+      "id": "en-incomplete", "query": "Can an incomplete scan prove that a note has no problems?",
+      "fragments": [
+        {"id": "coverage", "relevant": true, "text": "Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."},
+        {"id": "empty-screen", "relevant": false, "text": "The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."},
+        {"id": "speed", "relevant": false, "text": "The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."}
+      ]
+    }
+  ]
+}

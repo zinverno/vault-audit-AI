@@ -37,6 +37,9 @@ import {
 import type { CompanionSettings } from "./companionSync";
 import { DEFAULT_HEALTH_PREFERENCES } from "./health/preferences";
 import type { HealthPreferences } from "./health/preferences";
+import { DEFAULT_RERANK_SETTINGS } from "./rerank/types";
+import type { RerankSettings } from "./rerank/types";
+import { RerankError } from "./rerank/openRouterRerank";
 
 export interface AIHubSettings {
   // ── Провайдер ─────────────────────────────────────────────────────
@@ -68,6 +71,7 @@ export interface AIHubSettings {
   };
   // ── Семантические функции ─────────────────────────────────────────
   semantic: EmbeddingSettings;
+  rerank: RerankSettings;
   /** Clear keeps automatic sync suspended until a later explicit index run. */
   semanticAutoSyncSuspended: boolean;
   /** Optional read-only network mirror used by the standalone Companion. */
@@ -97,6 +101,7 @@ export const DEFAULT_SETTINGS: AIHubSettings = {
     delayMs: 1000,
   },
   semantic: { ...DEFAULT_EMBEDDING_SETTINGS },
+  rerank: { ...DEFAULT_RERANK_SETTINGS },
   semanticAutoSyncSuspended: false,
   companion: { ...DEFAULT_COMPANION_SETTINGS },
   health: { ...DEFAULT_HEALTH_PREFERENCES },
@@ -128,6 +133,7 @@ function hasSettingsUpdate(tab: PluginSettingTab): tab is PluginSettingTab & { u
 
 // ─────────────────────────────────────────────────────────────────────
 export class AIHubSettingTab extends PluginSettingTab {
+  private rerankTest: AbortController | null = null;
   plugin: AIHubPlugin;
   private embeddingTestInFlight = false;
   private embeddingTestButton: HTMLButtonElement | null = null;
@@ -171,7 +177,7 @@ export class AIHubSettingTab extends PluginSettingTab {
 
   getSettingDefinitions(): SettingsSection[] {
     const save = async () => this.plugin.saveSettings();
-    const { provider, semantic, companion } = this.plugin.settings;
+    const { provider, semantic, companion, rerank } = this.plugin.settings;
     const profile = PROVIDER_PROFILES[provider];
     const row = (keys: readonly string[], name: string, desc: string | undefined,
       render: (setting: Setting) => void): SettingsRow => ({ keys, name, ...(desc === undefined ? {} : { desc }), render });
@@ -424,7 +430,53 @@ export class AIHubSettingTab extends PluginSettingTab {
               }), visible: () => semantic.embeddingProvider !== "ollama"
           },
           row([], tr("Проверить embeddings"), undefined, (setting) => this.renderEmbeddingTest(this.customContainer(setting))),
-          row([], tr("Управление semantic index"), tr("Первое обновление, Clear и Rebuild запускаются вручную; обычные изменения Markdown затем синхронизируются автоматически."), (setting) => this.renderSemanticIndexControls(this.customContainer(setting)))
+          row([], tr("Управление semantic index"), tr("Первое обновление, Clear и Rebuild запускаются вручную; обычные изменения Markdown затем синхронизируются автоматически."), (setting) => this.renderSemanticIndexControls(this.customContainer(setting))),
+          row(["rerank.enabled"], tr("@rerank.settings.title"), tr("@rerank.settings.disclosure"), setting => {
+            setting.addToggle(toggle => toggle.setValue(rerank.enabled).onChange(async value => {
+              rerank.enabled = value;
+              this.rerankSettingsChanged();
+              await save();
+            }));
+          }),
+          { keys: [], name: tr("@rerank.settings.providerTitle"), desc: tr("@rerank.settings.provider") },
+          row(["rerank.model"], tr("@rerank.settings.model"), tr("@rerank.settings.modelHelp"), setting => {
+            setting.addText(text => text.setPlaceholder("cohere/rerank-v3.5").setValue(rerank.model).onChange(async value => {
+              rerank.model = value.trim();
+              this.rerankSettingsChanged();
+              await save();
+            }));
+          }),
+          row(["rerank.apiKey"], tr("@rerank.settings.key"), tr("@rerank.settings.keyHelp"), setting => {
+            setting.addText(text => {
+              text.inputEl.type = "password";
+              text.inputEl.setAttribute("autocomplete", "off");
+              text.setValue(rerank.apiKey).onChange(async value => {
+                rerank.apiKey = value.trim();
+                this.rerankSettingsChanged();
+                await save();
+              });
+            });
+          }),
+          row([], tr("@rerank.settings.test"), tr("@rerank.settings.testHelp"), setting => {
+            const status = setting.descEl.createDiv({ attr: { role: "status", "aria-live": "polite" } });
+            setting.addButton(button => button.setButtonText(tr("@rerank.settings.test")).onClick(async () => {
+              if (this.rerankTest) return;
+              const request = new AbortController();
+              const snapshot = { ...rerank };
+              this.rerankTest = request;
+              button.setDisabled(true);
+              status.setText(tr("@rerank.refining"));
+              try {
+                await this.plugin.getSemanticController().testRerankConnection(snapshot, request.signal);
+                if (!request.signal.aborted && status.isConnected) status.setText(tr("@rerank.test.ok"));
+              } catch (error) {
+                if (status.isConnected) status.setText(tr(`@rerank.error.${error instanceof RerankError ? error.code : "network"}`));
+              } finally {
+                if (this.rerankTest === request) this.rerankTest = null;
+                if (button.buttonEl.isConnected) button.setDisabled(false);
+              }
+            }));
+          })
         ]
       },
       {
@@ -726,6 +778,16 @@ export class AIHubSettingTab extends PluginSettingTab {
   private refreshSettings(): void {
     if (requireApiVersion("1.13.0") && hasSettingsUpdate(this)) this.update();
     else this.display();
+  }
+
+  hide(): void {
+    this.rerankTest?.abort();
+    this.rerankTest = null;
+  }
+
+  private rerankSettingsChanged(): void {
+    this.rerankTest?.abort();
+    this.plugin.getSemanticController().notifyRerankSettingsChanged();
   }
 
   private customContainer(setting: Setting): HTMLElement {

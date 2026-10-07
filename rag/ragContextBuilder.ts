@@ -1,3 +1,4 @@
+import { isCanonicalMarkdownPath, reconstructChunks } from "../chunking/reconstructChunks";
 import type { ChunkingStrategy, NoteChunk } from "../chunking/types";
 import type { MarkdownDocumentSource } from "../indexing/types";
 import type { SemanticSearchService } from "../semantic/semanticSearchService";
@@ -81,57 +82,6 @@ function prepareOptions(options: RagContextBuildOptions = {}): PreparedOptions {
     );
   }
   return prepared;
-}
-
-function isCanonicalMarkdownPath(value: unknown): value is string {
-  if (
-    typeof value !== "string" ||
-    value.length === 0 ||
-    value !== value.trim() ||
-    value.includes("\0") ||
-    value.includes("\\") ||
-    value.startsWith("/") ||
-    /^[A-Za-z]:[\\/]/.test(value) ||
-    !value.toLowerCase().endsWith(".md")
-  ) {
-    return false;
-  }
-  return !value
-    .split("/")
-    .some((segment) => !segment || segment === "." || segment === "..");
-}
-
-function chunkIsValid(
-  chunk: NoteChunk,
-  path: string,
-  contentLength: number,
-  lineCount: number,
-): boolean {
-  return (
-    chunk &&
-    chunk.path === path &&
-    typeof chunk.id === "string" &&
-    chunk.id.length > 0 &&
-    typeof chunk.contentHash === "string" &&
-    chunk.contentHash.length > 0 &&
-    typeof chunk.text === "string" &&
-    chunk.text.length > 0 &&
-    Array.isArray(chunk.headingPath) &&
-    chunk.headingPath.every((heading) => typeof heading === "string") &&
-    Number.isSafeInteger(chunk.ordinal) &&
-    chunk.ordinal >= 0 &&
-    Boolean(chunk.source) &&
-    Number.isSafeInteger(chunk.source.startOffset) &&
-    Number.isSafeInteger(chunk.source.endOffset) &&
-    Number.isSafeInteger(chunk.source.startLine) &&
-    Number.isSafeInteger(chunk.source.endLine) &&
-    chunk.source.startOffset >= 0 &&
-    chunk.source.endOffset >= chunk.source.startOffset &&
-    chunk.source.endOffset <= contentLength &&
-    chunk.source.startLine >= 0 &&
-    chunk.source.endLine >= chunk.source.startLine &&
-    chunk.source.endLine < lineCount
-  );
 }
 
 function orderedDocuments(
@@ -231,30 +181,11 @@ export class RagContextBuilder {
         continue;
       }
 
-      let chunks: NoteChunk[];
+      let chunksById: Map<string, NoteChunk>;
       try {
-        chunks = this.chunker.chunk({
-          path: sourceDocument.path,
-          content: sourceDocument.content,
-          cache: sourceDocument.cache,
-        });
+        chunksById = reconstructChunks(sourceDocument, this.chunker);
       } catch {
         continue;
-      }
-      const lineCount = sourceDocument.content.split("\n").length;
-      const chunksById = new Map<string, NoteChunk>();
-      for (const chunk of chunks) {
-        if (
-          chunkIsValid(
-            chunk,
-            document.path,
-            sourceDocument.content.length,
-            lineCount,
-          ) &&
-          !chunksById.has(chunk.id)
-        ) {
-          chunksById.set(chunk.id, chunk);
-        }
       }
 
       const documentCandidates: ReconstructedCandidate[] = [];

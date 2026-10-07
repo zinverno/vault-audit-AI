@@ -1,3 +1,5 @@
+import { DEFAULT_RERANK_SETTINGS } from "../rerank/types";
+import { OpenRouterRerankProvider } from "../rerank/openRouterRerank";
 import { newConnectionComparisonViewState, syncConnectionComparison, reviewCandidate, filteredConnectionPairs } from "../health/connections/connectionComparisonViewState";
 import { ConnectionComparisonController } from "../health/connections/connectionComparisonController";
 import { VaultTopologyController } from "../health/topology/vaultTopologyController";
@@ -88,6 +90,104 @@ import { MemoryHealthStorage } from "../health/store/testSupport";
 import * as embeddingFactory from "../embeddings/factory";
 
 const BASE_PATH = semanticIndexBasePath(".obsidian", "ai-knowledge-hub");
+
+describe("Discover rerank with the real semantic runtime", () => {
+  async function setup(enabled = true) {
+    const transport = vi.fn(async (request: RequestUrlParam) => {
+      const body = JSON.parse(request.body as string) as { model: string; documents: string[] };
+      return { status: 200, text: JSON.stringify({ model: body.model,
+        results: body.documents.map((_text: string, index: number) => ({ index, relevance_score: index })) }) };
+    });
+    const h = createHarness(semantic(), undefined, false, { rerankProvider: settings => new OpenRouterRerankProvider(settings, transport) });
+    Object.assign(h.plugin.settings.rerank, { enabled, apiKey: "synthetic-rerank-key" });
+    h.createFile("Beta.md", "# Beta\n\nbeta current text");
+    h.createFile("Gamma.md", "# Gamma\n\ngamma current text");
+    await h.controller.indexVault();
+    return { ...h, transport, run: () => h.controller.searchDiscover("alpha query", vi.fn(), new AbortController().signal) };
+  }
+
+  it("disabled does not read Markdown or call rerank; enabled uses exactly one query embedding", async () => {
+    const h = await setup(false); const reads = h.plugin.app.vault.cachedRead.mock.calls.length;
+    let before = embeddingCalls.length;
+    expect(await h.run()).toMatchObject({ stage: "skipped", reason: "disabled" });
+    expect(h.transport).not.toHaveBeenCalled(); expect(h.plugin.app.vault.cachedRead).toHaveBeenCalledTimes(reads);
+    expect(embeddingCalls.length - before).toBe(1);
+    h.plugin.settings.rerank.enabled = true; h.controller.notifyRerankSettingsChanged();
+    before = embeddingCalls.length;
+    expect(await h.run()).toMatchObject({ stage: "reranked", evaluated: 3 });
+    expect(embeddingCalls.length - before).toBe(1);
+    expect(h.transport).toHaveBeenCalledOnce(); await h.controller.dispose();
+  });
+
+  it("changing rerank model/key/enabled leaves index identity, bytes and runtime intact", async () => {
+    const h = await setup(); const state = h.controller.getCachedIndexState(); const bytes = structuredClone(h.adapter.files);
+    const slot = (h.controller as unknown as { runtimeSlot: unknown }).runtimeSlot;
+    h.plugin.settings.rerank.model = "explicit/new-rerank-model";
+    h.plugin.settings.rerank.apiKey = "rotated-synthetic-key";
+    h.plugin.settings.rerank.enabled = false; h.controller.notifyRerankSettingsChanged();
+    expect(h.controller.getCachedIndexState()).toEqual(state); expect(h.adapter.files).toEqual(bytes);
+    expect((h.controller as unknown as { runtimeSlot: unknown }).runtimeSlot).toBe(slot);
+    expect(h.transport).not.toHaveBeenCalled(); await h.controller.dispose();
+  });
+
+  it.each(["settings", "disable", "delete", "modify", "rename", "unload"])("ignores a paid response after %s", async change => {
+    const h = await setup(); h.registerAutomaticSync();
+    const gate = manualGate();
+    const normal = h.transport.getMockImplementation()!;
+    h.transport.mockImplementation(async request => { gate.markEntered(); await gate.wait; return normal(request); });
+    const pending = h.run(); await gate.entered;
+    if (change === "settings") { h.plugin.settings.rerank.model = "new/model"; h.controller.notifyRerankSettingsChanged(); }
+    if (change === "disable") { h.plugin.settings.rerank.enabled = false; h.controller.notifyRerankSettingsChanged(); }
+    if (change === "delete") h.deleteFile("Alpha.md");
+    if (change === "modify") h.modifyFile("Alpha.md", "# Changed\n\nnew private content");
+    if (change === "rename") h.renameFile("Alpha.md", "Renamed.md");
+    if (change === "unload") await h.controller.dispose();
+    const update = await pending;
+    expect(update).toMatchObject({ stage: "skipped", reason: "obsolete" });
+    expect(update.results.every(result => !("rerankScore" in result))).toBe(true);
+    if (change === "delete" || change === "rename") expect(update.results.map(result => result.path)).not.toContain("Alpha.md");
+    gate.release(); await h.controller.dispose(); expect(h.transport).toHaveBeenCalledOnce();
+  });
+
+  it("checks source changes during reconstruction before any outbound request", async () => {
+    const h = await setup(); h.registerAutomaticSync();
+    const read = h.plugin.app.vault.cachedRead.getMockImplementation()!;
+    h.plugin.app.vault.cachedRead.mockImplementationOnce(async file => {
+      const content = await read(file); h.modifyFile(file.path, "changed during read"); return content;
+    });
+    expect(await h.run()).toMatchObject({ stage: "skipped", reason: "obsolete" });
+    expect(h.transport).not.toHaveBeenCalled(); await h.controller.dispose();
+  });
+
+  it("skips stale chunks and deleted notes without rerequesting embeddings", async () => {
+    const h = await setup(); h.modifyFile("Beta.md", "# Changed\n\nnew text"); h.deleteFile("Gamma.md");
+    const before = embeddingCalls.length;
+    const update = await h.run();
+    expect(update).toMatchObject({ stage: "skipped", reason: "insufficient" });
+    expect(update.results.map(item => item.path)).toEqual(["Alpha.md", "Beta.md"]);
+    expect(h.transport).not.toHaveBeenCalled(); expect(embeddingCalls.length - before).toBe(1);
+    await h.controller.dispose();
+  });
+
+  it("releases the read barrier before external HTTP; clear completes during rerank", async () => {
+    const h = await setup(); const gate = manualGate(); const normal = h.transport.getMockImplementation()!;
+    h.transport.mockImplementation(async request => { gate.markEntered(); await gate.wait; return normal(request); });
+    const pending = h.run(); await gate.entered;
+    await h.controller.clearIndex();
+    expect(h.controller.getSemanticStatus().vectorCount).toBe(0);
+    gate.release(); expect(await pending).toMatchObject({ stage: "skipped", reason: "obsolete" });
+    await h.controller.dispose();
+  });
+
+  it("leaves ordinary search, maps, neighbors, duplicates, RAG, indexing and Companion outside rerank", async () => {
+    const h = await setup();
+    const runtime = (h.controller as unknown as { runtimeSlot: { runtime: SemanticRuntime } }).runtimeSlot.runtime;
+    await h.controller.search("alpha query"); await h.controller.analyzeGlobalSemanticMap();
+    await h.controller.findSimilarNotes("Alpha.md"); await h.controller.findPotentialDuplicates();
+    await runtime.buildRagContext("alpha question"); await runtime.captureCompanionSnapshot?.();
+    expect(h.transport).not.toHaveBeenCalled(); await h.controller.dispose();
+  });
+});
 
 type StoredValue =
   | { kind: "text"; value: string }
@@ -371,6 +471,7 @@ function createHarness(
     },
   };
   const pluginSettings = {
+    rerank: { ...DEFAULT_RERANK_SETTINGS },
     semantic: initialSettings,
     semanticAutoSyncSuspended: autoSyncSuspended,
     companion: {

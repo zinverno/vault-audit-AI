@@ -1,4 +1,5 @@
 import type { GlobalSemanticAnalysis, GlobalSemanticOptions, SemanticFocusAnalysis } from "./globalSemanticMap";
+import { prepareRerankCandidates } from "../rerank/prepareCandidates";
 import type { RagContextBuilder } from "../rag/ragContextBuilder";
 import type { RagContext } from "../rag/types";
 import { stableHash } from "../chunking/hash";
@@ -150,6 +151,11 @@ export class LazySemanticRuntime implements SemanticRuntime {
     await this.initialize();
     if (!this.ragContextBuilder) throw new SemanticNotReadyError();
     return this.ragContextBuilder.build(question);
+  }
+
+  async prepareRerankCandidates(results: readonly SemanticDocumentResult[], isCurrent: () => boolean) {
+    const { source, chunker } = this.requireComponents();
+    return chunker ? prepareRerankCandidates(results, source, chunker, isCurrent) : [];
   }
 
   async analyzeSemanticFocus(sourcePath: string): Promise<SemanticFocusAnalysis | undefined> {

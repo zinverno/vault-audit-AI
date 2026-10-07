@@ -1,0 +1,28 @@
+{
+  "obsidian": "1.13.7",
+  "electron": "43.6.0",
+  "platform": "linux",
+  "checks": [
+    "legacy settings migrate with rerank off and empty independent key",
+    "settings/workspace entry sends no rerank or embeddings",
+    "privacy disclosure visible before enabling",
+    "rerank key is masked",
+    "indexing does not rerank",
+    "disabled search uses one embedding and no reads/rerank",
+    "disabled search retains 10 results",
+    "originals visible and input usable during refinement",
+    "single expanded search and bounded request",
+    "index mapping reorders results without changing semantic score",
+    "note opens after rerank",
+    "failure preserves semantic order and safe message",
+    "late reply does not replace new query",
+    "closed search ignores late reply",
+    "explicit connection test sends only synthetic documents",
+    "model change preserves index",
+    "narrow search has no horizontal overflow"
+  ],
+  "embeddings": 7,
+  "rerankRequests": 7,
+  "mainSha256": "0cc6437ebd4b57627efe196b2c657d51c18f048b48eb7d76f37aa3f2e85d645a",
+  "limitations": "Native Linux Obsidian; fake rerank transport and local synthetic embedding server. No live model quality, paid requests, mobile, other OS, screen reader or custom theme coverage."
+}

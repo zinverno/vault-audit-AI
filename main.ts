@@ -1,4 +1,5 @@
 import { auditModeViewModel } from "./deep/auditModeViewModel";
+import { mergeRerankSettings } from "./rerank/types";
 import { collectDeepAuditFiles } from "./deep/deepScope";
 import { SemanticGlobalMapController } from "./semantic/product/semanticGlobalMapController";
 import { t as tr, tAll, setLanguage, dateLocale } from "./i18n";
@@ -295,6 +296,7 @@ export default class AIHubPlugin extends Plugin {
     const needsVaultId = !isVaultId(data?.companion?.vaultId);
     this.settings = Object.assign({}, DEFAULT_SETTINGS, data, {
       semantic: mergeEmbeddingSettings(data?.semantic),
+      rerank: mergeRerankSettings(data?.rerank),
       companion: mergeCompanionSettings(data?.companion),
       health: mergeHealthPreferences(data?.health),
     });
@@ -472,6 +474,7 @@ export default class AIHubPlugin extends Plugin {
       const committed = this.committedSettings;
       if (committed && rollback) {
         const semanticBefore = JSON.stringify(this.settings.semantic);
+        const rerankBefore = JSON.stringify(this.settings.rerank);
         const deepBefore = JSON.stringify(deepKnowledgeSettingsSnapshot(this.settings));
         const languageBefore = this.settings.language;
         const restore = <T extends object>(live: T, failed: T, durable: T): void => {
@@ -481,10 +484,11 @@ export default class AIHubPlugin extends Plugin {
           }
         };
         restore(this.settings, rollback, committed);
-        for (const key of ["semantic", "companion", "deepAudit", "health"] as const) {
+        for (const key of ["semantic", "rerank", "companion", "deepAudit", "health"] as const) {
           restore(this.settings[key], rollback[key], committed[key]);
         }
         if (semanticBefore !== JSON.stringify(this.settings.semantic)) this.semanticController?.notifySettingsChanged({ reconcile: false });
+        if (rerankBefore !== JSON.stringify(this.settings.rerank)) this.semanticController?.notifyRerankSettingsChanged();
         if (languageBefore !== this.settings.language) setLanguage(this.settings.language ?? "auto");
         // An already-open consent cannot survive an attempted provider change, even after rollback.
         if (deepBefore !== JSON.stringify(deepKnowledgeSettingsSnapshot(this.settings))) this.deepKnowledgeConfigurationRevision++;

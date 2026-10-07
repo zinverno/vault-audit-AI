@@ -7,6 +7,7 @@ import {
 } from "obsidian";
 import { t as tr } from "../i18n";
 import { SemanticNotReadyError } from "./errors";
+import type { RefinedDocumentResult, RefinedSearchUpdate } from "../rerank/types";
 import type {
   SemanticDocumentResult,
   SemanticRuntimeStats,
@@ -15,6 +16,8 @@ import type {
 export interface SemanticSearchModalDelegate {
   prepareSearch(): Promise<SemanticRuntimeStats>;
   search(query: string): Promise<SemanticDocumentResult[]>;
+  isSearchAvailable?(): boolean;
+  searchDiscover?(query: string, publish: (update: RefinedSearchUpdate) => void, signal: AbortSignal): Promise<RefinedSearchUpdate>;
   errorMessage(error: unknown): string;
 }
 
@@ -38,6 +41,7 @@ export class SemanticSearchModal extends Modal {
   private busy = false;
   private openState = false;
   private requestGeneration = 0;
+  private request: AbortController | null = null;
 
   constructor(
     app: App,
@@ -68,6 +72,7 @@ export class SemanticSearchModal extends Modal {
     });
     this.statusEl = this.contentEl.createDiv({
       cls: "ai-semantic-search-status",
+      attr: { role: "status", "aria-live": "polite" },
     });
     this.resultsEl = this.contentEl.createDiv({
       cls: "ai-semantic-result-list",
@@ -79,6 +84,13 @@ export class SemanticSearchModal extends Modal {
         void this.runSearch();
       }
     });
+    this.inputEl.addEventListener("input", () => {
+      if (!this.request || this.busy) return;
+      this.request.abort();
+      this.request = null;
+      this.requestGeneration++;
+      this.setStatus(tr("@rerank.skipped.obsolete"), "skipped");
+    });
     this.searchButton.addEventListener("click", () => {
       void this.runSearch();
     });
@@ -86,6 +98,8 @@ export class SemanticSearchModal extends Modal {
   }
 
   onClose(): void {
+    this.request?.abort();
+    this.request = null;
     this.openState = false;
     this.busy = false;
     this.requestGeneration++;
@@ -105,16 +119,30 @@ export class SemanticSearchModal extends Modal {
     }
 
     this.busy = true;
+    this.request?.abort();
+    const cancellation = new AbortController();
+    this.request = cancellation;
     const request = ++this.requestGeneration;
     this.setBusy(true);
     this.setStatus(tr("Ищу по семантическому индексу..."), "loading");
     this.resultsEl?.empty();
     try {
       const stats = await this.delegate.prepareSearch();
+      if (!this.isCurrent(request)) return;
       if (stats.vectorCount <= 0) {
         throw new SemanticNotReadyError(
           tr("Семантический индекс пуст. Сначала обновите индекс Vault."),
         );
+      }
+      if (this.delegate.searchDiscover) {
+        const update = await this.delegate.searchDiscover(query, update => {
+          if (!this.isCurrent(request)) return;
+          this.busy = false;
+          this.setBusy(false);
+          this.renderUpdate(update);
+        }, cancellation.signal);
+        if (this.isCurrent(request)) this.renderUpdate(update);
+        return;
       }
       const results = await this.delegate.search(query);
       if (!this.isCurrent(request)) return;
@@ -132,6 +160,7 @@ export class SemanticSearchModal extends Modal {
       this.setStatus(this.delegate.errorMessage(error), "error");
     } finally {
       if (this.isCurrent(request)) {
+        this.request = null;
         this.busy = false;
         this.setBusy(false);
       }
@@ -139,7 +168,7 @@ export class SemanticSearchModal extends Modal {
   }
 
   private isCurrent(request: number): boolean {
-    return this.openState && request === this.requestGeneration;
+    return this.openState && request === this.requestGeneration && this.delegate.isSearchAvailable?.() !== false;
   }
 
   private setBusy(value: boolean): void {
@@ -149,14 +178,26 @@ export class SemanticSearchModal extends Modal {
 
   private setStatus(
     text: string,
-    kind: "loading" | "empty" | "error" | "ready",
+    kind: "loading" | "empty" | "error" | "ready" | RefinedSearchUpdate["stage"],
   ): void {
     if (!this.statusEl) return;
     this.statusEl.setText(text);
     this.statusEl.setAttribute("data-state", kind);
   }
 
-  private renderResults(results: readonly SemanticDocumentResult[]): void {
+  private renderUpdate(update: RefinedSearchUpdate): void {
+    this.renderResults(update.results);
+    if (update.stage === "skipped" && update.reason === "disabled") {
+      this.setStatus(update.results.length ? tr("Найдено заметок: {n}", { n: update.results.length }) :
+        tr("Подходящие заметки не найдены."), update.results.length ? "ready" : "empty");
+      return;
+    }
+    const key = update.stage === "skipped" ? `@rerank.skipped.${update.reason}` :
+      update.stage === "reranked" && update.evaluated !== update.candidates ? "@rerank.partial" : `@rerank.${update.stage}`;
+    this.setStatus(tr(key, { evaluated: update.evaluated ?? 0, candidates: update.candidates ?? 0 }), update.stage);
+  }
+
+  private renderResults(results: readonly RefinedDocumentResult[]): void {
     if (!this.resultsEl) return;
     this.resultsEl.empty();
     for (const result of results) {
@@ -216,7 +257,7 @@ export class SemanticSearchModal extends Modal {
     }
   }
 
-  private async openResult(result: SemanticDocumentResult): Promise<void> {
+  private async openResult(result: RefinedDocumentResult): Promise<void> {
     const file = this.app.vault.getFileByPath(result.path);
     if (!(file instanceof TFile)) {
       new Notice(tr("Заметка больше не существует."));
@@ -225,7 +266,7 @@ export class SemanticSearchModal extends Modal {
     try {
       const leaf = this.app.workspace.getLeaf(false);
       await leaf.openFile(file);
-      const bestMatch = result.matches[0];
+      const bestMatch = result.rerankMatch ?? result.matches[0];
       if (bestMatch && leaf.view instanceof MarkdownView) {
         const position = { line: bestMatch.source.startLine, ch: 0 };
         try {
