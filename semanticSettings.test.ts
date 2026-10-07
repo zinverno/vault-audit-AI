@@ -21,7 +21,7 @@ async function fixture() {
   plugin.loadData = vi.fn(async () => structuredClone(disk));
   const save = vi.fn(async (data: typeof stored) => { disk = structuredClone(data); }); plugin.saveData = save;
   await plugin.loadSettings();
-  const engine = { notifyCompanionSettingsChanged: vi.fn(), notifySettingsChanged: vi.fn(), getSemanticStatus: () => ({ kind: "not-initialized", vectorCount: 0 } as SemanticStatus),
+  const engine = { notifyDecisionsSettingsChanged: vi.fn(), notifyCompanionSettingsChanged: vi.fn(), notifySettingsChanged: vi.fn(), getSemanticStatus: () => ({ kind: "not-initialized", vectorCount: 0 } as SemanticStatus),
     refreshSemanticStatus: vi.fn(async () => ({} as SemanticStatus)), indexVault: vi.fn(), rebuildIndex: vi.fn(),
     openSearch: vi.fn(), openSimilarNotes: vi.fn(), openPotentialDuplicates: vi.fn() };
   Object.assign(plugin, { semanticController: engine });
@@ -31,6 +31,21 @@ async function fixture() {
 }
 
 describe("transactional semantic settings in the plugin save queue", () => {
+  it("upgrades Decisions disabled and rolls failed Decisions saves back without changing other capabilities", async () => {
+    const f = await fixture();
+    const legacy: Partial<AIHubSettings> = structuredClone(f.stored); delete legacy.decisions;
+    f.plugin.loadData = vi.fn(async () => legacy); await f.plugin.loadSettings();
+    expect(f.plugin.settings.decisions).toEqual({ enabled: false, provider: "openrouter", model: "typesafe/jev-1.13", apiKey: "" });
+    const other = structuredClone({ semantic: f.plugin.settings.semantic, rerank: f.plugin.settings.rerank });
+    const reference = f.plugin.settings.decisions;
+    Object.assign(reference, { enabled: true, model: "typesafe/new-version", apiKey: "synthetic-separate" });
+    f.save.mockRejectedValueOnce(new Error("synthetic persistence failure"));
+    await expect(f.plugin.saveSettings()).rejects.toThrow("synthetic persistence failure");
+    expect(f.plugin.settings.decisions).toBe(reference);
+    expect(reference).toEqual({ enabled: false, provider: "openrouter", model: "typesafe/jev-1.13", apiKey: "" });
+    expect(f.plugin.settings.semantic).toEqual(other.semantic); expect(f.plugin.settings.rerank).toEqual(other.rerank);
+    expect(f.engine.notifySettingsChanged).not.toHaveBeenCalled(); expect(f.engine.notifyDecisionsSettingsChanged).toHaveBeenCalledOnce();
+  });
   it("upgrades legacy settings with rerank disabled and does not inherit an OpenRouter key", async () => {
     const f = await fixture();
     const legacy: Partial<AIHubSettings> = structuredClone(f.stored);

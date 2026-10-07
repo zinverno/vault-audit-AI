@@ -1,3 +1,5 @@
+import { DEFAULT_DECISIONS_SETTINGS } from "../decisions/types";
+import { OpenRouterDecisionsProvider } from "../decisions/openRouterDecisions";
 import { DEFAULT_RERANK_SETTINGS } from "../rerank/types";
 import { OpenRouterRerankProvider } from "../rerank/openRouterRerank";
 import { newConnectionComparisonViewState, syncConnectionComparison, reviewCandidate, filteredConnectionPairs } from "../health/connections/connectionComparisonViewState";
@@ -472,6 +474,7 @@ function createHarness(
   };
   const pluginSettings = {
     rerank: { ...DEFAULT_RERANK_SETTINGS },
+    decisions: { ...DEFAULT_DECISIONS_SETTINGS },
     semantic: initialSettings,
     semanticAutoSyncSuspended: autoSyncSuspended,
     companion: {
@@ -2351,4 +2354,101 @@ describe("MVP integrated durable domains", () => {
     expect(f.recall.getSnapshot().summary?.new).toBe(1); expect(f.controller.getSemanticStatus().kind).toBe("ready");
     f.passive(); expect(f.bytes(pluginRoot)).toEqual(before); await f.dispose();
   });
+});
+
+describe("Decisions over the real duplicate evidence and runtime", () => {
+  async function setup() {
+    const body = { model: "typesafe/jev-1.13-20260917", answers: { overlap: { type: "choice", choice: "same_information", confidence: 1,
+      probabilities: { same_information: 1, partial_overlap: 0, related_distinct: 0, unrelated: 0, insufficient_context: 0 } } } };
+    const transport = vi.fn(async (_request: RequestUrlParam) => ({ status: 200, text: JSON.stringify(body) }));
+    const h = createHarness(semantic(), undefined, false, { decisionsProvider: settings => new OpenRouterDecisionsProvider(settings, transport) });
+    h.setContent("# Alpha\n\nalpha shared evidence with enough information for the duplicate discovery service");
+    h.createFile("Near.md", "# Near\n\nalpha shared evidence with enough information for the duplicate discovery service");
+    h.createFile("Distractor.md", "# Distractor\n\nbeta unrelated evidence with enough information for the duplicate discovery service");
+    await h.controller.indexVault();
+    const pair = (await h.controller.findPotentialDuplicates()).find(pair => [pair.leftPath, pair.rightPath].includes("Near.md") && [pair.leftPath, pair.rightPath].includes("Alpha.md"))!;
+    expect(pair).toBeDefined();
+    Object.assign(h.plugin.settings.decisions, { enabled: true, apiKey: "synthetic-decisions" });
+    const session = h.controller.createOverlapSession(pair);
+    return { ...h, pair, session, transport };
+  }
+  it("has no passive calls, no dependency on rerank, and no index or Markdown writes", async () => {
+    const h = await setup(); const bytes = structuredClone(h.adapter.files); const before = embeddingCalls.length;
+    const state = h.controller.getCachedIndexState();
+    await h.controller.search("alpha"); await h.controller.findPotentialDuplicates();
+    await h.controller.findSimilarNotes("Alpha.md"); await h.controller.analyzeGlobalSemanticMap();
+    await h.controller.listIndexedPaths(); h.controller.getCompanionStatus();
+    const runtime = (h.controller as unknown as { runtimeSlot: { runtime: SemanticRuntime } }).runtimeSlot.runtime;
+    await runtime.buildRagContext("alpha question"); await runtime.captureCompanionSnapshot?.();
+    expect(h.transport).not.toHaveBeenCalled();
+    expect(h.plugin.settings.rerank.enabled).toBe(false);
+    await h.session.prepare(); expect(h.transport).not.toHaveBeenCalled();
+    const shown = h.session.view.preview!; expect(shown).toBeDefined();
+    await h.session.run(); expect(h.session.view.stage).toBe("result");
+    expect((JSON.parse(h.transport.mock.calls[0][0].body as string) as { state: unknown }).state).toEqual({ fragmentA: shown.a.text, fragmentB: shown.b.text });
+    expect(h.adapter.files).toEqual(bytes); expect(h.controller.getCachedIndexState()).toEqual(state);
+    expect(embeddingCalls.length - before).toBe(2); // Only explicit search and RAG retrieval.
+    h.plugin.settings.decisions.model = "typesafe/explicit-version"; h.controller.notifyDecisionsSettingsChanged();
+    expect(h.session.view.stage).toBe("stale"); expect(h.session.view.answer).toBeDefined();
+    expect(h.controller.getCachedIndexState()).toEqual(state); expect(h.adapter.files).toEqual(bytes);
+    expect(h.transport).toHaveBeenCalledOnce(); h.session.close(); await h.controller.dispose();
+  });
+  it("legacy disabled session performs no source reads or network", async () => {
+    const h = await setup(); h.plugin.settings.decisions.enabled = false;
+    const reads = h.plugin.app.vault.cachedRead.mock.calls.length;
+    await h.session.prepare(); await h.session.run();
+    expect(h.plugin.app.vault.cachedRead).toHaveBeenCalledTimes(reads); expect(h.transport).not.toHaveBeenCalled();
+    h.session.close(); await h.controller.dispose();
+  });
+  it.each(["modify", "delete", "rename", "exclude"])("refuses %s before sending", async reason => {
+    const h = await setup(); await h.session.prepare();
+    if (reason === "modify") h.modifyFile("Alpha.md", "changed alpha text");
+    if (reason === "delete") h.deleteFile("Alpha.md");
+    if (reason === "rename") h.renameFile("Alpha.md", "Renamed.md");
+    if (reason === "exclude") h.plugin.app.vault.getMarkdownFiles.mockImplementation(() => []);
+    await h.session.run(); expect(h.session.view.stage).toBe("stale"); expect(h.transport).not.toHaveBeenCalled();
+    h.session.close(); await h.controller.dispose();
+  });
+  it.each(["modify", "delete", "settings", "close", "unload", "other-pair"])("ignores pending reply after %s", async reason => {
+    const h = await setup(); h.registerAutomaticSync(); await h.session.prepare();
+    const gate = manualGate(); h.transport.mockImplementationOnce(async () => { gate.markEntered(); await gate.wait; return { status: 200, text: "{}" }; });
+    const pending = h.session.run(); await gate.entered;
+    if (reason === "modify") h.modifyFile("Alpha.md", "changed alpha");
+    if (reason === "delete") h.deleteFile("Alpha.md");
+    if (reason === "settings") { h.plugin.settings.decisions.enabled = false; h.controller.notifyDecisionsSettingsChanged(); }
+    if (reason === "close") h.session.close();
+    if (reason === "other-pair") h.controller.assessOverlap({ ...h.pair, rightPath: "Distractor.md" });
+    if (reason === "unload") await h.controller.dispose();
+    gate.release(); await pending;
+    expect(h.session.view.stage).toBe("stale"); expect(h.session.view.answer).toBeUndefined();
+    h.session.close(); await h.controller.dispose();
+  });
+  it("source events stale already displayed results without reading or reevaluating", async () => {
+    const h = await setup(); h.registerAutomaticSync(); await h.session.prepare(); await h.session.run();
+    const reads = h.plugin.app.vault.cachedRead.mock.calls.length;
+    h.modifyFile("Alpha.md", "updated alpha content");
+    expect(h.session.view.stage).toBe("stale"); expect(h.session.view.answer).toBeDefined();
+    expect(h.plugin.app.vault.cachedRead).toHaveBeenCalledTimes(reads); expect(h.transport).toHaveBeenCalledOnce();
+    h.session.close(); await h.controller.dispose();
+  });
+  it("does not hold the index write barrier over the paid request", async () => {
+    const h = await setup(); await h.session.prepare(); const gate = manualGate();
+    h.transport.mockImplementationOnce(async () => { gate.markEntered(); await gate.wait; return { status: 200, text: "{}" }; });
+    const pending = h.session.run(); await gate.entered;
+    await h.controller.clearIndex(); expect(h.controller.getCachedIndexState().vectorCount).toBe(0);
+    gate.release(); await pending; expect(h.session.view.stage).toBe("stale");
+    h.session.close(); await h.controller.dispose();
+  });
+});
+
+it("Decisions preview refresh succeeds once after recreating the same semantic runtime", async () => {
+  const h = createHarness();
+  h.setContent("# Alpha\n\nalpha current duplicate evidence that contains enough characters for discovery");
+  h.createFile("Near.md", "# Near\n\nalpha current duplicate evidence that contains enough characters for discovery");
+  await h.controller.indexVault(); const pair = (await h.controller.findPotentialDuplicates())[0];
+  Object.assign(h.plugin.settings.decisions, { enabled: true, apiKey: "synthetic" });
+  const session = h.controller.createOverlapSession(pair); await session.prepare(); expect(session.view.stage).toBe("ready");
+  h.controller.notifySettingsChanged({ reconcile: false }); expect(session.view.stage).toBe("stale");
+  await session.prepare(); expect(session.view.stage).toBe("ready");
+  session.close(); await h.controller.dispose();
 });

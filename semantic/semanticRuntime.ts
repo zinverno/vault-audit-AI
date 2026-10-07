@@ -1,5 +1,7 @@
 import type { GlobalSemanticAnalysis, GlobalSemanticOptions, SemanticFocusAnalysis } from "./globalSemanticMap";
 import { prepareRerankCandidates } from "../rerank/prepareCandidates";
+import { preparePair } from "../decisions/preparePair";
+import { DecisionsError } from "../decisions/openRouterDecisions";
 import type { RagContextBuilder } from "../rag/ragContextBuilder";
 import type { RagContext } from "../rag/types";
 import { stableHash } from "../chunking/hash";
@@ -156,6 +158,12 @@ export class LazySemanticRuntime implements SemanticRuntime {
   async prepareRerankCandidates(results: readonly SemanticDocumentResult[], isCurrent: () => boolean) {
     const { source, chunker } = this.requireComponents();
     return chunker ? prepareRerankCandidates(results, source, chunker, isCurrent) : [];
+  }
+
+  async prepareOverlapPair(pair: SemanticDuplicatePair, isCurrent: () => boolean, allowed: (path: string) => boolean) {
+    const { source, chunker } = this.requireComponents();
+    if (!chunker) throw new DecisionsError("stale");
+    return preparePair(pair, source, chunker, isCurrent, allowed);
   }
 
   async analyzeSemanticFocus(sourcePath: string): Promise<SemanticFocusAnalysis | undefined> {

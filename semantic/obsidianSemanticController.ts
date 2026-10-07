@@ -1,4 +1,9 @@
 import type { GlobalSemanticAnalysis, GlobalSemanticOptions, SemanticFocusAnalysis } from "./globalSemanticMap";
+import { DecisionsError, OpenRouterDecisionsProvider, testDecisionsConnection } from "../decisions/openRouterDecisions";
+import { mergeDecisionsSettings } from "../decisions/types";
+import type { DecisionsProvider, DecisionsSettings } from "../decisions/types";
+import { OverlapSession } from "../decisions/overlapSession";
+import { OverlapModal } from "../decisions/overlapModal";
 import { OpenRouterRerankProvider, testRerankConnection } from "../rerank/openRouterRerank";
 import { refinedSearch } from "../rerank/refinedSearch";
 import { mergeRerankSettings } from "../rerank/types";
@@ -104,6 +109,7 @@ interface SemanticPluginHost {
 }
 
 export interface SemanticControllerDependencies {
+  decisionsProvider?: (settings: DecisionsSettings) => DecisionsProvider;
   rerankProvider?: (settings: RerankSettings) => RerankProvider;
   runtimeFactory?: (input: {
     app: App;
@@ -246,6 +252,10 @@ function enqueueSharedSemanticMutation<T>(
 }
 
 export class ObsidianSemanticController {
+  private decisionsRevision = 0;
+  private readonly overlapSessions = new Set<OverlapSession>();
+  private readonly decisionsTests = new Set<AbortController>();
+  private readonly decisionsProvider: (settings: DecisionsSettings) => DecisionsProvider;
   private rerankRevision = 0;
   private sourceRevision = 0;
   private readonly rerankRequests = new Set<AbortController>();
@@ -302,6 +312,10 @@ export class ObsidianSemanticController {
   private set status(next: SemanticStatus) {
     const previous = this.cachedStatus;
     this.cachedStatus = next;
+    if (previous && (previous.vectorGeneration !== next.vectorGeneration || previous.vectorCount !== next.vectorCount)) {
+      // Initial preview preparation may itself load the index. There is no shown snapshot to invalidate yet.
+      for (const session of this.overlapSessions) if (session.view.preview) session.invalidate();
+    }
     if (JSON.stringify(previous) === JSON.stringify(next) || this.statusNotificationPending || !this.statusListeners.size) return;
     // Coalesce synchronous status transitions. Cached reads during rendering must not recurse into rendering.
     this.statusNotificationPending = true;
@@ -324,6 +338,7 @@ export class ObsidianSemanticController {
   ) {
     this.barrier = dependencies.barrier ?? new AsyncReadWriteBarrier();
     this.rerankProvider = dependencies.rerankProvider ?? (settings => new OpenRouterRerankProvider(settings));
+    this.decisionsProvider = dependencies.decisionsProvider ?? (settings => new OpenRouterDecisionsProvider(settings));
     this.storeRegistry =
       dependencies.storeRegistry ?? new SemanticStoreRegistry();
     this.runtimeFactory =
@@ -433,24 +448,28 @@ export class ObsidianSemanticController {
     this.autoSyncRegistered = true;
     this.plugin.registerEvent(
       this.plugin.app.vault.on("create", (file) => {
+        this.invalidateOverlapSources(file.path);
         this.invalidateRerankSources();
         if (isMarkdownTFile(file)) this.autoSync.upsert(file.path);
       }),
     );
     this.plugin.registerEvent(
       this.plugin.app.vault.on("modify", (file) => {
+        this.invalidateOverlapSources(file.path);
         this.invalidateRerankSources();
         if (isMarkdownTFile(file)) this.autoSync.upsert(file.path);
       }),
     );
     this.plugin.registerEvent(
       this.plugin.app.vault.on("delete", (file) => {
+        this.invalidateOverlapSources(file.path);
         this.invalidateRerankSources();
         if (isMarkdownTFile(file)) this.autoSync.delete(file.path);
       }),
     );
     this.plugin.registerEvent(
       this.plugin.app.vault.on("rename", (file, oldPath) => {
+        this.invalidateOverlapSources(file.path, oldPath);
         this.invalidateRerankSources();
         this.handleAutomaticRename(file, oldPath);
       }),
@@ -468,6 +487,7 @@ export class ObsidianSemanticController {
   }
 
   dispose(): Promise<void> {
+    this.notifyDecisionsSettingsChanged();
     this.notifyRerankSettingsChanged();
     if (this.disposePromise) return this.disposePromise;
     if (this.autoSyncPolicy !== "disposed") {
@@ -555,6 +575,7 @@ export class ObsidianSemanticController {
   }
 
   notifySettingsChanged(options: { reconcile?: boolean } = {}): void {
+    this.notifyDecisionsSettingsChanged();
     this.notifyRerankSettingsChanged();
     this.settingsEpoch++;
     this.runtimeSlot = null;
@@ -717,6 +738,55 @@ export class ObsidianSemanticController {
   notifyRerankSettingsChanged(): void {
     this.rerankRevision++;
     for (const request of this.rerankRequests) request.abort();
+  }
+
+  notifyDecisionsSettingsChanged(): void {
+    this.decisionsRevision++;
+    for (const request of this.decisionsTests) request.abort();
+    for (const session of this.overlapSessions) session.invalidate();
+  }
+
+  private invalidateOverlapSources(...paths: string[]): void {
+    for (const session of this.overlapSessions) {
+      if (session.paths.some(selected => paths.some(path => selected === path || selected.startsWith(`${path}/`)))) session.invalidate();
+    }
+  }
+
+  createOverlapSession(pair: SemanticDuplicatePair): OverlapSession {
+    const selected = structuredClone(pair);
+    const session: OverlapSession = new OverlapSession([selected.leftPath, selected.rightPath], {
+      settings: () => mergeDecisionsSettings(this.plugin.settings.decisions),
+      stamp: () => `${this.decisionsRevision}:${settingsSignature(this.plugin.settings.semantic)}`,
+      available: () => !this.isDisposed() && this.plugin.settings.semantic.enabled,
+      provider: settings => this.decisionsProvider(settings),
+      prepare: current => this.barrier.withShared(async () => {
+        if (!current()) throw new DecisionsError("stale");
+        const runtime = await this.runtimeForDiscovery();
+        const indexed = new Set(await runtime.listIndexedPaths());
+        const allowed = (path: string) => indexed.has(path) && this.plugin.app.vault.getMarkdownFiles().some(file => file.path === path);
+        if (!current() || !runtime.prepareOverlapPair) throw new DecisionsError("stale");
+        return runtime.prepareOverlapPair(selected, current, allowed);
+      }),
+      release: () => this.overlapSessions.delete(session),
+    });
+    this.overlapSessions.add(session);
+    return session;
+  }
+
+  assessOverlap(pair: SemanticDuplicatePair): void {
+    // Selecting another pair ends the previous in-memory comparison session.
+    for (const session of this.overlapSessions) session.invalidate();
+    new OverlapModal(this.plugin.app, this.createOverlapSession(pair)).open();
+  }
+
+  async testDecisionsConnection(settings: DecisionsSettings, signal: AbortSignal): Promise<void> {
+    const request = new AbortController();
+    const cancel = () => request.abort();
+    signal.addEventListener("abort", cancel, { once: true });
+    if (signal.aborted || this.isDisposed()) request.abort();
+    this.decisionsTests.add(request);
+    try { await testDecisionsConnection(settings, request.signal, this.decisionsProvider(settings)); }
+    finally { signal.removeEventListener("abort", cancel); this.decisionsTests.delete(request); }
   }
 
   isSearchAvailable(): boolean { return !this.isDisposed(); }

@@ -106,6 +106,8 @@ These features reuse the existing semantic index. Similarity is a discovery sign
 
 **Optional [Rerank v1](docs/rerank-v1.md)** refines explicit semantic searches through OpenRouter with your own separate API key. It is off by default, including upgrades. After showing the original results, Veynrel submits the query and one verified current fragment from each eligible candidate (up to 30 notes), then displays up to 10 results. Requests are billed to your OpenRouter account. Failures preserve eligible semantic results; the index, maps, RAG and Companion are unaffected. Quality depends on the candidates, selected model and available fragment—improvement is not guaranteed for every query.
 
+**Optional [Decisions v1](docs/decisions-v1.md)** adds **Assess overlap** to potential duplicate pairs. Review two current fragments, then explicitly send exactly that text to OpenRouter using an independent model setting and API key. It is off by default, works independently of rerank, and makes no automatic vault or index changes. The five-category model assessment applies only to the displayed fragments; a shared topic or high confidence does not confirm a duplicate. Requests are billed to your account.
+
 | Relationship view | What it shows |
 | --- | --- |
 | **Vault Topology** (Health) | The Markdown links you actually created. |

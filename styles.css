@@ -2502,3 +2502,9 @@
 }
 
 .veynrel-connections-count strong { white-space: nowrap; }
+
+/* Manual comparison uses plain text, including whitespace and untrusted markup. */
+.ai-overlap-fragments { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; margin: 12px 0; }
+.ai-overlap-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; font-family: var(--font-text); }
+.ai-overlap-note { white-space: normal; overflow-wrap: anywhere; height: auto; max-width: 100%; }
+.ai-overlap-result { overflow-wrap: anywhere; }

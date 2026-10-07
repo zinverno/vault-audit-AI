@@ -37,6 +37,9 @@ import {
 import type { CompanionSettings } from "./companionSync";
 import { DEFAULT_HEALTH_PREFERENCES } from "./health/preferences";
 import type { HealthPreferences } from "./health/preferences";
+import { DEFAULT_DECISIONS_SETTINGS } from "./decisions/types";
+import type { DecisionsSettings } from "./decisions/types";
+import { DecisionsError } from "./decisions/openRouterDecisions";
 import { DEFAULT_RERANK_SETTINGS } from "./rerank/types";
 import type { RerankSettings } from "./rerank/types";
 import { RerankError } from "./rerank/openRouterRerank";
@@ -72,6 +75,7 @@ export interface AIHubSettings {
   // ── Семантические функции ─────────────────────────────────────────
   semantic: EmbeddingSettings;
   rerank: RerankSettings;
+  decisions: DecisionsSettings;
   /** Clear keeps automatic sync suspended until a later explicit index run. */
   semanticAutoSyncSuspended: boolean;
   /** Optional read-only network mirror used by the standalone Companion. */
@@ -102,6 +106,7 @@ export const DEFAULT_SETTINGS: AIHubSettings = {
   },
   semantic: { ...DEFAULT_EMBEDDING_SETTINGS },
   rerank: { ...DEFAULT_RERANK_SETTINGS },
+  decisions: { ...DEFAULT_DECISIONS_SETTINGS },
   semanticAutoSyncSuspended: false,
   companion: { ...DEFAULT_COMPANION_SETTINGS },
   health: { ...DEFAULT_HEALTH_PREFERENCES },
@@ -133,6 +138,7 @@ function hasSettingsUpdate(tab: PluginSettingTab): tab is PluginSettingTab & { u
 
 // ─────────────────────────────────────────────────────────────────────
 export class AIHubSettingTab extends PluginSettingTab {
+  private decisionsTest: AbortController | null = null;
   private rerankTest: AbortController | null = null;
   plugin: AIHubPlugin;
   private embeddingTestInFlight = false;
@@ -177,7 +183,7 @@ export class AIHubSettingTab extends PluginSettingTab {
 
   getSettingDefinitions(): SettingsSection[] {
     const save = async () => this.plugin.saveSettings();
-    const { provider, semantic, companion, rerank } = this.plugin.settings;
+    const { provider, semantic, companion, rerank, decisions } = this.plugin.settings;
     const profile = PROVIDER_PROFILES[provider];
     const row = (keys: readonly string[], name: string, desc: string | undefined,
       render: (setting: Setting) => void): SettingsRow => ({ keys, name, ...(desc === undefined ? {} : { desc }), render });
@@ -473,6 +479,52 @@ export class AIHubSettingTab extends PluginSettingTab {
                 if (status.isConnected) status.setText(tr(`@rerank.error.${error instanceof RerankError ? error.code : "network"}`));
               } finally {
                 if (this.rerankTest === request) this.rerankTest = null;
+                if (button.buttonEl.isConnected) button.setDisabled(false);
+              }
+            }));
+          }),
+          row(["decisions.enabled"], tr("@decisions.settings.title"), tr("@decisions.settings.disclosure"), setting => {
+            setting.addToggle(toggle => toggle.setValue(decisions.enabled).onChange(async value => {
+              decisions.enabled = value;
+              this.decisionsSettingsChanged();
+              await save();
+            }));
+          }),
+          { keys: [], name: tr("@decisions.settings.providerTitle"), desc: tr("@decisions.settings.provider") },
+          row(["decisions.model"], tr("@decisions.settings.model"), tr("@decisions.settings.modelHelp"), setting => {
+            setting.addText(text => text.setPlaceholder("typesafe/jev-1.13").setValue(decisions.model).onChange(async value => {
+              decisions.model = value.trim();
+              this.decisionsSettingsChanged();
+              await save();
+            }));
+          }),
+          row(["decisions.apiKey"], tr("@decisions.settings.key"), tr("@decisions.settings.keyHelp"), setting => {
+            setting.addText(text => {
+              text.inputEl.type = "password";
+              text.inputEl.setAttribute("autocomplete", "off");
+              text.setValue(decisions.apiKey).onChange(async value => {
+                decisions.apiKey = value.trim();
+                this.decisionsSettingsChanged();
+                await save();
+              });
+            });
+          }),
+          row([], tr("@decisions.settings.test"), tr("@decisions.settings.testHelp"), setting => {
+            const status = setting.descEl.createDiv({ attr: { role: "status", "aria-live": "polite" } });
+            setting.addButton(button => button.setButtonText(tr("@decisions.settings.test")).onClick(async () => {
+              if (this.decisionsTest) return;
+              const request = new AbortController();
+              const snapshot = { ...decisions };
+              this.decisionsTest = request;
+              button.setDisabled(true);
+              status.setText(tr("@decisions.assessing"));
+              try {
+                await this.plugin.getSemanticController().testDecisionsConnection(snapshot, request.signal);
+                if (!request.signal.aborted && status.isConnected) status.setText(tr("@decisions.test.ok"));
+              } catch (error) {
+                if (status.isConnected) status.setText(tr(`@decisions.error.${error instanceof DecisionsError ? error.code : "network"}`));
+              } finally {
+                if (this.decisionsTest === request) this.decisionsTest = null;
                 if (button.buttonEl.isConnected) button.setDisabled(false);
               }
             }));
@@ -781,8 +833,15 @@ export class AIHubSettingTab extends PluginSettingTab {
   }
 
   hide(): void {
+    this.decisionsTest?.abort();
+    this.decisionsTest = null;
     this.rerankTest?.abort();
     this.rerankTest = null;
+  }
+
+  private decisionsSettingsChanged(): void {
+    this.decisionsTest?.abort();
+    this.plugin.getSemanticController().notifyDecisionsSettingsChanged();
   }
 
   private rerankSettingsChanged(): void {
