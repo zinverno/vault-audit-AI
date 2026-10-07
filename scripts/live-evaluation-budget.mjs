@@ -25,7 +25,8 @@ export function receipt(payload, capability) {
     cost = usage.input_tokens * 42; basis = 'usage-at-reviewed-rate';
   }
   if (!Number.isSafeInteger(cost) || cost < 0) { cost = null; basis = 'unknown'; }
-  return { usage, costNanodollars: cost, costBasis: basis };
+  return { usage, costNanodollars: cost, costBasis: basis,
+    reportedCostUSD: basis === 'provider' ? raw.cost : null };
 }
 
 export class BudgetJournal {
@@ -93,7 +94,7 @@ export class BudgetJournal {
     this.append(entry); // Durable before the caller is allowed to send anything.
     this.entries.set(id, entry);
   }
-  async run(id, capability, amount, invoke, getReceipt = () => undefined) {
+  async run(id, capability, amount, invoke, getReceipt = () => undefined, getOutcome = () => undefined) {
     this.reserve(id, capability, amount);
     const start = performance.now();
     let result, failure;
@@ -102,7 +103,8 @@ export class BudgetJournal {
     // A late response must not clear the reserve after a local timeout/disconnect.
     const bill = ['timeout', 'cancelled', 'network'].includes(status)
       ? receipt(undefined, capability) : receipt(getReceipt(), capability);
-    const entry = { ...this.entries.get(id), status, durationMs: Math.round(performance.now() - start), ...bill };
+    const entry = { ...this.entries.get(id), status, durationMs: Math.round(performance.now() - start), ...bill,
+      outcome: getOutcome(result) };
     this.append(entry);
     this.entries.set(id, entry);
     if (failure) throw Object.assign(Error(status), { code: status });

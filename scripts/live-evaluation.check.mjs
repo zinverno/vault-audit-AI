@@ -6,6 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { BudgetJournal, receipt } from './live-evaluation-budget.mjs';
 import { frozenCases, productionAdapters, preflight, MODELS } from './rerank-decisions-live.mjs';
+import { evaluationPlan, executeOperations, openPaidJournal, verifyNativeObservation } from './live-evaluation-native.mjs';
+import { classify } from './live-evaluation-report.mjs';
 
 const fingerprint = 'a'.repeat(64);
 function fixture(t, limits) {
@@ -141,7 +143,7 @@ test('all 24 frozen inputs pass actual serialization and validators with fake tr
     assert.equal(a.manualExpected, b.manualExpected); assert.deepEqual(a.manualAlternatives, b.manualAlternatives);
   }
 });
-test('dry-run stays offline with a key present; --live preflight still refuses unproven billing bound', async t => {
+test('dry-run stays offline with a key present; rerank gate remains independent', async t => {
   const previousKey = process.env.OPENROUTER_API_KEY, previousFetch = globalThis.fetch;
   process.env.OPENROUTER_API_KEY = 'synthetic-only';
   globalThis.fetch = () => assert.fail('network in preflight');
@@ -149,8 +151,100 @@ test('dry-run stays offline with a key present; --live preflight still refuses u
   for (const live of [false, true]) {
     const report = await preflight({ live });
     assert.equal(report.budget.sent.total, 0); assert.equal(report.entries.length, 24);
-    assert.deepEqual(report.blockers, ['unverified OpenRouter billing upper bound']);
-    assert.equal(report.pricing.verifiedUpperBoundUSD, null);
+    assert.deepEqual(report.blockers, ['unverified OpenRouter rerank billing upper bound']);
+    assert.equal(report.pricing.rerankUpperBoundUSD, null);
+    assert.equal(report.pricing.decisionsUpperBoundUSD, 0.057802752);
     assert(!JSON.stringify(report).includes('synthetic-only'));
   }
+});
+
+test('driver resumes saved outcomes, never repeats completed inputs, and blocks rerank only', async t => {
+  const evaluation = await evaluationPlan(false);
+  const { file, journal } = fixture(t);
+  const sent = [];
+  const driver = { prepare: async () => {}, disarm: async () => {}, execute: async op => {
+    sent.push(op.id); return { dispatched: true, nativeStage: 'result', previewMatched: true, previewRequests: 0, tentativeVisible: true,
+      result: { choice: 'partial_overlap' }, usage: { input_tokens: 500, cost: 0.000021 } };
+  } };
+  await executeOperations({ ...evaluation, operations: evaluation.operations.slice(0, 3) }, journal, driver, false);
+  journal.close();
+  const reopened = new BudgetJournal(file, fingerprint);
+  try {
+    await executeOperations(evaluation, reopened, driver, false);
+    assert.equal(sent.length, 21); assert.equal(new Set(sent).size, 21);
+    assert(!sent.some(id => id.includes('cancellation')));
+    assert(reopened.entries.get('native-ru-paraphrase-AB').outcome.result);
+    await executeOperations(evaluation, reopened, driver, false);
+    assert.equal(sent.length, 21);
+    assert(reopened.summary().committedNanodollars < 80_000_000);
+  } finally { reopened.close(); }
+});
+
+test('established persistent state with a missing journal cannot reset the budget', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'veynrel-persistent-guard-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const directory = root + '/state';
+  const journal = await openPaidJournal(directory, fingerprint);
+  await journal.run('done', 'decisions', 100, async () => {}, reported(0)); journal.close();
+  fs.renameSync(directory + '/budget.jsonl', directory + '/saved-for-test.jsonl');
+  await assert.rejects(openPaidJournal(directory, fingerprint), /missing-established-journal/);
+  assert(!fs.existsSync(directory + '/budget.jsonl'));
+});
+
+test('native UI failure keeps observed cost and stops before the next paid input', async t => {
+  const evaluation = await evaluationPlan(false), { journal } = fixture(t);
+  let calls = 0;
+  const driver = { prepare: async () => {}, disarm: async () => {}, execute: async () => {
+    calls++; return { dispatched: true, nativeStage: 'stale', previewMatched: true, previewRequests: 0,
+      tentativeVisible: false, usage: { cost: 0.000021 } };
+  } };
+  await assert.rejects(executeOperations(evaluation, journal, driver, false), /internal/);
+  assert.equal(calls, 1); assert.equal(journal.summary().providerNanodollars, 21000);
+  assert.equal(journal.entries.values().next().value.outcome.nativeChecksPassed, false);
+  assert(verifyNativeObservation({ native: true, capability: 'decisions' }, { nativeStage: 'result', previewMatched: true,
+    previewRequests: 0, tentativeVisible: true }).nativeChecksPassed);
+});
+
+test('driver halts on timeout or missing usage; reopening cannot dispatch the next input', async t => {
+  const evaluation = await evaluationPlan(false);
+  for (const error of [null, 'timeout', 'invalid-response', 'auth']) {
+    const { file, journal } = fixture(t); let calls = 0;
+    const driver = { prepare: async () => {}, disarm: async () => {}, execute: async () => {
+      calls++; return { dispatched: true, error, usage: null };
+    } };
+    await assert.rejects(executeOperations(evaluation, journal, driver, false));
+    assert.equal(calls, 1); assert.equal(journal.summary().unresolvedNanodollars, 2_752_512);
+    journal.close(); const reopened = new BudgetJournal(file, fingerprint);
+    try { await assert.rejects(executeOperations(evaluation, reopened, driver, false), /reconciliation-required/); }
+    finally { reopened.close(); }
+    assert.equal(calls, 1);
+  }
+});
+
+test('offline reporting separates primary, alternative, disagreement, tie and technical failure', () => {
+  const expected = 'partial_overlap', alternatives = ['same_information'];
+  const entry = (choice, tied = [choice]) => ({ status: 'validated', outcome: { result: { choice, tied } } });
+  assert.equal(classify(entry(expected), expected, alternatives), 'primary-match');
+  assert.equal(classify(entry('same_information'), expected, alternatives), 'allowed-alternative');
+  assert.equal(classify(entry('unrelated'), expected, alternatives), 'disagreement');
+  assert.equal(classify(entry(expected, [expected, 'same_information']), expected, alternatives), 'ambiguous');
+  assert.equal(classify({ status: 'invalid-response' }, expected, alternatives), 'technical-failure');
+  assert.equal(classify(undefined, expected, alternatives), 'NOT RUN');
+});
+
+test('characterize known headerless filename disclosure; this is not privacy acceptance', async () => {
+  const adapters = await productionAdapters(), chunker = new adapters.MarkdownChunker();
+  const documents = [
+    { path: 'Synthetic-title-A.md', content: 'A synthetic fact.' },
+    { path: 'Synthetic-title-B.md', content: 'Another synthetic fact.' },
+  ];
+  const chunks = documents.map(d => chunker.chunk(d)[0]);
+  const pair = { leftPath: documents[0].path, rightPath: documents[1].path, score: 1,
+    leftMatches: [{ ...chunks[0], score: 1 }], rightMatches: [{ ...chunks[1], score: 1 }] };
+  const source = { readPaths: async paths => ({ documents: documents.filter(d => paths.includes(d.path)) }) };
+  const prepared = await adapters.preparePair(pair, source, chunker, () => true, () => true);
+  const body = JSON.parse(adapters.decisionsBody(MODELS.decisions, { fragmentA: prepared.a.text, fragmentB: prepared.b.text }));
+  assert(body.state.fragmentA.startsWith('Synthetic-title-A\n\n'));
+  assert(body.state.fragmentB.startsWith('Synthetic-title-B\n\n'));
+  assert.equal(chunker.chunk({ ...documents[0], content: '# Fragment\n\nA synthetic fact.' })[0].text, 'Fragment\n\nA synthetic fact.');
 });

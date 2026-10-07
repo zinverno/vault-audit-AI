@@ -1,5 +1,4 @@
-// Offline preflight for the blocked live evaluation. --live fails closed; see the report.
-// No HTTP implementation here: paid/native execution must wait for a defensible billing bound.
+// Dry-run by default. --fake / --live use the isolated native driver and a durable journal.
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -32,7 +31,7 @@ export async function frozenCases() {
 // The injected fake in the free check is the only transport used by this preflight.
 export async function productionAdapters() {
   const result = await build({ stdin: { contents:
-    'export * from "./rerank/openRouterRerank"; export * from "./decisions/openRouterDecisions";',
+    'export * from "./rerank/openRouterRerank"; export * from "./decisions/openRouterDecisions"; export * from "./chunking/markdownChunker"; export * from "./decisions/preparePair";',
     resolveDir: ROOT, sourcefile: 'evaluation-entry.ts' }, bundle: true, write: false, format: 'esm',
     platform: 'node', logLevel: 'silent', plugins: [{ name: 'offline-obsidian', setup(builder) {
       builder.onResolve({ filter: /^obsidian$/ }, () => ({ path: 'obsidian', namespace: 'offline' }));
@@ -64,10 +63,11 @@ export async function preflight({ live = false } = {}) {
       status: 'NOT RUN', choice: null, probabilities: null, confidence: null, tied: null,
       resolvedModel: null, correspondence: null, latencyMs: null, usage: null, costUSD: null });
   }
-  const keyPresent = Boolean(process.env.OPENROUTER_API_KEY?.trim());
-  const blockers = [...(keyPresent ? [] : ['missing credential']), 'unverified OpenRouter billing upper bound'];
+  // Dry-run checks only source availability; the native child gets the secret in memory on --live.
+  const keyPresent = Boolean(process.env.OPENROUTER_API_KEY?.trim()) || await fs.access('/home/zinvernix/.config/veynrel/openrouter-test.key').then(() => true, () => false);
+  const blockers = [...(keyPresent ? [] : ['missing credential']), 'unverified OpenRouter rerank billing upper bound'];
   return {
-    schemaVersion: 1, generatedAt: new Date().toISOString(), mode: live ? 'live-preflight-refused' : 'dry-run',
+    schemaVersion: 2, generatedAt: new Date().toISOString(), mode: live ? 'live-preflight' : 'dry-run',
     sourceCommit: SOURCE_COMMIT, checkoutCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim(),
     buildSha256: sha256(await fs.readFile(path.join(ROOT, 'main.js'))),
     stylesSha256: sha256(await fs.readFile(path.join(ROOT, 'styles.css'))),
@@ -76,42 +76,47 @@ export async function preflight({ live = false } = {}) {
     cases: { file: CASE_FILE, sha256: CASE_SHA256, criteriaVersion: cases.criteriaVersion,
       sources: cases.sources, criteriaSourceSha256: cases.criteriaSourceSha256,
       decisionsAdapterSha256: cases.decisionsAdapterSha256, rerankAdapterSha256: cases.rerankAdapterSha256 },
-    blockers, liveAdapter: 'BLOCKED', nativeLive: 'BLOCKED', semanticQuality: 'NOT EVALUATED',
+    blockers, liveAdapter: 'NOT RUN', nativeLive: 'NOT RUN', semanticQuality: 'NOT EVALUATED',
     pricing: { checkedOn: '2026-10-07', rerankUSDPerSearchUnit: 0.001, decisionsUSDPerMillionInputTokens: 0.042,
       decisionsUSDPerMillionOutputTokens: 0,
       sources: ['https://openrouter.ai/cohere/rerank-v3.5', 'https://openrouter.ai/typesafe/jev-1.13',
         'https://openrouter.ai/docs/api/api-reference/rerank/submit-a-rerank-request',
         'https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request',
         'https://cohere.com/pricing', 'https://docs.cohere.com/v1/reference/rerank', 'https://docs.typesafe.ai/models'],
-      verifiedUpperBoundUSD: null, conditionalPlanningEnvelopeUSD: 0.07376,
-      assumptions: ['5 rerank calls reserving 4 search units each (0.020 USD total); OpenRouter upstream chunk cap not established.',
-        '20 Decisions calls reserving 64000 input tokens each, including state, criteria and service context (0.05376 USD total); no output charge.',
+      decisionsUpperBoundUSD: 0.057802752, rerankUpperBoundUSD: null,
+      assumptions: ['Rerank live gate closed: OpenRouter upstream chunk cap not established.',
+        '21 Decisions calls reserving 65536 input tokens each, including state, criteria and service context (0.057802752 USD total); no output charge.',
         'No connection probes, remote embeddings, retries, or additional experiments. Recheck rules before live execution.'] },
     budget: { authorizedUSD: 0.10, planningCeilingUSD: 0.08, untouchedMarginUSD: 0.02, maximumRequests: 32,
-      planned: { rerankFixed: 4, rerankNative: 1, decisions: 20, nativeDecisionsReusesFirstPair: true,
-        remoteEmbeddings: 0, connectionTests: 0, total: 25 },
+      planned: { rerankFixed: 0, rerankNative: 0, decisions: 20, nativeDecisions: 1, nativeDecisionsReusesFirstPair: false,
+        remoteEmbeddings: 0, connectionTests: 0, total: 21 },
       sent: { rerank: 0, decisions: 0, embeddings: 0, connectionTests: 0, total: 0 },
       spentByThisRunUSD: 0, providerReportedUSD: null, calculatedFromUsageUSD: null, unresolvedReservesUSD: 0 },
-    nativePlan: { rerankCaseId: 'native-ru-cancellation', decisionsCaseId: 'ru-paraphrase-AB',
+    nativePlan: { rerankCaseId: 'native-ru-cancellation', decisionsCaseId: 'native-ru-paraphrase-AB',
       rerankStatus: 'NOT RUN', decisionsStatus: 'NOT RUN', embeddings: 'synthetic only; no quality baseline' },
     orderStability: cases.decisions.filter(p => !p.swapped).map(p => ({ pairId: p.id.slice(0, -3),
       choiceAgrees: null, ambiguousSetAgrees: null, status: 'NOT RUN' })), entries,
   };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+async function main() {
   const args = process.argv.slice(2);
   const live = args.includes('--live');
+  const fake = args.includes('--fake');
   const outputIndex = args.indexOf('--out');
   const output = outputIndex >= 0 ? args[outputIndex + 1] : undefined;
-  const valid = args.every((arg, i) => arg === '--live' || arg === '--out' || i === outputIndex + 1 && outputIndex >= 0);
-  if (!valid || outputIndex >= 0 && (!output || output.startsWith('--'))) throw Error('usage: [--live] [--out new-file.json]');
+  const valid = args.every((arg, i) => ['--live', '--fake', '--out'].includes(arg) || i === outputIndex + 1 && outputIndex >= 0);
+  if (!valid || live && fake || outputIndex >= 0 && (!output || output.startsWith('--'))) throw Error('usage: [--live | --fake] [--out new-file.json]');
   try {
-    const report = await preflight({ live });
+    const report = live || fake ? await (await import('./live-evaluation-native.mjs')).runNative({ fake }) : await preflight();
     if (output) await fs.writeFile(output, JSON.stringify(report, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
-    console.log(JSON.stringify({ mode: report.mode, blockers: report.blockers, planned: report.budget.planned,
-      conditionalPlanningEnvelopeUSD: report.pricing.conditionalPlanningEnvelopeUSD,
-      verifiedUpperBoundUSD: null, sent: 0, output: output ? 'written' : 'not requested' }, null, 2));
-    if (live) process.exitCode = 2;
-  } catch { console.error('Preflight failed; no provider calls made. Check frozen sources, build and output path.'); process.exitCode = 1; }
+    console.log(JSON.stringify({ mode: report.mode, blockers: report.blockers ?? report.blocked, planned: report.budget?.planned,
+      decisionsUpperBoundUSD: report.pricing?.decisionsUpperBoundUSD, accounting: report.accounting,
+      stopCode: report.stopCode, driverReason: report.driverReason, stoppedAt: report.stoppedAt,
+      output: output ? 'written' : 'not requested' }, null, 2));
+    if (report.stopCode) process.exitCode = 2;
+  } catch { console.error('Evaluation stopped. Inspect the durable journal and safe evidence before any further dispatch.'); process.exitCode = 1; }
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  void main().catch(() => { console.error('Invalid evaluation arguments.'); process.exitCode = 1; });
 }
