@@ -110,8 +110,8 @@ describe("refined search and current chunk reconstruction", () => {
   it("deterministically truncates by Unicode code points and bounds escaped UTF-8 JSON", async () => {
     const f = fixture(30);
     const long = "😀\"\\".repeat(2000);
-    const chunk = { ...f.results[0].matches[0], text: long, source: { startOffset: 0, endOffset: long.length, startLine: 0, endLine: 0 } };
-    const customChunker = { chunk: () => [chunk] };
+    const customChunker = new MarkdownChunker({ targetChars: 18000, maxChars: 20000, overlapChars: 0 });
+    const chunk = { ...customChunker.chunk({ path: f.results[0].path, content: long })[0], score: 0.7 };
     const document = { ...f.results[0], matches: [chunk] };
     f.contents.set(document.path, long);
     const prepared = await prepareRerankCandidates([document], f.source, customChunker, () => true);

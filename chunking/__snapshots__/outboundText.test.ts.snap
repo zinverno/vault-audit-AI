@@ -1,0 +1,85 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`legacy chunk representation frozen before the fix > 'authored basename heading': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 1,
+  "sha256": "085b361d8db9ea4c362585e0676204babecbe8012f21d8203a6666404e784427",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'authored path in body': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 1,
+  "sha256": "8027c1b4a218b7a179975e3d3b860bd430cf6ac859f0031b402cc9a8c08eb966",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'cached Setext': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 1,
+  "sha256": "3a5b10434244a3464ad3eb997594e6ebf927074dd7be283f093a6764655a544a",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'code list overlap': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 5,
+  "sha256": "ca91340a13a5af90dfacb669c70dd760944138535198c8c2d06f9ebdcc19f170",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'empty heading': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 1,
+  "sha256": "7d087d8be50674b92401be22e675110d5516fd27586bee8c2662694116c4973e",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'empty': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 0,
+  "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'frontmatter and body': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 1,
+  "sha256": "4452903ac31f411a63fe338205b34808447e37682feb93733c10d666d1af9830",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'frontmatter only': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 0,
+  "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'headerless': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 1,
+  "sha256": "f64023f1a072e4e46e5cc81a665fee3513d1d686052a6ea6b41cb57995173eba",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'introduction': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 2,
+  "sha256": "a1bf04d2cbd597faab768fa1c17398e33733109b63029dbd98ec5e7fa790b199",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'long Unicode filename BOM CRLF': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 1,
+  "sha256": "ff8e13df33fdde9fe5a7a384f8e5d72c5fe8d6d424d932b4f433ac5de24d6a66",
+}
+`;
+
+exports[`legacy chunk representation frozen before the fix > 'nested and empty headings': every serialized legacy field remains byte-identical 1`] = `
+{
+  "count": 3,
+  "sha256": "4d814aa3fb1d0fc443ad9c0ebaecb56d9670ac97beb9cbae993373c43f9fcff3",
+}
+`;

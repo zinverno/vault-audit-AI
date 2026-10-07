@@ -26,6 +26,7 @@ interface HeadingInfo {
 
 interface Section {
   headingPath: string[];
+  syntheticHeading: boolean;
   startOffset: number;
   endOffset: number;
 }
@@ -389,6 +390,7 @@ function buildSections(
   const firstHeadingStart = headings[0]?.startOffset ?? contentLength;
   sections.push({
     headingPath: [rootHeading(path)],
+    syntheticHeading: true,
     startOffset: contentStart,
     endOffset: firstHeadingStart,
   });
@@ -403,6 +405,7 @@ function buildSections(
     const headingPath = stack.map((entry) => entry.text).filter(Boolean);
     sections.push({
       headingPath: headingPath.length ? headingPath : [rootHeading(path)],
+      syntheticHeading: headingPath.length === 0,
       startOffset: heading.bodyStartOffset,
       endOffset: headings[index + 1]?.startOffset ?? contentLength,
     });
@@ -932,6 +935,12 @@ function validateOptions(options: ChunkingOptions): void {
 
 export class MarkdownChunker implements ChunkingStrategy {
   private readonly options: ChunkingOptions;
+  // Object-local provenance never becomes a NoteChunk field, index record or spread payload.
+  private readonly outboundTexts = new WeakMap<NoteChunk, string>();
+
+  outboundText(chunk: NoteChunk): string | undefined {
+    return this.outboundTexts.get(chunk);
+  }
 
   constructor(options: Partial<ChunkingOptions> = {}) {
     this.options = { ...DEFAULT_CHUNKING_OPTIONS, ...options };
@@ -1012,6 +1021,8 @@ export class MarkdownChunker implements ChunkingStrategy {
             endLine: lineAtOffset(allLines, Math.max(startOffset, endOffset - 1)),
           },
         };
+        // Same selected blocks, separators and overlap; only filename-derived context is omitted.
+        this.outboundTexts.set(chunk, section.syntheticHeading ? joinBlocks(included) : text);
         chunks.push(chunk);
         previousPrimary = group.primary;
       }

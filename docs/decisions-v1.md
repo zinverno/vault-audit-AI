@@ -18,6 +18,10 @@ The feature is off by default, including upgrades. It does not require rerank. I
 
 Only current Markdown paths still present in the compatible index and permitted by the document source are eligible. Missing, deleted, renamed, excluded or stale evidence blocks sending. The code never substitutes a whole note, broadens the scope, scans other pairs, or rebuilds the index to obtain a comparison. Current semantic scope remains unchanged.
 
+After checking the original chunk ID/content hash, Decisions obtains an outbound representation from the same parsed blocks and overlap. Filename-derived fallback breadcrumbs are omitted, including for headerless notes, introductions and empty headings. Actual Markdown headings remain as context; names or paths written by the author in a heading or body remain content. This is provenance handling, **not anonymization or personal-data removal**. The plugin does not add filenames, folder names or paths as service context to these fragments. Local note labels and navigation remain available.
+
+This happens before Unicode truncation and JSON size checks; the preview is exactly the resulting outbound text. Missing provenance is a technical stale/preparation state, never a model verdict or a fallback to enriched text. Legacy `chunk.text`, identity/hash, coordinates, embedding space and persisted index stay unchanged; no rebuild is requested. This boundary applies to Decisions and Rerank, not to embeddings, RAG or Companion.
+
 Product limits, **not provider limits**:
 
 | Limit | v1 |

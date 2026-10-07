@@ -1,4 +1,4 @@
-import { isCanonicalMarkdownPath, reconstructChunks } from "../chunking/reconstructChunks";
+import { isCanonicalMarkdownPath, outboundChunkText, reconstructChunks } from "../chunking/reconstructChunks";
 import type { ChunkingStrategy } from "../chunking/types";
 import type { MarkdownDocumentSource } from "../indexing/types";
 import type { SemanticDocumentResult } from "../semantic/types";
@@ -22,10 +22,12 @@ export async function prepareRerankCandidates(
       const matches = [...document.matches].sort((a, b) => b.score - a.score || a.ordinal - b.ordinal);
       for (const match of matches) {
         const chunk = chunks.get(match.id);
-        if (match.path !== document.path || !chunk || chunk.contentHash !== match.contentHash || !chunk.text.trim()) continue;
+        if (match.path !== document.path || !chunk || chunk.contentHash !== match.contentHash) continue;
+        const text = outboundChunkText(chunker, chunk);
+        if (text === undefined) continue;
         prepared.push({ document, chunkId: chunk.id, originalOrder,
           match: { ...match, source: { ...chunk.source }, headingPath: [...chunk.headingPath] },
-          text: Array.from(chunk.text).slice(0, RERANK_LIMITS.fragmentCodePoints).join("") });
+          text: Array.from(text).slice(0, RERANK_LIMITS.fragmentCodePoints).join("") });
         break;
       }
     } catch { /* Unreadable/stale text remains unscored, never replaced by the whole note. */ }

@@ -1,0 +1,69 @@
+{
+  "sourceCommit": "6a405e2e7d90be41f722e2a80995628ce56ad83c",
+  "documents": [
+    {
+      "path": "private/Headerless-name.md",
+      "content": "Synthetic body."
+    },
+    {
+      "path": "private/Introduction-name.md",
+      "content": "Intro.\n\n# Written heading\n\nBody."
+    }
+  ],
+  "chunks": [
+    {
+      "id": "chunk-32616fdbc75d5604",
+      "path": "private/Headerless-name.md",
+      "ordinal": 0,
+      "headingPath": [
+        "Headerless-name"
+      ],
+      "text": "Headerless-name\n\nSynthetic body.",
+      "contentHash": "44f70534332de5d6",
+      "source": {
+        "startOffset": 0,
+        "endOffset": 15,
+        "startLine": 0,
+        "endLine": 0
+      }
+    },
+    {
+      "id": "chunk-1a825fd78675bc5c",
+      "path": "private/Introduction-name.md",
+      "ordinal": 0,
+      "headingPath": [
+        "Introduction-name"
+      ],
+      "text": "Introduction-name\n\nIntro.",
+      "contentHash": "e4f4d0f70b899cee",
+      "source": {
+        "startOffset": 0,
+        "endOffset": 6,
+        "startLine": 0,
+        "endLine": 0
+      }
+    },
+    {
+      "id": "chunk-f37b59ebdf9d7a74",
+      "path": "private/Introduction-name.md",
+      "ordinal": 1,
+      "headingPath": [
+        "Written heading"
+      ],
+      "text": "Written heading\n\nBody.",
+      "contentHash": "4615cdd80e1af7f1",
+      "source": {
+        "startOffset": 27,
+        "endOffset": 32,
+        "startLine": 4,
+        "endLine": 4
+      }
+    }
+  ],
+  "text": {
+    "vectors/vector-manifest.json": "{\n  \"schemaVersion\": 1,\n  \"generation\": 1,\n  \"dimensions\": 3,\n  \"embeddingSpaceId\": \"embedding-space:v1|provider=openai-compatible|model=fixture|endpoint=http%3A%2F%2Flocalhost%3A1%2Fv1|dimensions=3\",\n  \"normalized\": true,\n  \"count\": 3,\n  \"binaryFile\": \"vector-index.bin\",\n  \"records\": [\n    {\n      \"id\": \"chunk-1a825fd78675bc5c\",\n      \"path\": \"private/Introduction-name.md\",\n      \"headingPath\": [\n        \"Introduction-name\"\n      ],\n      \"ordinal\": 0,\n      \"contentHash\": \"e4f4d0f70b899cee\",\n      \"source\": {\n        \"startOffset\": 0,\n        \"endOffset\": 6,\n        \"startLine\": 0,\n        \"endLine\": 0\n      },\n      \"preview\": \"Introduction-name Intro.\"\n    },\n    {\n      \"id\": \"chunk-32616fdbc75d5604\",\n      \"path\": \"private/Headerless-name.md\",\n      \"headingPath\": [\n        \"Headerless-name\"\n      ],\n      \"ordinal\": 0,\n      \"contentHash\": \"44f70534332de5d6\",\n      \"source\": {\n        \"startOffset\": 0,\n        \"endOffset\": 15,\n        \"startLine\": 0,\n        \"endLine\": 0\n      },\n      \"preview\": \"Headerless-name Synthetic body.\"\n    },\n    {\n      \"id\": \"chunk-f37b59ebdf9d7a74\",\n      \"path\": \"private/Introduction-name.md\",\n      \"headingPath\": [\n        \"Written heading\"\n      ],\n      \"ordinal\": 1,\n      \"contentHash\": \"4615cdd80e1af7f1\",\n      \"source\": {\n        \"startOffset\": 27,\n        \"endOffset\": 32,\n        \"startLine\": 4,\n        \"endLine\": 4\n      },\n      \"preview\": \"Written heading Body.\"\n    }\n  ]\n}\n"
+  },
+  "binary": {
+    "vectors/vector-index.bin": "VkFBVkVDMDEBAAAAAQAAAAMAAAADAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAA"
+  }
+}
