@@ -691,3 +691,47 @@ describe("semantic discovery modals", () => {
     expect(source).not.toContain("insertAdjacentHTML");
   });
 });
+
+describe("manual Decisions UI", () => {
+  it("offers an explicit pair action without running the model on the duplicates list", async () => {
+    const f = discoveryHarness(); const assessOverlap = vi.fn();
+    const modal = new SemanticDuplicatesModal(f.app as never, { ...f.delegate, assessOverlap });
+    modal.open(); await flush(); const content = modal.contentEl as unknown as InstanceType<typeof mocks.FakeElement>;
+    expect(assessOverlap).not.toHaveBeenCalled();
+    const button = content.findByTag("button")[0]; expect(button.text).toBe("Оценить пересечение");
+    button.trigger("click"); expect(assessOverlap).toHaveBeenCalledWith(expect.objectContaining({ leftPath: "A.md", rightPath: "Folder/B.md" }));
+    modal.close();
+  });
+  it.each(["en", "ru"] as const)("shows exact bounded text, manual state transitions and stale result in %s", async language => {
+    const { setLanguage } = await import("../i18n"); setLanguage(language);
+    const { OverlapModal } = await import("../decisions/overlapModal");
+    const { OverlapSession } = await import("../decisions/overlapSession");
+    const { DEFAULT_DECISIONS_SETTINGS } = await import("../decisions/types");
+    const { validateDecisionsResponse } = await import("../decisions/openRouterDecisions");
+    const f = discoveryHarness(); const preview = {
+      a: { match: discoveryMatch("A.md", 3), text: "<script>untrusted literal</script>" + "😀".repeat(3900), truncated: true, sourceHash: "a" },
+      b: { match: discoveryMatch("Folder/B.md", 18), text: "second fragment", truncated: false, sourceHash: "b" },
+    };
+    const answer = validateDecisionsResponse({ answers: { overlap: { type: "choice", choice: "same_information", confidence: 0.375,
+      probabilities: { same_information: 0.5, partial_overlap: 0.5, related_distinct: 0, unrelated: 0, insufficient_context: 0 } } } }, "typesafe/jev-1.13");
+    let finish!: () => void;
+    const assess = vi.fn(() => new Promise<typeof answer>(resolve => { finish = () => resolve(answer); }));
+    const release = vi.fn();
+    const session = new OverlapSession(["A.md", "Folder/B.md"], {
+      settings: () => ({ ...DEFAULT_DECISIONS_SETTINGS, enabled: true, apiKey: "synthetic" }), stamp: () => "1", available: () => true,
+      prepare: async () => preview, provider: () => ({ assess }), release,
+    });
+    const modal = new OverlapModal(f.app as never, session); modal.open(); await flush();
+    const content = modal.contentEl as unknown as InstanceType<typeof mocks.FakeElement>;
+    expect(assess).not.toHaveBeenCalled(); expect(content.findByTag("pre").map(p => p.text)).toEqual([preview.a.text, preview.b.text]);
+    expect(content.findByTag("script")).toHaveLength(0); expect(content.findByTag("pre")[0].attributes.get("tabindex")).toBe("0");
+    const run = content.findByClass("mod-cta")[0]; run.trigger("click"); await flush();
+    expect(run.disabled).toBe(true); run.trigger("click"); session.onChange(); expect(assess).toHaveBeenCalledOnce();
+    finish(); await flush(); expect(session.view.stage).toBe("result");
+    expect(content.findByTag("p").some(p => p.text.includes(language === "ru" ? "единственную" : "single category"))).toBe(true);
+    content.findByClass("ai-overlap-note")[1].trigger("click"); await flush();
+    expect(f.leaf.openFile).toHaveBeenCalledWith(expect.objectContaining({ path: "Folder/B.md" })); expect(f.view.editor.setCursor).toHaveBeenCalledWith({ line: 18, ch: 0 });
+    session.invalidate(); expect(content.findByTag("p").some(p => p.text.includes(language === "ru" ? "устарела" : "stale"))).toBe(true);
+    modal.close(); expect(release).toHaveBeenCalledOnce(); expect(content.children).toHaveLength(0); setLanguage("ru");
+  });
+});

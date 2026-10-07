@@ -1,0 +1,196 @@
+{
+  "purpose": "Synthetic manual labels for future live evaluation; not model measurements. No production tuning.",
+  "criteriaVersion": "overlap-v1",
+  "pairs": [
+    {
+      "id": "ru-paraphrase-AB",
+      "language": "ru",
+      "fragmentA": "Встреча перенесена на вторник в 10:00. Место прежнее.",
+      "fragmentB": "Во вторник встречаемся в десять утра там же.",
+      "manualExpected": "same_information",
+      "manualAlternatives": [],
+      "swapped": false
+    },
+    {
+      "id": "ru-paraphrase-BA",
+      "language": "ru",
+      "fragmentA": "Во вторник встречаемся в десять утра там же.",
+      "fragmentB": "Встреча перенесена на вторник в 10:00. Место прежнее.",
+      "manualExpected": "same_information",
+      "manualAlternatives": [],
+      "swapped": true
+    },
+    {
+      "id": "en-partial-AB",
+      "language": "en",
+      "fragmentA": "Backups run nightly at 02:00.",
+      "fragmentB": "Backups run nightly at 02:00 and are retained for 30 days.",
+      "manualExpected": "partial_overlap",
+      "manualAlternatives": [],
+      "swapped": false
+    },
+    {
+      "id": "en-partial-BA",
+      "language": "en",
+      "fragmentA": "Backups run nightly at 02:00 and are retained for 30 days.",
+      "fragmentB": "Backups run nightly at 02:00.",
+      "manualExpected": "partial_overlap",
+      "manualAlternatives": [],
+      "swapped": true
+    },
+    {
+      "id": "ru-aspects-AB",
+      "language": "ru",
+      "fragmentA": "Для велосипеда важна правильная высота седла.",
+      "fragmentB": "Для велосипеда важно регулярно смазывать цепь.",
+      "manualExpected": "related_distinct",
+      "manualAlternatives": [],
+      "swapped": false
+    },
+    {
+      "id": "ru-aspects-BA",
+      "language": "ru",
+      "fragmentA": "Для велосипеда важно регулярно смазывать цепь.",
+      "fragmentB": "Для велосипеда важна правильная высота седла.",
+      "manualExpected": "related_distinct",
+      "manualAlternatives": [],
+      "swapped": true
+    },
+    {
+      "id": "en-contradiction-AB",
+      "language": "en",
+      "fragmentA": "The switch must remain on during calibration.",
+      "fragmentB": "The switch must remain off during calibration.",
+      "manualExpected": "related_distinct",
+      "manualAlternatives": [],
+      "swapped": false
+    },
+    {
+      "id": "en-contradiction-BA",
+      "language": "en",
+      "fragmentA": "The switch must remain off during calibration.",
+      "fragmentB": "The switch must remain on during calibration.",
+      "manualExpected": "related_distinct",
+      "manualAlternatives": [],
+      "swapped": true
+    },
+    {
+      "id": "ru-unrelated-AB",
+      "language": "ru",
+      "fragmentA": "Томатам нужен регулярный полив.",
+      "fragmentB": "Пакет UDP не гарантирует доставку.",
+      "manualExpected": "unrelated",
+      "manualAlternatives": [],
+      "swapped": false
+    },
+    {
+      "id": "ru-unrelated-BA",
+      "language": "ru",
+      "fragmentA": "Пакет UDP не гарантирует доставку.",
+      "fragmentB": "Томатам нужен регулярный полив.",
+      "manualExpected": "unrelated",
+      "manualAlternatives": [],
+      "swapped": true
+    },
+    {
+      "id": "en-context-AB",
+      "language": "en",
+      "fragmentA": "It was the same as before.",
+      "fragmentB": "That one changed later.",
+      "manualExpected": "insufficient_context",
+      "manualAlternatives": [],
+      "swapped": false
+    },
+    {
+      "id": "en-context-BA",
+      "language": "en",
+      "fragmentA": "That one changed later.",
+      "fragmentB": "It was the same as before.",
+      "manualExpected": "insufficient_context",
+      "manualAlternatives": [],
+      "swapped": true
+    },
+    {
+      "id": "translation-AB",
+      "language": "ru-en",
+      "fragmentA": "Библиотека закрыта по понедельникам, кроме праздников.",
+      "fragmentB": "The library is closed on Mondays except on holidays.",
+      "manualExpected": "same_information",
+      "manualAlternatives": [],
+      "swapped": false
+    },
+    {
+      "id": "translation-BA",
+      "language": "ru-en",
+      "fragmentA": "The library is closed on Mondays except on holidays.",
+      "fragmentB": "Библиотека закрыта по понедельникам, кроме праздников.",
+      "manualExpected": "same_information",
+      "manualAlternatives": [],
+      "swapped": true
+    },
+    {
+      "id": "en-ambiguous-AB",
+      "language": "en",
+      "fragmentA": "The device usually lasts ten hours.",
+      "fragmentB": "The device lasts up to ten hours under normal conditions.",
+      "manualExpected": "partial_overlap",
+      "manualAlternatives": [
+        "related_distinct",
+        "same_information"
+      ],
+      "swapped": false
+    },
+    {
+      "id": "en-ambiguous-BA",
+      "language": "en",
+      "fragmentA": "The device lasts up to ten hours under normal conditions.",
+      "fragmentB": "The device usually lasts ten hours.",
+      "manualExpected": "partial_overlap",
+      "manualAlternatives": [
+        "related_distinct",
+        "same_information"
+      ],
+      "swapped": true
+    },
+    {
+      "id": "ru-ambiguous-AB",
+      "language": "ru",
+      "fragmentA": "Этот метод работает на небольших данных.",
+      "fragmentB": "Метод применим к небольшой выборке при независимых наблюдениях.",
+      "manualExpected": "partial_overlap",
+      "manualAlternatives": [
+        "insufficient_context"
+      ],
+      "swapped": false
+    },
+    {
+      "id": "ru-ambiguous-BA",
+      "language": "ru",
+      "fragmentA": "Метод применим к небольшой выборке при независимых наблюдениях.",
+      "fragmentB": "Этот метод работает на небольших данных.",
+      "manualExpected": "partial_overlap",
+      "manualAlternatives": [
+        "insufficient_context"
+      ],
+      "swapped": true
+    },
+    {
+      "id": "en-caveat-AB",
+      "language": "en",
+      "fragmentA": "The medicine is stored below 25°C, but must not be frozen.",
+      "fragmentB": "Store the medicine below 25°C.",
+      "manualExpected": "partial_overlap",
+      "manualAlternatives": [],
+      "swapped": false
+    },
+    {
+      "id": "en-caveat-BA",
+      "language": "en",
+      "fragmentA": "Store the medicine below 25°C.",
+      "fragmentB": "The medicine is stored below 25°C, but must not be frozen.",
+      "manualExpected": "partial_overlap",
+      "manualAlternatives": [],
+      "swapped": true
+    }
+  ]
+}

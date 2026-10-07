@@ -1,3 +1,4 @@
+import { DEFAULT_DECISIONS_SETTINGS } from "./decisions/types";
 import { DEFAULT_RERANK_SETTINGS } from "./rerank/types";
 import { DEFAULT_HEALTH_PREFERENCES } from "./health/preferences";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -49,6 +50,7 @@ function settings(overrides: Partial<AIHubSettings> = {}): AIHubSettings {
       openRouterApiKey: "",
       openAICompatibleApiKey: "",
     },
+    decisions: { ...DEFAULT_DECISIONS_SETTINGS },
     rerank: { ...DEFAULT_RERANK_SETTINGS },
     semanticAutoSyncSuspended: false,
     health: { ...DEFAULT_HEALTH_PREFERENCES },
