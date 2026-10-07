@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
+import type { RefinedSearchUpdate } from "../rerank/types";
 
 const mocks = vi.hoisted(() => {
   interface FakeEvent {
@@ -239,6 +240,79 @@ function harness(results = [result("safe preview")]) {
 }
 
 describe("SemanticSearchModal helpers and behavior", () => {
+  it("navigates to the current selected rerank fragment while retaining all original previews", async () => {
+    const f = harness(); const document = result("original preview");
+    const selected = { ...document.matches[0], id: "selected-current-chunk", source: {
+      startOffset: 300, endOffset: 400, startLine: 42, endLine: 45,
+    } };
+    Object.assign(f.delegate, { searchDiscover: async () => ({ stage: "reranked", evaluated: 2, candidates: 2,
+      results: [{ ...document, rerankScore: 8, rerankMatch: selected }] }) });
+    f.content.findByTag("input")[0].value = "query";
+    f.content.findByTag("button")[0].trigger("click"); await flush();
+    expect(f.content.findByClass("ai-semantic-result-preview")[0].text).toBe("original preview");
+    f.content.findByClass("ai-semantic-result-card")[0].trigger("click"); await flush();
+    expect(f.view.editor.setCursor).toHaveBeenCalledWith({ line: 42, ch: 0 });
+  });
+  it("shows original results while refining and supports a newer explicit search", async () => {
+    const f = harness();
+    let finish!: (update: RefinedSearchUpdate) => void;
+    let firstSignal!: AbortSignal;
+    const discover = vi.fn(async (_query: string, publish: (update: RefinedSearchUpdate) => void, signal: AbortSignal) => {
+      firstSignal = signal;
+      publish({ stage: "refining", results: [result("original")] });
+      return new Promise<RefinedSearchUpdate>(resolve => { finish = resolve; });
+    });
+    Object.assign(f.delegate, { searchDiscover: discover });
+    const input = f.content.findByTag("input")[0], button = f.content.findByTag("button")[0];
+    input.value = "first"; button.trigger("click"); await flush();
+    expect(f.content.findByClass("ai-semantic-result-preview")[0].text).toBe("original");
+    expect(f.content.findByClass("ai-semantic-search-status")[0].attributes.get("data-state")).toBe("refining");
+    expect(input.disabled).toBe(false);
+    discover.mockImplementationOnce(async () => ({ stage: "reranked", results: [result("new result")], evaluated: 2, candidates: 2 }));
+    input.value = "second"; button.trigger("click"); await flush();
+    expect(firstSignal.aborted).toBe(true);
+    finish({ stage: "reranked", results: [result("late old result")], evaluated: 2, candidates: 2 }); await flush();
+    expect(f.content.findByClass("ai-semantic-result-preview")[0].text).toBe("new result");
+    expect(discover).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["close", "edit", "unload"])("ignores refinement after %s and never sends on input events", async action => {
+    const f = harness(); let finish!: (value: RefinedSearchUpdate) => void; let signal!: AbortSignal;
+    const discover = vi.fn(async (_query: string, publish: (update: RefinedSearchUpdate) => void, currentSignal: AbortSignal) => {
+      signal = currentSignal; publish({ stage: "refining", results: [result("original")] });
+      return new Promise<RefinedSearchUpdate>(resolve => { finish = resolve; });
+    });
+    Object.assign(f.delegate, { searchDiscover: discover });
+    const input = f.content.findByTag("input")[0];
+    input.value = "typed"; input.trigger("input"); expect(discover).not.toHaveBeenCalled();
+    f.content.findByTag("button")[0].trigger("click"); await flush();
+    if (action === "close") f.modal.close();
+    else if (action === "edit") { input.value = "new draft"; input.trigger("input"); }
+    else Object.assign(f.delegate, { isSearchAvailable: () => false });
+    if (action !== "unload") expect(signal.aborted).toBe(true);
+    finish({ stage: "reranked", results: [result("late reply")] }); await flush();
+    expect(f.content.findByClass("ai-semantic-result-preview").some(item => item.text === "late reply")).toBe(false);
+    expect(discover).toHaveBeenCalledOnce();
+  });
+
+  it.each(["fallback", "reranked", "skipped"] as const)("renders %s status as text and preserves note navigation", async stage => {
+    const f = harness();
+    const update: RefinedSearchUpdate = { stage, results: [result("<b>local fragment</b>")],
+      evaluated: 2, candidates: 3, reason: stage === "skipped" ? "insufficient" : undefined };
+    const discover = vi.fn(async () => update);
+    Object.assign(f.delegate, { searchDiscover: discover });
+    f.content.findByTag("input")[0].value = "search";
+    f.content.findByTag("button")[0].trigger("click"); await flush();
+    const status = f.content.findByClass("ai-semantic-search-status")[0];
+    expect(status.attributes.get("data-state")).toBe(stage);
+    if (stage === "fallback") expect(status.text).toBe("Уточнение недоступно. Показаны результаты семантического поиска.");
+    if (stage === "reranked") expect(status.text).toContain("2 из 3");
+    expect(f.content.findByClass("ai-semantic-result-preview")[0].text).toBe("<b>local fragment</b>");
+    expect(f.content.findByClass("ai-semantic-result-score")[0].text).toBe("0.842");
+    f.content.findByClass("ai-semantic-result-card")[0].trigger("click"); await flush();
+    expect(f.leaf.openFile).toHaveBeenCalledOnce(); expect(f.view.editor.setCursor).toHaveBeenCalled();
+    expect(discover).toHaveBeenCalledOnce();
+  });
   it("formats scores, basenames, and breadcrumbs", () => {
     expect(formatSemanticScore(0.8421)).toBe("0.842");
     expect(semanticBasename("Folder/Alpha.md")).toBe("Alpha");

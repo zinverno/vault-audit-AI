@@ -104,6 +104,8 @@ The current-data dashboard brings findings, last-check information, Recall and K
 
 These features reuse the existing semantic index. Similarity is a discovery signal, not proof that notes are identical or agree.
 
+**Optional [Rerank v1](docs/rerank-v1.md)** refines explicit semantic searches through OpenRouter with your own separate API key. It is off by default, including upgrades. After showing the original results, Veynrel submits the query and one verified current fragment from each eligible candidate (up to 30 notes), then displays up to 10 results. Requests are billed to your OpenRouter account. Failures preserve eligible semantic results; the index, maps, RAG and Companion are unaffected. Quality depends on the candidates, selected model and available fragment—improvement is not guaranteed for every query.
+
 | Relationship view | What it shows |
 | --- | --- |
 | **Vault Topology** (Health) | The Markdown links you actually created. |

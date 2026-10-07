@@ -1,3 +1,4 @@
+import { DEFAULT_RERANK_SETTINGS } from "./rerank/types";
 import { DEFAULT_HEALTH_PREFERENCES } from "./health/preferences";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RequestUrlParam, RequestUrlResponse } from "obsidian";
@@ -48,6 +49,7 @@ function settings(overrides: Partial<AIHubSettings> = {}): AIHubSettings {
       openRouterApiKey: "",
       openAICompatibleApiKey: "",
     },
+    rerank: { ...DEFAULT_RERANK_SETTINGS },
     semanticAutoSyncSuspended: false,
     health: { ...DEFAULT_HEALTH_PREFERENCES },
     ...overrides,

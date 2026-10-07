@@ -1,4 +1,8 @@
 import type { GlobalSemanticAnalysis, GlobalSemanticOptions, SemanticFocusAnalysis } from "./globalSemanticMap";
+import { OpenRouterRerankProvider, testRerankConnection } from "../rerank/openRouterRerank";
+import { refinedSearch } from "../rerank/refinedSearch";
+import { mergeRerankSettings } from "../rerank/types";
+import type { RefinedSearchUpdate, RerankProvider, RerankSettings } from "../rerank/types";
 import { EmbeddingError } from "../embeddings/errors";
 import { INDEXING_EMBEDDING_TIMEOUT_MS } from "../indexing/indexingService";
 import { IndexingObsoleteError } from "../indexing/errors";
@@ -100,6 +104,7 @@ interface SemanticPluginHost {
 }
 
 export interface SemanticControllerDependencies {
+  rerankProvider?: (settings: RerankSettings) => RerankProvider;
   runtimeFactory?: (input: {
     app: App;
     settings: EmbeddingSettings;
@@ -241,6 +246,10 @@ function enqueueSharedSemanticMutation<T>(
 }
 
 export class ObsidianSemanticController {
+  private rerankRevision = 0;
+  private sourceRevision = 0;
+  private readonly rerankRequests = new Set<AbortController>();
+  private readonly rerankProvider: (settings: RerankSettings) => RerankProvider;
   private readonly runtimeFactory: NonNullable<
     SemanticControllerDependencies["runtimeFactory"]
   >;
@@ -314,6 +323,7 @@ export class ObsidianSemanticController {
     dependencies: SemanticControllerDependencies = {},
   ) {
     this.barrier = dependencies.barrier ?? new AsyncReadWriteBarrier();
+    this.rerankProvider = dependencies.rerankProvider ?? (settings => new OpenRouterRerankProvider(settings));
     this.storeRegistry =
       dependencies.storeRegistry ?? new SemanticStoreRegistry();
     this.runtimeFactory =
@@ -423,21 +433,25 @@ export class ObsidianSemanticController {
     this.autoSyncRegistered = true;
     this.plugin.registerEvent(
       this.plugin.app.vault.on("create", (file) => {
+        this.invalidateRerankSources();
         if (isMarkdownTFile(file)) this.autoSync.upsert(file.path);
       }),
     );
     this.plugin.registerEvent(
       this.plugin.app.vault.on("modify", (file) => {
+        this.invalidateRerankSources();
         if (isMarkdownTFile(file)) this.autoSync.upsert(file.path);
       }),
     );
     this.plugin.registerEvent(
       this.plugin.app.vault.on("delete", (file) => {
+        this.invalidateRerankSources();
         if (isMarkdownTFile(file)) this.autoSync.delete(file.path);
       }),
     );
     this.plugin.registerEvent(
       this.plugin.app.vault.on("rename", (file, oldPath) => {
+        this.invalidateRerankSources();
         this.handleAutomaticRename(file, oldPath);
       }),
     );
@@ -454,6 +468,7 @@ export class ObsidianSemanticController {
   }
 
   dispose(): Promise<void> {
+    this.notifyRerankSettingsChanged();
     if (this.disposePromise) return this.disposePromise;
     if (this.autoSyncPolicy !== "disposed") {
       this.autoSyncPolicy = "disposed";
@@ -540,6 +555,7 @@ export class ObsidianSemanticController {
   }
 
   notifySettingsChanged(options: { reconcile?: boolean } = {}): void {
+    this.notifyRerankSettingsChanged();
     this.settingsEpoch++;
     this.runtimeSlot = null;
     if (this.autoSyncPolicy !== "disposed") {
@@ -694,7 +710,78 @@ export class ObsidianSemanticController {
     });
   }
 
-  async search(query: string): Promise<SemanticDocumentResult[]> {
+  search(query: string): Promise<SemanticDocumentResult[]> {
+    return this.searchCandidates(query, 10);
+  }
+
+  notifyRerankSettingsChanged(): void {
+    this.rerankRevision++;
+    for (const request of this.rerankRequests) request.abort();
+  }
+
+  isSearchAvailable(): boolean { return !this.isDisposed(); }
+
+  async testRerankConnection(settings: RerankSettings, signal: AbortSignal): Promise<void> {
+    const request = new AbortController();
+    const cancel = () => request.abort();
+    signal.addEventListener("abort", cancel, { once: true });
+    if (signal.aborted || this.isDisposed()) request.abort();
+    this.rerankRequests.add(request);
+    try { await testRerankConnection(settings, request.signal, this.rerankProvider(settings)); }
+    finally {
+      signal.removeEventListener("abort", cancel);
+      this.rerankRequests.delete(request);
+    }
+  }
+
+  private invalidateRerankSources(): void {
+    // Conservative v1: any vault event invalidates pending refinement, without reading text.
+    this.sourceRevision++;
+    for (const request of this.rerankRequests) request.abort();
+  }
+
+  async searchDiscover(query: string, publish: (update: RefinedSearchUpdate) => void,
+    signal: AbortSignal): Promise<RefinedSearchUpdate> {
+    const settings = mergeRerankSettings(this.plugin.settings.rerank);
+    // Disabled keeps the old path, including its errors, limits and zero source reads.
+    if (!settings.enabled) return { results: await this.search(query), stage: "skipped", reason: "disabled" };
+    const revision = this.rerankRevision;
+    const sources = this.sourceRevision;
+    const semantic = settingsSignature(this.plugin.settings.semantic);
+    const request = new AbortController();
+    const cancel = () => request.abort();
+    signal.addEventListener("abort", cancel, { once: true });
+    if (signal.aborted) request.abort();
+    this.rerankRequests.add(request);
+    let runtime: SemanticRuntime | undefined;
+    let generation = 0;
+    let indexed = new Set<string>();
+    const current = () => !this.isDisposed() && !request.signal.aborted && revision === this.rerankRevision &&
+      sources === this.sourceRevision && semantic === settingsSignature(this.plugin.settings.semantic) &&
+      Object.entries(settings).every(([key, value]) => this.plugin.settings.rerank[key as keyof RerankSettings] === value) &&
+      (!runtime || (runtime === this.runtimeSlot?.runtime && generation === runtime.getStats().vectorGeneration));
+    try {
+      return await refinedSearch({ query: query.trim(), settings, signal: request.signal,
+        provider: this.rerankProvider(settings), isCurrent: current,
+        search: async limit => {
+          const results = await this.searchCandidates(query, limit, snapshot => {
+            runtime = snapshot;
+            generation = runtime.getStats().vectorGeneration;
+          });
+          indexed = new Set(results.map(item => item.path));
+          return results;
+        },
+        allowed: path => indexed.has(path) && !!this.plugin.app.vault.getMarkdownFiles().find(file => file.path === path),
+        prepare: results => runtime?.prepareRerankCandidates?.(results, current) ?? Promise.resolve([]),
+        publish: update => { if (!signal.aborted && !this.isDisposed()) publish(update); },
+      });
+    } finally {
+      signal.removeEventListener("abort", cancel);
+      this.rerankRequests.delete(request);
+    }
+  }
+
+  private async searchCandidates(query: string, limit: number, capture?: (runtime: SemanticRuntime) => void): Promise<SemanticDocumentResult[]> {
     return this.barrier.withShared(async () => {
       if (!this.plugin.settings.semantic.enabled) {
         throw new SemanticNotReadyError(
@@ -717,7 +804,8 @@ export class ObsidianSemanticController {
           tr("Семантический индекс пуст. Сначала обновите индекс Vault."),
         );
       }
-      return runtime.search(query, { limit: 10, matchesPerDocument: 3 });
+      capture?.(runtime);
+      return runtime.search(query, { limit, matchesPerDocument: 3 });
     });
   }
 

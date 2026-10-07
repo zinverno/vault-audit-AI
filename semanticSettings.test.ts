@@ -31,6 +31,18 @@ async function fixture() {
 }
 
 describe("transactional semantic settings in the plugin save queue", () => {
+  it("upgrades legacy settings with rerank disabled and does not inherit an OpenRouter key", async () => {
+    const f = await fixture();
+    const legacy: Partial<AIHubSettings> = structuredClone(f.stored);
+    delete legacy.rerank;
+    legacy.semantic!.openRouterApiKey = "separate-embedding-key";
+    f.plugin.loadData = vi.fn(async () => legacy);
+    vi.mocked(requestUrl).mockClear();
+    await f.plugin.loadSettings();
+    expect(f.plugin.settings.rerank).toEqual({ enabled: false, provider: "openrouter", model: "cohere/rerank-v3.5", apiKey: "" });
+    expect(f.plugin.settings.semantic).toEqual(legacy.semantic);
+    expect(requestUrl).not.toHaveBeenCalled();
+  });
   it("preserves Health, Semantic, Deep Audit, Companion and ordinary preferences in the same save queue", async () => {
     const f = await fixture();
     f.plugin.settings.deepAudit.batchSize = 3;

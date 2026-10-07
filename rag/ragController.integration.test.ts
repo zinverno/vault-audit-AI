@@ -1,3 +1,4 @@
+import { DEFAULT_RERANK_SETTINGS } from "../rerank/types";
 import { DEFAULT_HEALTH_PREFERENCES } from "../health/preferences";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -85,6 +86,7 @@ function settings(): AIHubSettings {
       openRouterApiKey: "",
       openAICompatibleApiKey: "embed-key",
     },
+    rerank: { ...DEFAULT_RERANK_SETTINGS },
     semanticAutoSyncSuspended: false,
     companion: {
       enabled: false,

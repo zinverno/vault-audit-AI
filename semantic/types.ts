@@ -1,6 +1,7 @@
 import type { GlobalSemanticAnalysis, GlobalSemanticOptions, SemanticFocusAnalysis } from "./globalSemanticMap";
 import type { ChunkSourceRange } from "../chunking/types";
 import type { RagContext } from "../rag/types";
+import type { PreparedRerankCandidate } from "../rerank/types";
 import type {
   IndexDocumentInput,
   IndexingExecutionOptions,
@@ -88,6 +89,7 @@ export interface SemanticRuntime {
     options?: SemanticSearchOptions,
   ) => Promise<SemanticDocumentResult[]>;
   buildRagContext: (question: string) => Promise<RagContext>;
+  prepareRerankCandidates?: (results: readonly SemanticDocumentResult[], isCurrent: () => boolean) => Promise<PreparedRerankCandidate[]>;
   /**
    * Rejects with SemanticSourceNotIndexedError when a non-empty compatible
    * index does not contain the requested source; UI boundaries render that

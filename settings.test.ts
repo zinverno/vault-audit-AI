@@ -19,6 +19,7 @@ const exposedKeys = [
   "provider", "apiKey", "model", "baseUrl", "temperature", "language", "showContextMenu", "notifyOnCopy",
   "defaultInsertion", "newNoteFolder", "filenameTemplate", "mocFolder", "atomsLocation", "atomsFolder",
   "deepAudit.batchSize", "deepAudit.maxConcurrent", "deepAudit.delayMs",
+  "rerank.enabled", "rerank.model", "rerank.apiKey",
   "semantic.enabled", "semantic.embeddingProvider", "semantic.embeddingModel", "semantic.embeddingBaseUrl",
   "semantic.openRouterApiKey", "semantic.openAICompatibleApiKey", "companion.enabled", "companion.endpoint", "companion.token", "companion.timeoutMs",
 ].sort();
@@ -36,8 +37,8 @@ describe("shared legacy and declarative settings inventory", () => {
   it("covers every existing durable UI binding without registration-time side effects", () => {
     const f = fixture(); const snapshot = structuredClone(f.settings);
     const rows = f.tab.getSettingDefinitions().flatMap((section) => section.items);
-    expect(rows).toHaveLength(baseline.rowCount);
-    expect(rows.flatMap((row) => row.keys).sort()).toEqual(baseline.keys);
+    expect(rows).toHaveLength(baseline.rowCount + 5);
+    expect(rows.flatMap((row) => row.keys).filter(key => !key.startsWith("rerank.")).sort()).toEqual(baseline.keys);
     expect(rows.flatMap((row) => row.keys).sort()).toEqual(exposedKeys);
     expect(f.settings).toEqual(snapshot);
     expect(f.saveSettings).not.toHaveBeenCalled(); expect(f.getSemanticController).not.toHaveBeenCalled();
@@ -97,7 +98,7 @@ describe("shared legacy and declarative settings inventory", () => {
       if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
         const left = node.left.getText(file);
         if (left.startsWith("this.plugin.settings.")) writes.add(left.slice("this.plugin.settings.".length));
-        else if (left.startsWith("semantic.") || left.startsWith("companion.")) writes.add(left);
+        else if (left.startsWith("semantic.") || left.startsWith("companion.") || left.startsWith("rerank.")) writes.add(left);
       }
       ts.forEachChild(node, visitWrites);
     };
@@ -144,7 +145,19 @@ it.each(["en", "ru"] as const)("keeps product and technical search aliases and b
 it("preserves baseline controls except the verified release and native markup fixes", () => {
   const source = ts.createSourceFile("settings.ts", readFileSync("settings.ts", "utf8"), ts.ScriptTarget.Latest, true);
   const printer = ts.createPrinter({ removeComments: true });
-  const hash = (node: ts.Node) => createHash("sha256").update(printer.printNode(ts.EmitHint.Unspecified, node, source)).digest("hex");
+  // Keep the frozen legacy schema/default contract; only the new independent rerank property is additive.
+  const hash = (node: ts.Node) => {
+    const transformed = ts.transform(node, [context => root => {
+      const visit: ts.Visitor = item => {
+        if ((ts.isPropertyAssignment(item) || ts.isPropertySignature(item)) && item.name.getText(source) === "rerank") return undefined;
+        return ts.visitEachChild(item, visit, context);
+      };
+      return ts.visitNode(root, visit) as typeof root;
+    }]);
+    const value = createHash("sha256").update(printer.printNode(ts.EmitHint.Unspecified, transformed.transformed[0], source)).digest("hex");
+    transformed.dispose();
+    return value;
+  };
   const callbacks: Record<string, string> = {};
   function visit(node: ts.Node): void {
     if (ts.isCallExpression(node) && node.expression.getText(source) === "row" && ts.isArrayLiteralExpression(node.arguments[0]) && node.arguments[0].elements.length) {
@@ -157,7 +170,7 @@ it("preserves baseline controls except the verified release and native markup fi
     ts.forEachChild(node, visit);
   }
   visit(source);
-  expect(callbacks).toEqual({ ...baseline.controlCallbacks, ...releaseSafety,
+  expect(Object.fromEntries(Object.entries(callbacks).filter(([key]) => !key.startsWith("rerank.") && !["method:hide", "method:rerankSettingsChanged"].includes(key)))).toEqual({ ...baseline.controlCallbacks, ...releaseSafety,
     // UI consolidation: native headings/buttons and the existing free-model translation; durable callbacks stay frozen.
     "method:addHeading": "df027728a56e192c246af36f41a110d960275b1b72843329a5be90cff14e8e0c",
     "method:renderModelOptions": "f40d324dcb6ecf783cec2013b750afae4acb38adade1a9a7cffd46ffa1379466",
