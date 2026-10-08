@@ -18,6 +18,10 @@ The masked field uses a dedicated key stored in the plugin's existing local sett
 
 The only outbound fields are `model`, `query`, `documents` (plain text strings), `top_n`, and `provider.allow_fallbacks: false`; the key is a bearer header. No separate paths, chunk IDs, user/session/trace metadata, or telemetry are sent. A fragment may itself contain a heading, link, path, or other private content from the note. Keys, queries, fragments and provider error bodies are not logged. There is no persistent query/text cache.
 
+The plugin does not add filenames, folder names or paths as service context to Rerank fragments. After validating the original chunk ID/content hash, it composes outbound text from the same parsed blocks and overlap, omitting filename-derived fallback breadcrumbs. This covers headerless notes, introductions and empty headings, including truncated fallback names. Authored headings remain context, and names or paths literally written in the note are preserved. This is **not anonymization**. Conversion precedes the 4,000-code-point cap and JSON size calculation; missing provenance leaves the candidate unscored, with no fallback to enriched text or the whole note.
+
+Legacy chunk text, identities/hashes, source coordinates, embedding inputs and serialized index remain compatible; no automatic rebuild occurs. Decisions uses the same outbound rule. Other flows such as embeddings, RAG and Companion retain their existing text/metadata behavior; this is not a plugin-wide filename-exclusion claim.
+
 ## Data flow and boundaries
 
 ```mermaid

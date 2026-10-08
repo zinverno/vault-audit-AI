@@ -1,5 +1,5 @@
 import { stableHash } from "../chunking/hash";
-import { isCanonicalMarkdownPath, reconstructChunks } from "../chunking/reconstructChunks";
+import { isCanonicalMarkdownPath, outboundChunkText, reconstructChunks } from "../chunking/reconstructChunks";
 import type { ChunkingStrategy } from "../chunking/types";
 import type { MarkdownDocumentSource } from "../indexing/types";
 import type { SemanticDuplicatePair } from "../semantic/types";
@@ -22,8 +22,10 @@ export async function preparePair(pair: SemanticDuplicatePair, source: MarkdownD
       const chunks = reconstructChunks(document, chunker);
       for (const match of [...matches].sort((a, b) => b.score - a.score || a.ordinal - b.ordinal)) {
         const chunk = chunks.get(match.id);
-        if (match.path !== path || !chunk || chunk.contentHash !== match.contentHash || !chunk.text.trim()) continue;
-        const points = Array.from(chunk.text);
+        if (match.path !== path || !chunk || chunk.contentHash !== match.contentHash) continue;
+        const text = outboundChunkText(chunker, chunk);
+        if (text === undefined) continue;
+        const points = Array.from(text);
         fragments.push({ match: { ...match, source: { ...chunk.source }, headingPath: [...chunk.headingPath] },
           text: points.slice(0, DECISIONS_LIMITS.fragmentCodePoints).join(""),
           truncated: points.length > DECISIONS_LIMITS.fragmentCodePoints, sourceHash: stableHash(document.content) });

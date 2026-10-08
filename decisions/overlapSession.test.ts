@@ -48,12 +48,10 @@ describe("pair reconstruction and send boundary", () => {
   it("selects the next valid existing match deterministically and truncates Unicode", async () => {
     const f = fixture();
     const document = f.documents[0]; document.content = "😀".repeat(4500);
-    const chunker = { chunk: () => [{ ...f.pair.leftMatches[0], text: document.content,
-      source: { startOffset: 0, endOffset: document.content.length, startLine: 0, endLine: 0 } }] };
-    const chunk = chunker.chunk()[0];
+    const chunker = new MarkdownChunker({ targetChars: 12000, maxChars: 12000, overlapChars: 0 });
+    const chunk = { ...chunker.chunk(document)[0], score: 0.7 };
     const pair = { ...f.pair, leftMatches: [{ ...chunk, id: "missing", score: 1 }, chunk] };
-    const combined = { chunk: (input: { path: string; content: string }) => input.path === "A.md" ? chunker.chunk() : f.chunker.chunk(input) };
-    const result = await preparePair(pair, f.source, combined, () => true, () => true);
+    const result = await preparePair(pair, f.source, chunker, () => true, () => true);
     expect(Array.from(result.a.text)).toHaveLength(4000); expect(result.a.text).toBe("😀".repeat(4000)); expect(result.a.truncated).toBe(true);
   });
 });

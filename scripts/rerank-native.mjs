@@ -11,7 +11,8 @@ const vault = root + '/vault', pluginDir = vault + '/.obsidian/plugins/ai-knowle
 if (mode === 'prepare') {
   await fs.mkdir(pluginDir, { recursive: true }); await fs.mkdir(root + '/profile', { recursive: true });
   for (let i = 0; i < 12; i++) await fs.writeFile(`${vault}/Note-${String(i).padStart(2, '0')}.md`,
-    `# Synthetic ${i}\n\nСинтетический фрагмент ${i}. A local note about search and fragments.\n\n## Navigation\n\nSecond section ${i}.`);
+    (i < 2 ? '' : `# Synthetic ${i}\n\n`) + `Синтетический фрагмент ${i}. A local note about search and fragments.` +
+    (i === 0 ? '' : `\n\n## Navigation\n\nSecond section ${i}.`));
   await fs.writeFile(pluginDir + '/data.json', JSON.stringify({ language: 'en', apiKey: '',
     semantic: { enabled: true, embeddingProvider: 'openai-compatible', embeddingModel: 'synthetic-rerank-smoke',
       embeddingBaseUrl: 'http://127.0.0.1:19361/v1', openRouterApiKey: '', openAICompatibleApiKey: '' },
@@ -46,13 +47,14 @@ try {
   await evaluate("app.setting.close();for(const el of document.querySelectorAll('.ai-semantic-search-modal'))el.closest('.modal').querySelector('.modal-close-button,.modal-header-button').click();void 0");
   await waitFor("!document.querySelector('.ai-semantic-search-modal')");
   await waitFor("!!app.plugins.plugins['ai-knowledge-hub']?.semanticController");
+  check('isolated synthetic vault selected', await evaluate(`app.vault.adapter.basePath===${JSON.stringify(vault)}`));
   await evaluate(`(async()=>{await new Promise(r=>app.workspace.onLayoutReady(r)); window.plugin=app.plugins.plugins['ai-knowledge-hub'];window.engine=plugin.semanticController;
     window.rerankCalls=[];window.mode='success';window.pendingRerank=[];
     const factory=engine.rerankProvider;engine.rerankProvider=settings=>{const provider=factory(settings);provider.transport=async request=>{
       const body=JSON.parse(request.body);rerankCalls.push(body);
       if(mode==='slow') await new Promise(resolve=>pendingRerank.push(resolve));
       if(mode==='failure')return {status:429,text:'synthetic private error, never display'};
-      return {status:200,text:JSON.stringify({model:body.model,results:body.documents.map((_,index)=>({index,relevance_score:index}))})};};return provider;};
+      return {status:200,text:JSON.stringify({model:body.model,results:body.documents.map((_,index)=>({index,relevance_score:mode==='source-order'?-index:index}))})};};return provider;};
     window.noteReads=0;const read=app.vault.cachedRead;app.vault.cachedRead=function(...args){noteReads++;return read.apply(this,args)};
   })()`);
   check('legacy settings migrate with rerank off and empty independent key', await evaluate("plugin.settings.rerank.enabled===false && plugin.settings.rerank.apiKey===''") );
@@ -83,6 +85,7 @@ try {
   check('originals visible and input usable during refinement', await evaluate("document.querySelectorAll('.ai-semantic-result-card').length===10 && !document.querySelector('.ai-semantic-search-modal input').disabled"));
   await waitFor('pendingRerank.length===1');
   check('single expanded search and bounded request', embeddings - before === 1 && await evaluate("rerankCalls[0].documents.length===12 && rerankCalls[0].top_n===12 && !JSON.stringify(rerankCalls[0]).includes('Note-')"));
+  check('headerless and introduction final payloads preserve body only', await evaluate("rerankCalls[0].documents[0]==='Синтетический фрагмент 0. A local note about search and fragments.' && rerankCalls[0].documents[1]==='Синтетический фрагмент 1. A local note about search and fragments.'"));
   await screenshot('refining'); await evaluate("pendingRerank.shift()();mode='success'"); await stage('reranked');
   check('index mapping reorders results without changing semantic score', await evaluate("document.querySelector('.ai-semantic-result-title').innerText==='Note-11' && document.querySelector('.ai-semantic-result-score').innerText==='1.000'"));
   await screenshot('reranked');
@@ -113,7 +116,19 @@ try {
   await evaluate("engine.openSearch()"); await search('narrow query'); await stage('reranked');
   check('narrow search has no horizontal overflow', await evaluate("{const el=document.querySelector('.ai-semantic-search-modal');el.scrollWidth<=el.clientWidth}"));
   await screenshot('narrow'); await evaluate("document.querySelector('.ai-semantic-search-modal').closest('.modal').querySelector('.modal-close-button,.modal-header-button').click()");
-  const info = await evaluate("({obsidian:require('/usr/lib/obsidian/obsidian.asar/package.json').version,electron:process.versions.electron,platform:process.platform})");
+  for (const index of [0, 1]) {
+    await evaluate("mode='source-order';engine.openSearch()"); await search('navigation'); await stage('reranked');
+    check('local name retained for source ' + index, await evaluate(`document.querySelectorAll('.ai-semantic-result-title')[${index}].innerText===${JSON.stringify('Note-0' + index)}`));
+    await evaluate(`document.querySelectorAll('.ai-semantic-result-card')[${index}].click()`);
+    await waitFor(`app.workspace.getActiveFile()?.path===${JSON.stringify('Note-0' + index + '.md')}`);
+    check('navigation targets headerless/introduction body ' + index, await evaluate('app.workspace.activeEditor.editor.getCursor().line===0'));
+    await waitFor("!document.querySelector('.ai-semantic-search-modal')");
+  }
+  await evaluate("app.setting.open();app.setting.openTabById('about');void 0");
+  const observedVersion = await evaluate("app.setting.modalEl.innerText.match(/Version ([0-9.]+)/)?.[1]"); assert(observedVersion);
+  await evaluate('app.setting.close()');
+  const info = await evaluate("({installer:require('/usr/lib/obsidian/obsidian.asar/package.json').version,electron:process.versions.electron,platform:process.platform})");
+  info.obsidian = observedVersion;
   const report = { ...info, checks, embeddings, rerankRequests: await evaluate('rerankCalls.length'),
     mainSha256: crypto.createHash('sha256').update(await fs.readFile(pluginDir + '/main.js')).digest('hex'),
     limitations: 'Native Linux Obsidian; fake rerank transport and local synthetic embedding server. No live model quality, paid requests, mobile, other OS, screen reader or custom theme coverage.' };

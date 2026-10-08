@@ -9,8 +9,10 @@ assert(['prepare', 'run'].includes(mode)); assert(root?.startsWith('/tmp/') && !
 const vault = root + '/vault', pluginDir = vault + '/.obsidian/plugins/ai-knowledge-hub';
 if (mode === 'prepare') {
   await fs.mkdir(pluginDir, { recursive: true }); await fs.mkdir(root + '/profile', { recursive: true });
-  for (const name of ['Alpha', 'Beta', 'Gamma']) await fs.writeFile(`${vault}/${name}.md`,
-    `# Synthetic ${name}\n\n` + 'Bicycles have two wheels. Велосипед имеет два колеса. 😀 '.repeat(28));
+  const body = 'Bicycles have two wheels. Велосипед имеет два колеса. 😀 '.repeat(28);
+  await fs.writeFile(`${vault}/Alpha.md`, body); // Entirely headerless.
+  await fs.writeFile(`${vault}/Beta.md`, body + '\n\n# Authored section\n\nLater body.'); // Introduction before heading.
+  await fs.writeFile(`${vault}/Gamma.md`, '# Authored context\n\n' + body);
   await fs.writeFile(pluginDir + '/data.json', JSON.stringify({ language: 'en', apiKey: '',
     semantic: { enabled: true, embeddingProvider: 'openai-compatible', embeddingModel: 'synthetic-decisions-smoke',
       embeddingBaseUrl: 'http://127.0.0.1:19362/v1', openRouterApiKey: '', openAICompatibleApiKey: '' },
@@ -46,6 +48,7 @@ const closeOverlap = async () => {
 };
 try {
   await waitFor("!!app.plugins.plugins['ai-knowledge-hub']?.semanticController");
+  check('isolated synthetic vault selected', await evaluate(`app.vault.adapter.basePath===${JSON.stringify(vault)}`));
   await evaluate(`(async()=>{await new Promise(r=>app.workspace.onLayoutReady(r));window.plugin=app.plugins.plugins['ai-knowledge-hub'];window.engine=plugin.semanticController;
     window.decisionCalls=[];window.mode='success';window.pendingDecisions=[];
     const factory=engine.decisionsProvider;engine.decisionsProvider=settings=>{const provider=factory(settings);provider.transport=async request=>{
@@ -65,14 +68,15 @@ try {
   await waitFor("engine.getSemanticStatus().kind==='ready'");
   await evaluate('engine.openPotentialDuplicates()');
   await waitFor("!!document.querySelector('.ai-semantic-duplicate-card button')");
+  await evaluate("window.selectedPair=()=>[...document.querySelectorAll('.ai-semantic-duplicate-card')].find(el=>el.innerText.includes('Alpha.md')&&el.innerText.includes('Beta.md')).querySelector('button');void 0");
   check('index and duplicate list do not call Decisions', await evaluate('decisionCalls.length===0'));
-  await evaluate("document.querySelector('.ai-semantic-duplicate-card button').click()"); await stage('disabled');
+  await evaluate("selectedPair().click()"); await stage('disabled');
   check('disabled comparison shows settings route', await evaluate("document.querySelector('.ai-overlap-modal').innerText.includes('Settings → Veynrel') && decisionCalls.length===0"));
   await closeOverlap();
   await evaluate("Object.assign(plugin.settings.decisions,{enabled:true,apiKey:'synthetic-decisions-key'});engine.notifyDecisionsSettingsChanged();plugin.saveSettings()");
   const indexBefore = await evaluate('engine.getCachedIndexState()');
   const bytesBefore = await fs.readdir(pluginDir);
-  await evaluate("document.querySelector('.ai-semantic-duplicate-card button').click()"); await stage('ready');
+  await evaluate("selectedPair().click()"); await stage('ready');
   check('preview has two long exact fragments and no request', await evaluate("document.querySelectorAll('.ai-overlap-text').length===2 && document.querySelector('.ai-overlap-text').innerText.length>1000 && decisionCalls.length===0"));
   await screenshot('preview-en');
   await evaluate("window.displayed=[...document.querySelectorAll('.ai-overlap-text')].map(el=>el.textContent);mode='slow';document.querySelector('.ai-overlap-modal .mod-cta').focus()");
@@ -80,14 +84,18 @@ try {
   await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
   await stage('assessing'); await waitFor('pendingDecisions.length===1');
   check('keyboard launches one request with exactly displayed text', await evaluate("decisionCalls.length===1 && decisionCalls[0].state.fragmentA===displayed[0] && decisionCalls[0].state.fragmentB===displayed[1] && Object.keys(decisionCalls[0].state).join(',')==='fragmentA,fragmentB' && document.querySelector('.ai-overlap-modal .mod-cta').disabled"));
+  check('headerless and introduction payloads have no filename-derived context', await evaluate("!JSON.stringify(decisionCalls[0]).includes('Alpha') && !JSON.stringify(decisionCalls[0]).includes('Beta') && displayed.every(text=>text==='Bicycles have two wheels. Велосипед имеет два колеса. 😀 '.repeat(28).trimEnd())"));
+  check('note names remain local in comparison', await evaluate("[...document.querySelectorAll('.ai-overlap-note')].map(el=>el.textContent).join('|').includes('Alpha.md') && [...document.querySelectorAll('.ai-overlap-note')].map(el=>el.textContent).join('|').includes('Beta.md')"));
   await evaluate("document.querySelector('.ai-overlap-modal .mod-cta').click();pendingDecisions.shift()();mode='success'"); await stage('result');
   check('tentative fragment-only result and no automatic re-run', await evaluate("document.querySelector('.ai-overlap-result').innerText.includes('The model suggests') && document.querySelector('.ai-overlap-modal').innerText.includes('not the entire notes') && decisionCalls.length===1"));
   check('index identity remains unchanged', JSON.stringify(indexBefore) === JSON.stringify(await evaluate('engine.getCachedIndexState()')));
   check('no new plugin persistent result store', JSON.stringify(bytesBefore) === JSON.stringify(await fs.readdir(pluginDir)));
   await screenshot('result-en');
-  await evaluate("document.querySelector('.ai-overlap-note').click()");
-  await waitFor("!!app.workspace.getActiveFile()");
-  check('opens selected note and chunk', await evaluate("['Alpha.md','Beta.md','Gamma.md'].includes(app.workspace.getActiveFile().path) && app.workspace.activeEditor.editor.getCursor().line>=0"));
+  for (const name of ['Alpha.md', 'Beta.md']) {
+    await evaluate(`[...document.querySelectorAll('.ai-overlap-note')].find(el=>el.textContent.includes(${JSON.stringify(name)})).click();void 0`);
+    await waitFor(`app.workspace.getActiveFile()?.path===${JSON.stringify(name)}`);
+    check('opens ' + name + ' at its selected body fragment', await evaluate('app.workspace.activeEditor.editor.getCursor().line===0'));
+  }
   await evaluate("plugin.settings.decisions.model='typesafe/jev-1.13';engine.notifyDecisionsSettingsChanged();void 0"); await stage('stale');
   check('shown assessment marked stale on settings change', await evaluate("document.querySelector('.ai-overlap-result').innerText.includes('This assessment is stale') && decisionCalls.length===1"));
   await closeOverlap();
@@ -97,7 +105,7 @@ try {
   check('explicit connection test is synthetic only', await evaluate("decisionCalls.at(-1).state.fragmentA==='A bicycle has two wheels.' && decisionCalls.at(-1).state.fragmentB==='Bicycles have two wheels.'"));
   await evaluate("{const select=[...app.setting.modalEl.querySelectorAll('select')].find(el=>[...el.options].some(o=>o.value==='ru'));select.value='ru';select.dispatchEvent(new Event('change',{bubbles:true}));}void 0");
   await waitFor("app.setting.modalEl.innerText.includes('Оценка пересечения / Decisions')"); await evaluate('app.setting.close()');
-  await evaluate("document.querySelector('.ai-semantic-duplicate-card button').click()"); await stage('ready');
+  await evaluate("selectedPair().click()"); await stage('ready');
   await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
   check('Russian localization and narrow long fragments without horizontal overflow', await evaluate("{const el=document.querySelector('.ai-overlap-modal');el.innerText.includes('Оценка относится к выбранным фрагментам') && el.scrollWidth<=el.clientWidth}"));
   await screenshot('preview-ru-narrow');

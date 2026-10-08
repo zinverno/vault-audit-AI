@@ -1,5 +1,11 @@
 import type { ChunkingStrategy, MarkdownChunkInput, NoteChunk } from "./types";
 
+/** Call only after matching the original id/contentHash. Never fall back to enriched chunk.text. */
+export function outboundChunkText(chunker: ChunkingStrategy, chunk: NoteChunk): string | undefined {
+  const text = chunker.outboundText?.(chunk);
+  return typeof text === "string" && text.trim() ? text : undefined;
+}
+
 export function isCanonicalMarkdownPath(value: unknown): value is string {
   if (
     typeof value !== "string" ||

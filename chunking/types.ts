@@ -38,6 +38,8 @@ export interface ChunkingOptions {
 
 export interface ChunkingStrategy {
   chunk(input: MarkdownChunkInput): NoteChunk[];
+  /** Authored context/body for this exact reconstructed object; absent provenance fails closed. */
+  outboundText?(chunk: NoteChunk): string | undefined;
 }
 
 export const DEFAULT_CHUNKING_OPTIONS: Readonly<ChunkingOptions> = {
