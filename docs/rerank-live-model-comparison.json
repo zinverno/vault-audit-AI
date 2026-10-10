@@ -1,0 +1,4067 @@
+{
+  "schemaVersion": 1,
+  "checkedOn": "2026-10-10",
+  "production": {
+    "commit": "3890f74d7d4d057c92ec5bd9d7922db63e2fe3be",
+    "mainSha256": "c8c2d4482a962b7f3e20793ae876501081fe58ce64b159b4d2212c207a9cf158",
+    "branch": "test/rerank-live-model-comparison",
+    "includesMergedPRs": [
+      69,
+      70,
+      72
+    ],
+    "historicalPR71Unchanged": true,
+    "sourceHashes": {
+      "rerank/openRouterRerank.ts": "0d98b0518bd4296ce5e60b21b2d075b3903d4ee17cdde085ff674cf22097a4f7",
+      "rerank/refinedSearch.ts": "99b2c79365a994b1d3a186bb9b1a0e103c054d1c34ef2b10dcb93ed6be7b495f",
+      "rerank/prepareCandidates.ts": "5361168c58d2b62e506647bcf450c7b644ded8600192d71a1f20b5eb5c2514a7",
+      "semantic/obsidianSemanticController.ts": "d45de9d104254df96d1299a1409da6ab874ab29cb04cd743ab2e1fc091265b0d"
+    }
+  },
+  "experimentPlan": {
+    "sourceCommit": "3890f74d7d4d057c92ec5bd9d7922db63e2fe3be",
+    "buildSha256": "c8c2d4482a962b7f3e20793ae876501081fe58ce64b159b4d2212c207a9cf158",
+    "casesSha256": "a6213ed3b33c26625ec537aafb910ed7d8cd86b238be3f27de97a5ddec714973",
+    "models": [
+      "cohere/rerank-v3.5",
+      "voyageai/rerank-3-lite",
+      "qwen/qwen3-reranker-8b"
+    ],
+    "cases": [
+      {
+        "id": "smoke",
+        "query": "Which document explains retry backoff?",
+        "fragments": [
+          {
+            "id": "backoff",
+            "relevant": true,
+            "text": "A retry with exponential backoff increases the delay between attempts."
+          },
+          {
+            "id": "database",
+            "relevant": false,
+            "text": "A database index speeds up queries."
+          }
+        ]
+      },
+      {
+        "id": "ru-cancellation",
+        "query": "Как не дать старому ответу изменить результаты нового поиска?",
+        "fragments": [
+          {
+            "id": "http",
+            "relevant": false,
+            "text": "HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+          },
+          {
+            "id": "index",
+            "relevant": false,
+            "text": "Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+          },
+          {
+            "id": "revision",
+            "relevant": true,
+            "text": "Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+          }
+        ]
+      },
+      {
+        "id": "ru-offline",
+        "query": "Где заметки об обработке звука без отправки записи в облако?",
+        "fragments": [
+          {
+            "id": "cloud-asr",
+            "relevant": false,
+            "text": "Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+          },
+          {
+            "id": "local-player",
+            "relevant": false,
+            "text": "Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+          },
+          {
+            "id": "local-asr",
+            "relevant": true,
+            "text": "Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+          }
+        ]
+      },
+      {
+        "id": "en-rollback",
+        "query": "How can a failed settings write avoid losing a newer edit?",
+        "fragments": [
+          {
+            "id": "reset-all",
+            "relevant": false,
+            "text": "The reset button restores every setting to its factory default. All custom preferences are removed."
+          },
+          {
+            "id": "ui-style",
+            "relevant": false,
+            "text": "Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+          },
+          {
+            "id": "conditional-restore",
+            "relevant": true,
+            "text": "Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+          }
+        ]
+      },
+      {
+        "id": "en-incomplete",
+        "query": "Can an incomplete scan prove that a note has no problems?",
+        "fragments": [
+          {
+            "id": "empty-screen",
+            "relevant": false,
+            "text": "The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+          },
+          {
+            "id": "speed",
+            "relevant": false,
+            "text": "The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+          },
+          {
+            "id": "coverage",
+            "relevant": true,
+            "text": "Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+          }
+        ]
+      }
+    ],
+    "fixedPermutation": [
+      1,
+      2,
+      0
+    ],
+    "plannedUSD": 0.02,
+    "ceilingUSD": 0.03,
+    "serverLimitUSD": 50,
+    "serverLimitAuthorization": "User confirmed their intentionally selected $50 limit after preflight on 2026-10-10.",
+    "billing": "Actual response/generation cost; otherwise reconciled key delta. Unknown is not zero. No retries.",
+    "reservePerRerankUSD": 0.002,
+    "reserveEmbeddingUSD": 0.001,
+    "semantic": {
+      "model": "openai/text-embedding-3-small",
+      "rerankSelection": "highest fixed-set MRR, then lowest observed cost, then latency",
+      "caseIds": [
+        "ru-cancellation",
+        "ru-offline",
+        "en-rollback",
+        "en-incomplete"
+      ],
+      "maximumRerankModels": 1
+    }
+  },
+  "pricing": {
+    "checkedOn": "2026-10-10",
+    "models": [
+      {
+        "model": "cohere/rerank-v3.5",
+        "usdPerSearchUnit": 0.001,
+        "source": "https://openrouter.ai/cohere/rerank-v3.5"
+      },
+      {
+        "model": "voyageai/rerank-3-lite",
+        "usdPerToken": 2e-8,
+        "source": "https://openrouter.ai/voyageai/rerank-3-lite"
+      },
+      {
+        "model": "qwen/qwen3-reranker-8b",
+        "usdPerToken": 2e-7,
+        "source": "https://openrouter.ai/qwen/qwen3-reranker-8b"
+      },
+      {
+        "model": "openai/text-embedding-3-small",
+        "usdPerToken": 2e-8,
+        "source": "https://openrouter.ai/openai/text-embedding-3-small"
+      }
+    ],
+    "contract": "https://openrouter.ai/docs/api/api-reference/rerank/submit-a-rerank-request",
+    "suppliedContractURLStatus": "create-rerank URL returned 404; current canonical submit-a-rerank-request is available",
+    "cohereUnits": "https://cohere.com/pricing",
+    "publishedRateIsNotAnAbsoluteHttpCallCostBound": true
+  },
+  "budget": {
+    "plannedUSD": 0.02,
+    "maximumUSD": 0.03,
+    "serverLimitUSD": 50,
+    "serverLimitChangedByAgent": false,
+    "serverLimitAuthorization": "User explicitly confirmed the intentionally selected $50 limit after the initial preflight reported it.",
+    "initialKeyUsageUSD": 0.000488922,
+    "finalKeySnapshot": {
+      "httpStatus": 200,
+      "checkedAt": "2026-10-10T12:42:11.613Z",
+      "limit": 50,
+      "limit_remaining": 49.994128698,
+      "usage": 0.005871302,
+      "expires_at": "2026-10-14T08:09:40.860Z",
+      "resetIsDisabled": true
+    },
+    "rerankRequests": 19,
+    "embeddingRequests": 1,
+    "totalRequests": 20,
+    "rerankCostUSD": 0.0053713,
+    "embeddingCostUSD": 0.00001108,
+    "totalCostUSD": 0.00538238,
+    "meanRerankLatencyMs": 569.6315789473684,
+    "unresolvedReservesUSD": 0,
+    "cumulativeKeyUsageReconciled": true,
+    "allReceiptsMatchPublishedRates": true,
+    "generationMetadata": "All 19 retained rerank generation lookups returned 404; the embedding metadata lookup was not retained after the accounting stop. Explicit response costs and final key usage reconcile exactly.",
+    "journalSha256": "5cb42abc0541fac7dae9b6a3cc6b1774efa28541a90c54bc12dda0d254492e2f",
+    "resume": {
+      "passed": true,
+      "paidRequests": 0,
+      "journalUnchanged": true,
+      "checkedAt": "2026-10-10T12:48:19.130Z"
+    }
+  },
+  "frozenEvaluation": {
+    "source": "docs/rerank-v1-evaluation.json",
+    "sourceSha256": "a6213ed3b33c26625ec537aafb910ed7d8cd86b238be3f27de97a5ddec714973",
+    "original": {
+      "purpose": "Synthetic manual evaluation only; relevance labels are hypotheses to review, not measured model quality.",
+      "cases": [
+        {
+          "id": "ru-cancellation",
+          "query": "Как не дать старому ответу изменить результаты нового поиска?",
+          "fragments": [
+            {
+              "id": "revision",
+              "relevant": true,
+              "text": "Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+            },
+            {
+              "id": "http",
+              "relevant": false,
+              "text": "HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+            },
+            {
+              "id": "index",
+              "relevant": false,
+              "text": "Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+            }
+          ]
+        },
+        {
+          "id": "ru-offline",
+          "query": "Где заметки об обработке звука без отправки записи в облако?",
+          "fragments": [
+            {
+              "id": "local-asr",
+              "relevant": true,
+              "text": "Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+            },
+            {
+              "id": "cloud-asr",
+              "relevant": false,
+              "text": "Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+            },
+            {
+              "id": "local-player",
+              "relevant": false,
+              "text": "Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+            }
+          ]
+        },
+        {
+          "id": "en-rollback",
+          "query": "How can a failed settings write avoid losing a newer edit?",
+          "fragments": [
+            {
+              "id": "conditional-restore",
+              "relevant": true,
+              "text": "Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+            },
+            {
+              "id": "reset-all",
+              "relevant": false,
+              "text": "The reset button restores every setting to its factory default. All custom preferences are removed."
+            },
+            {
+              "id": "ui-style",
+              "relevant": false,
+              "text": "Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+            }
+          ]
+        },
+        {
+          "id": "en-incomplete",
+          "query": "Can an incomplete scan prove that a note has no problems?",
+          "fragments": [
+            {
+              "id": "coverage",
+              "relevant": true,
+              "text": "Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+            },
+            {
+              "id": "empty-screen",
+              "relevant": false,
+              "text": "The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+            },
+            {
+              "id": "speed",
+              "relevant": false,
+              "text": "The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+            }
+          ]
+        }
+      ]
+    },
+    "sentPermutation": [
+      1,
+      2,
+      0
+    ],
+    "inputOrderIsSemanticBaseline": false,
+    "labelsChangedAfterResponses": false
+  },
+  "models": [
+    {
+      "model": "cohere/rerank-v3.5",
+      "status": "PASS",
+      "resolvedModel": "rerank-v3.5",
+      "provider": "Cohere",
+      "smoke": {
+        "latencyMs": 610,
+        "costUSD": 0.001,
+        "usage": {
+          "search_units": 1,
+          "cost": 0.001
+        },
+        "order": [
+          "backoff",
+          "database"
+        ]
+      },
+      "fixed": {
+        "count": 4,
+        "top1Hits": 4,
+        "top1Rate": 1,
+        "top3Rate": 1,
+        "mrr": 1,
+        "meanLatencyMs": 489.75,
+        "costUSD": 0.004
+      },
+      "all": {
+        "count": 5,
+        "meanLatencyMs": 513.8,
+        "costUSD": 0.005
+      }
+    },
+    {
+      "model": "voyageai/rerank-3-lite",
+      "status": "PASS",
+      "resolvedModel": "rerank-3-lite",
+      "provider": "VoyageAI by MongoDB",
+      "smoke": {
+        "latencyMs": 614,
+        "costUSD": 5e-7,
+        "usage": {
+          "total_tokens": 25,
+          "cost": 5e-7
+        },
+        "order": [
+          "backoff",
+          "database"
+        ]
+      },
+      "fixed": {
+        "count": 4,
+        "top1Hits": 4,
+        "top1Rate": 1,
+        "top3Rate": 1,
+        "mrr": 1,
+        "meanLatencyMs": 520.5,
+        "costUSD": 0.0000102
+      },
+      "all": {
+        "count": 9,
+        "meanLatencyMs": 518,
+        "costUSD": 0.0000515
+      }
+    },
+    {
+      "model": "qwen/qwen3-reranker-8b",
+      "status": "PASS",
+      "resolvedModel": "accounts/fireworks/models/qwen3-reranker-8b",
+      "provider": "Fireworks",
+      "smoke": {
+        "latencyMs": 946,
+        "costUSD": 0.0000354,
+        "usage": {
+          "total_tokens": 177,
+          "cost": 0.0000354
+        },
+        "order": [
+          "backoff",
+          "database"
+        ]
+      },
+      "fixed": {
+        "count": 4,
+        "top1Hits": 4,
+        "top1Rate": 1,
+        "top3Rate": 1,
+        "mrr": 1,
+        "meanLatencyMs": 661.5,
+        "costUSD": 0.0002844
+      },
+      "all": {
+        "count": 5,
+        "meanLatencyMs": 718.4,
+        "costUSD": 0.0003198
+      }
+    }
+  ],
+  "native": {
+    "obsidian": "1.13.7",
+    "electron": "43.6.0",
+    "platform": "linux",
+    "status": "PASS",
+    "checks": {
+      "actualObsidianRequestUrl": true,
+      "productionArtifactInstalled": true,
+      "stages": true,
+      "semanticScoresPreserved": true,
+      "separateRerankScore": true,
+      "localTitlesRetained": true,
+      "openedCorrectFragment": true,
+      "fallbackNamesAbsentFromRerank": true,
+      "keyAbsentFromPluginData": true
+    },
+    "settings": "Separate in-memory rerank settings; real credential injected only into provider copies.",
+    "embeddingEvidence": "Synthetic vectors for this UI/transport smoke only; not quality evidence.",
+    "observation": {
+      "stage": "reranked",
+      "updates": [
+        {
+          "stage": "semantic",
+          "results": [
+            {
+              "path": "Local-Only-0.md",
+              "semanticScore": 1,
+              "rerankScore": null,
+              "source": {
+                "startOffset": 0,
+                "endOffset": 70,
+                "startLine": 0,
+                "endLine": 0
+              }
+            },
+            {
+              "path": "Local-Only-1.md",
+              "semanticScore": 0.800000011920929,
+              "rerankScore": null,
+              "source": {
+                "startOffset": 0,
+                "endOffset": 35,
+                "startLine": 0,
+                "endLine": 0
+              }
+            }
+          ]
+        },
+        {
+          "stage": "refining",
+          "results": [
+            {
+              "path": "Local-Only-0.md",
+              "semanticScore": 1,
+              "rerankScore": null,
+              "source": {
+                "startOffset": 0,
+                "endOffset": 70,
+                "startLine": 0,
+                "endLine": 0
+              }
+            },
+            {
+              "path": "Local-Only-1.md",
+              "semanticScore": 0.800000011920929,
+              "rerankScore": null,
+              "source": {
+                "startOffset": 0,
+                "endOffset": 35,
+                "startLine": 0,
+                "endLine": 0
+              }
+            }
+          ]
+        },
+        {
+          "stage": "reranked",
+          "results": [
+            {
+              "path": "Local-Only-0.md",
+              "semanticScore": 1,
+              "rerankScore": 0.2039139,
+              "source": {
+                "startOffset": 0,
+                "endOffset": 70,
+                "startLine": 0,
+                "endLine": 0
+              }
+            },
+            {
+              "path": "Local-Only-1.md",
+              "semanticScore": 0.800000011920929,
+              "rerankScore": 0.0110989455,
+              "source": {
+                "startOffset": 0,
+                "endOffset": 35,
+                "startLine": 0,
+                "endLine": 0
+              }
+            }
+          ]
+        }
+      ],
+      "candidates": [
+        {
+          "path": "Local-Only-0.md",
+          "semanticScore": 1,
+          "rerankScore": null,
+          "source": {
+            "startOffset": 0,
+            "endOffset": 70,
+            "startLine": 0,
+            "endLine": 0
+          }
+        },
+        {
+          "path": "Local-Only-1.md",
+          "semanticScore": 0.800000011920929,
+          "rerankScore": null,
+          "source": {
+            "startOffset": 0,
+            "endOffset": 35,
+            "startLine": 0,
+            "endLine": 0
+          }
+        }
+      ],
+      "titles": [
+        "Local-Only-0",
+        "Local-Only-1"
+      ],
+      "opened": {
+        "path": "Local-Only-0.md",
+        "line": 0
+      }
+    }
+  },
+  "semantic": {
+    "status": "EVALUATED",
+    "embeddingModel": "openai/text-embedding-3-small",
+    "dimensions": 1536,
+    "indexStats": {
+      "initialized": true,
+      "dimensions": 1536,
+      "embeddingSpaceId": "embedding-space:v1|provider=openrouter|model=openai%2Ftext-embedding-3-small|endpoint=https%3A%2F%2Fopenrouter.ai%2Fapi%2Fv1|dimensions=1536",
+      "vectorCount": 12,
+      "vectorGeneration": 1
+    },
+    "retrieval": "Production MarkdownChunker + IndexingService + LocalVectorStore + SemanticSearchService + prepareRerankCandidates; cached real embeddings.",
+    "pools": [
+      {
+        "id": "ru-cancellation",
+        "query": "Как не дать старому ответу изменить результаты нового поиска?",
+        "relevantIds": [
+          "revision"
+        ],
+        "queryEmbeddingLookups": 1,
+        "baseline": [
+          {
+            "id": "revision",
+            "path": "Synthetic-revision.md",
+            "score": 0.5571248750840327,
+            "matches": [
+              {
+                "id": "chunk-6d1fed8ab07497bf",
+                "path": "Synthetic-revision.md",
+                "headingPath": [
+                  "Synthetic-revision"
+                ],
+                "ordinal": 0,
+                "contentHash": "0a92da88d6dfaf19",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 146,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.5571248750840327,
+                "preview": "Synthetic-revision Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+              }
+            ]
+          },
+          {
+            "id": "index",
+            "path": "Synthetic-index.md",
+            "score": 0.2914585650153036,
+            "matches": [
+              {
+                "id": "chunk-6d98d4ff6248896c",
+                "path": "Synthetic-index.md",
+                "headingPath": [
+                  "Synthetic-index"
+                ],
+                "ordinal": 0,
+                "contentHash": "68ba376e6d8ff88c",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 118,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.2914585650153036,
+                "preview": "Synthetic-index Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+              }
+            ]
+          },
+          {
+            "id": "speed",
+            "path": "Synthetic-speed.md",
+            "score": 0.265513120184665,
+            "matches": [
+              {
+                "id": "chunk-17b07138b4007f06",
+                "path": "Synthetic-speed.md",
+                "headingPath": [
+                  "Synthetic-speed"
+                ],
+                "ordinal": 0,
+                "contentHash": "ed9797bcc2e8ce0d",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 100,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.265513120184665,
+                "preview": "Synthetic-speed The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+              }
+            ]
+          },
+          {
+            "id": "conditional-restore",
+            "path": "Synthetic-conditional-restore.md",
+            "score": 0.22607618703591117,
+            "matches": [
+              {
+                "id": "chunk-fa876364d529f061",
+                "path": "Synthetic-conditional-restore.md",
+                "headingPath": [
+                  "Synthetic-conditional-restore"
+                ],
+                "ordinal": 0,
+                "contentHash": "4475e3108ecf4713",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 164,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.22607618703591117,
+                "preview": "Synthetic-conditional-restore Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+              }
+            ]
+          },
+          {
+            "id": "coverage",
+            "path": "Synthetic-coverage.md",
+            "score": 0.21280681387429154,
+            "matches": [
+              {
+                "id": "chunk-06c7a3a3c9f89ba3",
+                "path": "Synthetic-coverage.md",
+                "headingPath": [
+                  "Synthetic-coverage"
+                ],
+                "ordinal": 0,
+                "contentHash": "512a2fc703594dd7",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 141,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.21280681387429154,
+                "preview": "Synthetic-coverage Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+              }
+            ]
+          },
+          {
+            "id": "empty-screen",
+            "path": "Synthetic-empty-screen.md",
+            "score": 0.21249636799137084,
+            "matches": [
+              {
+                "id": "chunk-379f232873546cb9",
+                "path": "Synthetic-empty-screen.md",
+                "headingPath": [
+                  "Synthetic-empty-screen"
+                ],
+                "ordinal": 0,
+                "contentHash": "b898db39ddc9d99e",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 113,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.21249636799137084,
+                "preview": "Synthetic-empty-screen The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+              }
+            ]
+          },
+          {
+            "id": "local-asr",
+            "path": "Synthetic-local-asr.md",
+            "score": 0.20537396502592367,
+            "matches": [
+              {
+                "id": "chunk-79f4fb4e12b595c3",
+                "path": "Synthetic-local-asr.md",
+                "headingPath": [
+                  "Synthetic-local-asr"
+                ],
+                "ordinal": 0,
+                "contentHash": "76bf7a3904e7fd2a",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 131,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.20537396502592367,
+                "preview": "Synthetic-local-asr Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+              }
+            ]
+          },
+          {
+            "id": "http",
+            "path": "Synthetic-http.md",
+            "score": 0.1968690498923133,
+            "matches": [
+              {
+                "id": "chunk-035f1347c767c5b3",
+                "path": "Synthetic-http.md",
+                "headingPath": [
+                  "Synthetic-http"
+                ],
+                "ordinal": 0,
+                "contentHash": "45f8c4efc867080f",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 104,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1968690498923133,
+                "preview": "Synthetic-http HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+              }
+            ]
+          },
+          {
+            "id": "local-player",
+            "path": "Synthetic-local-player.md",
+            "score": 0.19387756504015452,
+            "matches": [
+              {
+                "id": "chunk-ceaa17205261d1f1",
+                "path": "Synthetic-local-player.md",
+                "headingPath": [
+                  "Synthetic-local-player"
+                ],
+                "ordinal": 0,
+                "contentHash": "dffcdafe993fd26d",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 114,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.19387756504015452,
+                "preview": "Synthetic-local-player Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+              }
+            ]
+          },
+          {
+            "id": "cloud-asr",
+            "path": "Synthetic-cloud-asr.md",
+            "score": 0.13126120642978298,
+            "matches": [
+              {
+                "id": "chunk-ed41d31eb766fee3",
+                "path": "Synthetic-cloud-asr.md",
+                "headingPath": [
+                  "Synthetic-cloud-asr"
+                ],
+                "ordinal": 0,
+                "contentHash": "df766738e28b0a78",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 105,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.13126120642978298,
+                "preview": "Synthetic-cloud-asr Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+              }
+            ]
+          },
+          {
+            "id": "reset-all",
+            "path": "Synthetic-reset-all.md",
+            "score": 0.13014853456405043,
+            "matches": [
+              {
+                "id": "chunk-25c9837bcc13c044",
+                "path": "Synthetic-reset-all.md",
+                "headingPath": [
+                  "Synthetic-reset-all"
+                ],
+                "ordinal": 0,
+                "contentHash": "fd7c9e9223aa00a8",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 99,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.13014853456405043,
+                "preview": "Synthetic-reset-all The reset button restores every setting to its factory default. All custom preferences are removed."
+              }
+            ]
+          },
+          {
+            "id": "ui-style",
+            "path": "Synthetic-ui-style.md",
+            "score": 0.04128812598932576,
+            "matches": [
+              {
+                "id": "chunk-799c794849759b57",
+                "path": "Synthetic-ui-style.md",
+                "headingPath": [
+                  "Synthetic-ui-style"
+                ],
+                "ordinal": 0,
+                "contentHash": "44f53ea5c49d0b5f",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 112,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.04128812598932576,
+                "preview": "Synthetic-ui-style Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+              }
+            ]
+          }
+        ],
+        "fragments": [
+          {
+            "id": "revision",
+            "relevant": true,
+            "text": "Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+          },
+          {
+            "id": "index",
+            "relevant": false,
+            "text": "Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+          },
+          {
+            "id": "speed",
+            "relevant": false,
+            "text": "The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+          },
+          {
+            "id": "conditional-restore",
+            "relevant": false,
+            "text": "Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+          },
+          {
+            "id": "coverage",
+            "relevant": false,
+            "text": "Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+          },
+          {
+            "id": "empty-screen",
+            "relevant": false,
+            "text": "The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+          },
+          {
+            "id": "local-asr",
+            "relevant": false,
+            "text": "Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+          },
+          {
+            "id": "http",
+            "relevant": false,
+            "text": "HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+          },
+          {
+            "id": "local-player",
+            "relevant": false,
+            "text": "Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+          },
+          {
+            "id": "cloud-asr",
+            "relevant": false,
+            "text": "Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+          },
+          {
+            "id": "reset-all",
+            "relevant": false,
+            "text": "The reset button restores every setting to its factory default. All custom preferences are removed."
+          },
+          {
+            "id": "ui-style",
+            "relevant": false,
+            "text": "Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+          }
+        ]
+      },
+      {
+        "id": "ru-offline",
+        "query": "Где заметки об обработке звука без отправки записи в облако?",
+        "relevantIds": [
+          "local-asr"
+        ],
+        "queryEmbeddingLookups": 1,
+        "baseline": [
+          {
+            "id": "local-asr",
+            "path": "Synthetic-local-asr.md",
+            "score": 0.4034493744903716,
+            "matches": [
+              {
+                "id": "chunk-79f4fb4e12b595c3",
+                "path": "Synthetic-local-asr.md",
+                "headingPath": [
+                  "Synthetic-local-asr"
+                ],
+                "ordinal": 0,
+                "contentHash": "76bf7a3904e7fd2a",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 131,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.4034493744903716,
+                "preview": "Synthetic-local-asr Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+              }
+            ]
+          },
+          {
+            "id": "cloud-asr",
+            "path": "Synthetic-cloud-asr.md",
+            "score": 0.3936366991987683,
+            "matches": [
+              {
+                "id": "chunk-ed41d31eb766fee3",
+                "path": "Synthetic-cloud-asr.md",
+                "headingPath": [
+                  "Synthetic-cloud-asr"
+                ],
+                "ordinal": 0,
+                "contentHash": "df766738e28b0a78",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 105,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.3936366991987683,
+                "preview": "Synthetic-cloud-asr Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+              }
+            ]
+          },
+          {
+            "id": "local-player",
+            "path": "Synthetic-local-player.md",
+            "score": 0.3384779685869429,
+            "matches": [
+              {
+                "id": "chunk-ceaa17205261d1f1",
+                "path": "Synthetic-local-player.md",
+                "headingPath": [
+                  "Synthetic-local-player"
+                ],
+                "ordinal": 0,
+                "contentHash": "dffcdafe993fd26d",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 114,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.3384779685869429,
+                "preview": "Synthetic-local-player Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+              }
+            ]
+          },
+          {
+            "id": "speed",
+            "path": "Synthetic-speed.md",
+            "score": 0.2267154978630694,
+            "matches": [
+              {
+                "id": "chunk-17b07138b4007f06",
+                "path": "Synthetic-speed.md",
+                "headingPath": [
+                  "Synthetic-speed"
+                ],
+                "ordinal": 0,
+                "contentHash": "ed9797bcc2e8ce0d",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 100,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.2267154978630694,
+                "preview": "Synthetic-speed The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+              }
+            ]
+          },
+          {
+            "id": "index",
+            "path": "Synthetic-index.md",
+            "score": 0.1782729605717246,
+            "matches": [
+              {
+                "id": "chunk-6d98d4ff6248896c",
+                "path": "Synthetic-index.md",
+                "headingPath": [
+                  "Synthetic-index"
+                ],
+                "ordinal": 0,
+                "contentHash": "68ba376e6d8ff88c",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 118,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1782729605717246,
+                "preview": "Synthetic-index Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+              }
+            ]
+          },
+          {
+            "id": "revision",
+            "path": "Synthetic-revision.md",
+            "score": 0.1505830167145771,
+            "matches": [
+              {
+                "id": "chunk-6d1fed8ab07497bf",
+                "path": "Synthetic-revision.md",
+                "headingPath": [
+                  "Synthetic-revision"
+                ],
+                "ordinal": 0,
+                "contentHash": "0a92da88d6dfaf19",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 146,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1505830167145771,
+                "preview": "Synthetic-revision Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+              }
+            ]
+          },
+          {
+            "id": "coverage",
+            "path": "Synthetic-coverage.md",
+            "score": 0.1501353183956496,
+            "matches": [
+              {
+                "id": "chunk-06c7a3a3c9f89ba3",
+                "path": "Synthetic-coverage.md",
+                "headingPath": [
+                  "Synthetic-coverage"
+                ],
+                "ordinal": 0,
+                "contentHash": "512a2fc703594dd7",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 141,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1501353183956496,
+                "preview": "Synthetic-coverage Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+              }
+            ]
+          },
+          {
+            "id": "http",
+            "path": "Synthetic-http.md",
+            "score": 0.12396110642737362,
+            "matches": [
+              {
+                "id": "chunk-035f1347c767c5b3",
+                "path": "Synthetic-http.md",
+                "headingPath": [
+                  "Synthetic-http"
+                ],
+                "ordinal": 0,
+                "contentHash": "45f8c4efc867080f",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 104,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.12396110642737362,
+                "preview": "Synthetic-http HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+              }
+            ]
+          },
+          {
+            "id": "empty-screen",
+            "path": "Synthetic-empty-screen.md",
+            "score": 0.11401434299423494,
+            "matches": [
+              {
+                "id": "chunk-379f232873546cb9",
+                "path": "Synthetic-empty-screen.md",
+                "headingPath": [
+                  "Synthetic-empty-screen"
+                ],
+                "ordinal": 0,
+                "contentHash": "b898db39ddc9d99e",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 113,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.11401434299423494,
+                "preview": "Synthetic-empty-screen The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+              }
+            ]
+          },
+          {
+            "id": "conditional-restore",
+            "path": "Synthetic-conditional-restore.md",
+            "score": 0.1113305467937579,
+            "matches": [
+              {
+                "id": "chunk-fa876364d529f061",
+                "path": "Synthetic-conditional-restore.md",
+                "headingPath": [
+                  "Synthetic-conditional-restore"
+                ],
+                "ordinal": 0,
+                "contentHash": "4475e3108ecf4713",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 164,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1113305467937579,
+                "preview": "Synthetic-conditional-restore Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+              }
+            ]
+          },
+          {
+            "id": "ui-style",
+            "path": "Synthetic-ui-style.md",
+            "score": 0.08413450263666614,
+            "matches": [
+              {
+                "id": "chunk-799c794849759b57",
+                "path": "Synthetic-ui-style.md",
+                "headingPath": [
+                  "Synthetic-ui-style"
+                ],
+                "ordinal": 0,
+                "contentHash": "44f53ea5c49d0b5f",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 112,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.08413450263666614,
+                "preview": "Synthetic-ui-style Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+              }
+            ]
+          },
+          {
+            "id": "reset-all",
+            "path": "Synthetic-reset-all.md",
+            "score": 0.050151750923038446,
+            "matches": [
+              {
+                "id": "chunk-25c9837bcc13c044",
+                "path": "Synthetic-reset-all.md",
+                "headingPath": [
+                  "Synthetic-reset-all"
+                ],
+                "ordinal": 0,
+                "contentHash": "fd7c9e9223aa00a8",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 99,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.050151750923038446,
+                "preview": "Synthetic-reset-all The reset button restores every setting to its factory default. All custom preferences are removed."
+              }
+            ]
+          }
+        ],
+        "fragments": [
+          {
+            "id": "local-asr",
+            "relevant": true,
+            "text": "Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+          },
+          {
+            "id": "cloud-asr",
+            "relevant": false,
+            "text": "Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+          },
+          {
+            "id": "local-player",
+            "relevant": false,
+            "text": "Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+          },
+          {
+            "id": "speed",
+            "relevant": false,
+            "text": "The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+          },
+          {
+            "id": "index",
+            "relevant": false,
+            "text": "Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+          },
+          {
+            "id": "revision",
+            "relevant": false,
+            "text": "Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+          },
+          {
+            "id": "coverage",
+            "relevant": false,
+            "text": "Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+          },
+          {
+            "id": "http",
+            "relevant": false,
+            "text": "HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+          },
+          {
+            "id": "empty-screen",
+            "relevant": false,
+            "text": "The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+          },
+          {
+            "id": "conditional-restore",
+            "relevant": false,
+            "text": "Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+          },
+          {
+            "id": "ui-style",
+            "relevant": false,
+            "text": "Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+          },
+          {
+            "id": "reset-all",
+            "relevant": false,
+            "text": "The reset button restores every setting to its factory default. All custom preferences are removed."
+          }
+        ]
+      },
+      {
+        "id": "en-rollback",
+        "query": "How can a failed settings write avoid losing a newer edit?",
+        "relevantIds": [
+          "conditional-restore"
+        ],
+        "queryEmbeddingLookups": 1,
+        "baseline": [
+          {
+            "id": "conditional-restore",
+            "path": "Synthetic-conditional-restore.md",
+            "score": 0.5058113560014313,
+            "matches": [
+              {
+                "id": "chunk-fa876364d529f061",
+                "path": "Synthetic-conditional-restore.md",
+                "headingPath": [
+                  "Synthetic-conditional-restore"
+                ],
+                "ordinal": 0,
+                "contentHash": "4475e3108ecf4713",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 164,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.5058113560014313,
+                "preview": "Synthetic-conditional-restore Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+              }
+            ]
+          },
+          {
+            "id": "reset-all",
+            "path": "Synthetic-reset-all.md",
+            "score": 0.29284331284021625,
+            "matches": [
+              {
+                "id": "chunk-25c9837bcc13c044",
+                "path": "Synthetic-reset-all.md",
+                "headingPath": [
+                  "Synthetic-reset-all"
+                ],
+                "ordinal": 0,
+                "contentHash": "fd7c9e9223aa00a8",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 99,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.29284331284021625,
+                "preview": "Synthetic-reset-all The reset button restores every setting to its factory default. All custom preferences are removed."
+              }
+            ]
+          },
+          {
+            "id": "revision",
+            "path": "Synthetic-revision.md",
+            "score": 0.28414143911051176,
+            "matches": [
+              {
+                "id": "chunk-6d1fed8ab07497bf",
+                "path": "Synthetic-revision.md",
+                "headingPath": [
+                  "Synthetic-revision"
+                ],
+                "ordinal": 0,
+                "contentHash": "0a92da88d6dfaf19",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 146,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.28414143911051176,
+                "preview": "Synthetic-revision Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+              }
+            ]
+          },
+          {
+            "id": "ui-style",
+            "path": "Synthetic-ui-style.md",
+            "score": 0.23651662712616525,
+            "matches": [
+              {
+                "id": "chunk-799c794849759b57",
+                "path": "Synthetic-ui-style.md",
+                "headingPath": [
+                  "Synthetic-ui-style"
+                ],
+                "ordinal": 0,
+                "contentHash": "44f53ea5c49d0b5f",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 112,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.23651662712616525,
+                "preview": "Synthetic-ui-style Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+              }
+            ]
+          },
+          {
+            "id": "speed",
+            "path": "Synthetic-speed.md",
+            "score": 0.1992309080963941,
+            "matches": [
+              {
+                "id": "chunk-17b07138b4007f06",
+                "path": "Synthetic-speed.md",
+                "headingPath": [
+                  "Synthetic-speed"
+                ],
+                "ordinal": 0,
+                "contentHash": "ed9797bcc2e8ce0d",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 100,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1992309080963941,
+                "preview": "Synthetic-speed The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+              }
+            ]
+          },
+          {
+            "id": "coverage",
+            "path": "Synthetic-coverage.md",
+            "score": 0.19696428159695603,
+            "matches": [
+              {
+                "id": "chunk-06c7a3a3c9f89ba3",
+                "path": "Synthetic-coverage.md",
+                "headingPath": [
+                  "Synthetic-coverage"
+                ],
+                "ordinal": 0,
+                "contentHash": "512a2fc703594dd7",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 141,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.19696428159695603,
+                "preview": "Synthetic-coverage Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+              }
+            ]
+          },
+          {
+            "id": "empty-screen",
+            "path": "Synthetic-empty-screen.md",
+            "score": 0.16357915553936453,
+            "matches": [
+              {
+                "id": "chunk-379f232873546cb9",
+                "path": "Synthetic-empty-screen.md",
+                "headingPath": [
+                  "Synthetic-empty-screen"
+                ],
+                "ordinal": 0,
+                "contentHash": "b898db39ddc9d99e",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 113,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.16357915553936453,
+                "preview": "Synthetic-empty-screen The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+              }
+            ]
+          },
+          {
+            "id": "index",
+            "path": "Synthetic-index.md",
+            "score": 0.14021236032921727,
+            "matches": [
+              {
+                "id": "chunk-6d98d4ff6248896c",
+                "path": "Synthetic-index.md",
+                "headingPath": [
+                  "Synthetic-index"
+                ],
+                "ordinal": 0,
+                "contentHash": "68ba376e6d8ff88c",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 118,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.14021236032921727,
+                "preview": "Synthetic-index Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+              }
+            ]
+          },
+          {
+            "id": "local-asr",
+            "path": "Synthetic-local-asr.md",
+            "score": 0.1328146680554203,
+            "matches": [
+              {
+                "id": "chunk-79f4fb4e12b595c3",
+                "path": "Synthetic-local-asr.md",
+                "headingPath": [
+                  "Synthetic-local-asr"
+                ],
+                "ordinal": 0,
+                "contentHash": "76bf7a3904e7fd2a",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 131,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1328146680554203,
+                "preview": "Synthetic-local-asr Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+              }
+            ]
+          },
+          {
+            "id": "local-player",
+            "path": "Synthetic-local-player.md",
+            "score": 0.09182414964225975,
+            "matches": [
+              {
+                "id": "chunk-ceaa17205261d1f1",
+                "path": "Synthetic-local-player.md",
+                "headingPath": [
+                  "Synthetic-local-player"
+                ],
+                "ordinal": 0,
+                "contentHash": "dffcdafe993fd26d",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 114,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.09182414964225975,
+                "preview": "Synthetic-local-player Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+              }
+            ]
+          },
+          {
+            "id": "cloud-asr",
+            "path": "Synthetic-cloud-asr.md",
+            "score": 0.0460261009550101,
+            "matches": [
+              {
+                "id": "chunk-ed41d31eb766fee3",
+                "path": "Synthetic-cloud-asr.md",
+                "headingPath": [
+                  "Synthetic-cloud-asr"
+                ],
+                "ordinal": 0,
+                "contentHash": "df766738e28b0a78",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 105,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.0460261009550101,
+                "preview": "Synthetic-cloud-asr Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+              }
+            ]
+          },
+          {
+            "id": "http",
+            "path": "Synthetic-http.md",
+            "score": 0.03573527262691076,
+            "matches": [
+              {
+                "id": "chunk-035f1347c767c5b3",
+                "path": "Synthetic-http.md",
+                "headingPath": [
+                  "Synthetic-http"
+                ],
+                "ordinal": 0,
+                "contentHash": "45f8c4efc867080f",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 104,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.03573527262691076,
+                "preview": "Synthetic-http HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+              }
+            ]
+          }
+        ],
+        "fragments": [
+          {
+            "id": "conditional-restore",
+            "relevant": true,
+            "text": "Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+          },
+          {
+            "id": "reset-all",
+            "relevant": false,
+            "text": "The reset button restores every setting to its factory default. All custom preferences are removed."
+          },
+          {
+            "id": "revision",
+            "relevant": false,
+            "text": "Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+          },
+          {
+            "id": "ui-style",
+            "relevant": false,
+            "text": "Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+          },
+          {
+            "id": "speed",
+            "relevant": false,
+            "text": "The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+          },
+          {
+            "id": "coverage",
+            "relevant": false,
+            "text": "Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+          },
+          {
+            "id": "empty-screen",
+            "relevant": false,
+            "text": "The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+          },
+          {
+            "id": "index",
+            "relevant": false,
+            "text": "Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+          },
+          {
+            "id": "local-asr",
+            "relevant": false,
+            "text": "Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+          },
+          {
+            "id": "local-player",
+            "relevant": false,
+            "text": "Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+          },
+          {
+            "id": "cloud-asr",
+            "relevant": false,
+            "text": "Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+          },
+          {
+            "id": "http",
+            "relevant": false,
+            "text": "HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+          }
+        ]
+      },
+      {
+        "id": "en-incomplete",
+        "query": "Can an incomplete scan prove that a note has no problems?",
+        "relevantIds": [
+          "coverage"
+        ],
+        "queryEmbeddingLookups": 1,
+        "baseline": [
+          {
+            "id": "coverage",
+            "path": "Synthetic-coverage.md",
+            "score": 0.480631818047218,
+            "matches": [
+              {
+                "id": "chunk-06c7a3a3c9f89ba3",
+                "path": "Synthetic-coverage.md",
+                "headingPath": [
+                  "Synthetic-coverage"
+                ],
+                "ordinal": 0,
+                "contentHash": "512a2fc703594dd7",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 141,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.480631818047218,
+                "preview": "Synthetic-coverage Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+              }
+            ]
+          },
+          {
+            "id": "speed",
+            "path": "Synthetic-speed.md",
+            "score": 0.38651376986936364,
+            "matches": [
+              {
+                "id": "chunk-17b07138b4007f06",
+                "path": "Synthetic-speed.md",
+                "headingPath": [
+                  "Synthetic-speed"
+                ],
+                "ordinal": 0,
+                "contentHash": "ed9797bcc2e8ce0d",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 100,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.38651376986936364,
+                "preview": "Synthetic-speed The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+              }
+            ]
+          },
+          {
+            "id": "empty-screen",
+            "path": "Synthetic-empty-screen.md",
+            "score": 0.2322464452704244,
+            "matches": [
+              {
+                "id": "chunk-379f232873546cb9",
+                "path": "Synthetic-empty-screen.md",
+                "headingPath": [
+                  "Synthetic-empty-screen"
+                ],
+                "ordinal": 0,
+                "contentHash": "b898db39ddc9d99e",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 113,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.2322464452704244,
+                "preview": "Synthetic-empty-screen The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+              }
+            ]
+          },
+          {
+            "id": "local-asr",
+            "path": "Synthetic-local-asr.md",
+            "score": 0.2105187272873593,
+            "matches": [
+              {
+                "id": "chunk-79f4fb4e12b595c3",
+                "path": "Synthetic-local-asr.md",
+                "headingPath": [
+                  "Synthetic-local-asr"
+                ],
+                "ordinal": 0,
+                "contentHash": "76bf7a3904e7fd2a",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 131,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.2105187272873593,
+                "preview": "Synthetic-local-asr Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+              }
+            ]
+          },
+          {
+            "id": "conditional-restore",
+            "path": "Synthetic-conditional-restore.md",
+            "score": 0.18104064012761742,
+            "matches": [
+              {
+                "id": "chunk-fa876364d529f061",
+                "path": "Synthetic-conditional-restore.md",
+                "headingPath": [
+                  "Synthetic-conditional-restore"
+                ],
+                "ordinal": 0,
+                "contentHash": "4475e3108ecf4713",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 164,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.18104064012761742,
+                "preview": "Synthetic-conditional-restore Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+              }
+            ]
+          },
+          {
+            "id": "index",
+            "path": "Synthetic-index.md",
+            "score": 0.1563778292310327,
+            "matches": [
+              {
+                "id": "chunk-6d98d4ff6248896c",
+                "path": "Synthetic-index.md",
+                "headingPath": [
+                  "Synthetic-index"
+                ],
+                "ordinal": 0,
+                "contentHash": "68ba376e6d8ff88c",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 118,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1563778292310327,
+                "preview": "Synthetic-index Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+              }
+            ]
+          },
+          {
+            "id": "cloud-asr",
+            "path": "Synthetic-cloud-asr.md",
+            "score": 0.15514947654496553,
+            "matches": [
+              {
+                "id": "chunk-ed41d31eb766fee3",
+                "path": "Synthetic-cloud-asr.md",
+                "headingPath": [
+                  "Synthetic-cloud-asr"
+                ],
+                "ordinal": 0,
+                "contentHash": "df766738e28b0a78",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 105,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.15514947654496553,
+                "preview": "Synthetic-cloud-asr Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+              }
+            ]
+          },
+          {
+            "id": "revision",
+            "path": "Synthetic-revision.md",
+            "score": 0.15315798193553984,
+            "matches": [
+              {
+                "id": "chunk-6d1fed8ab07497bf",
+                "path": "Synthetic-revision.md",
+                "headingPath": [
+                  "Synthetic-revision"
+                ],
+                "ordinal": 0,
+                "contentHash": "0a92da88d6dfaf19",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 146,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.15315798193553984,
+                "preview": "Synthetic-revision Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+              }
+            ]
+          },
+          {
+            "id": "local-player",
+            "path": "Synthetic-local-player.md",
+            "score": 0.15279459339309953,
+            "matches": [
+              {
+                "id": "chunk-ceaa17205261d1f1",
+                "path": "Synthetic-local-player.md",
+                "headingPath": [
+                  "Synthetic-local-player"
+                ],
+                "ordinal": 0,
+                "contentHash": "dffcdafe993fd26d",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 114,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.15279459339309953,
+                "preview": "Synthetic-local-player Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+              }
+            ]
+          },
+          {
+            "id": "ui-style",
+            "path": "Synthetic-ui-style.md",
+            "score": 0.1015940007089635,
+            "matches": [
+              {
+                "id": "chunk-799c794849759b57",
+                "path": "Synthetic-ui-style.md",
+                "headingPath": [
+                  "Synthetic-ui-style"
+                ],
+                "ordinal": 0,
+                "contentHash": "44f53ea5c49d0b5f",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 112,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.1015940007089635,
+                "preview": "Synthetic-ui-style Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+              }
+            ]
+          },
+          {
+            "id": "reset-all",
+            "path": "Synthetic-reset-all.md",
+            "score": 0.07590261154304,
+            "matches": [
+              {
+                "id": "chunk-25c9837bcc13c044",
+                "path": "Synthetic-reset-all.md",
+                "headingPath": [
+                  "Synthetic-reset-all"
+                ],
+                "ordinal": 0,
+                "contentHash": "fd7c9e9223aa00a8",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 99,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.07590261154304,
+                "preview": "Synthetic-reset-all The reset button restores every setting to its factory default. All custom preferences are removed."
+              }
+            ]
+          },
+          {
+            "id": "http",
+            "path": "Synthetic-http.md",
+            "score": 0.056051347157373324,
+            "matches": [
+              {
+                "id": "chunk-035f1347c767c5b3",
+                "path": "Synthetic-http.md",
+                "headingPath": [
+                  "Synthetic-http"
+                ],
+                "ordinal": 0,
+                "contentHash": "45f8c4efc867080f",
+                "source": {
+                  "startOffset": 0,
+                  "endOffset": 104,
+                  "startLine": 0,
+                  "endLine": 0
+                },
+                "score": 0.056051347157373324,
+                "preview": "Synthetic-http HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+              }
+            ]
+          }
+        ],
+        "fragments": [
+          {
+            "id": "coverage",
+            "relevant": true,
+            "text": "Missing findings establish healthy absence only with complete current coverage. A failed or partial scan leaves previous findings unresolved."
+          },
+          {
+            "id": "speed",
+            "relevant": false,
+            "text": "The scanner skips unchanged inputs to save time. Progress displays the number of documents examined."
+          },
+          {
+            "id": "empty-screen",
+            "relevant": false,
+            "text": "The findings screen shows an empty illustration when the current filter has no rows. Users can change the filter."
+          },
+          {
+            "id": "local-asr",
+            "relevant": false,
+            "text": "Локальное распознавание запускается на CPU. Модель заранее установлена пользователем; аудиозапись не отправляется внешнему сервису."
+          },
+          {
+            "id": "conditional-restore",
+            "relevant": false,
+            "text": "Restore the last committed value only if the live field still equals the failed attempted value. A newer user edit owns its current value and must survive rollback."
+          },
+          {
+            "id": "index",
+            "relevant": false,
+            "text": "Построение векторного индекса разбивает заметки на фрагменты. Изменение embedding-модели может требовать перестроения."
+          },
+          {
+            "id": "cloud-asr",
+            "relevant": false,
+            "text": "Облачный сервис быстро распознаёт аудиозапись. Файл загружается по HTTPS и оплата списывается с аккаунта."
+          },
+          {
+            "id": "revision",
+            "relevant": false,
+            "text": "Каждому запуску поиска присваивается номер поколения. Перед обновлением UI ответ сравнивается с текущим поколением; устаревший ответ игнорируется."
+          },
+          {
+            "id": "local-player",
+            "relevant": false,
+            "text": "Проигрыватель открывает локальные аудиофайлы. Для следующего трека нажмите стрелку вправо; распознавания речи нет."
+          },
+          {
+            "id": "ui-style",
+            "relevant": false,
+            "text": "Settings controls share spacing and typography. Each field has a descriptive label and keyboard focus indicator."
+          },
+          {
+            "id": "reset-all",
+            "relevant": false,
+            "text": "The reset button restores every setting to its factory default. All custom preferences are removed."
+          },
+          {
+            "id": "http",
+            "relevant": false,
+            "text": "HTTP-клиент умеет посылать запросы с заголовками и читать JSON. Сервер возвращает статус 200 при успехе."
+          }
+        ]
+      }
+    ],
+    "selectedModel": {
+      "model": "voyageai/rerank-3-lite",
+      "index": 1,
+      "count": 4,
+      "mrr": 1,
+      "cost": 10200,
+      "latency": 2082
+    },
+    "embeddingRequestSha256": "cbc4f27c51c5c2cb36bf4ab8700470dc5950c408fa32774a9f469cea9c79e29b",
+    "vectorSha256": "dce10da76d74eff84ca83f09b3491e3be3b2eaf8e4e5abc9c069d736447968bf",
+    "casesSha256": "a6213ed3b33c26625ec537aafb910ed7d8cd86b238be3f27de97a5ddec714973",
+    "requests": [
+      {
+        "id": "ru-cancellation",
+        "candidateContainsRelevant": true,
+        "beforeOrder": [
+          "revision",
+          "index",
+          "speed",
+          "conditional-restore",
+          "coverage",
+          "empty-screen",
+          "local-asr",
+          "http",
+          "local-player",
+          "cloud-asr",
+          "reset-all",
+          "ui-style"
+        ],
+        "beforePositions": [
+          1
+        ],
+        "beforeTop1": true,
+        "beforeTop3": true,
+        "afterPositions": [
+          1
+        ],
+        "afterTop1": true,
+        "afterTop3": true,
+        "change": "unchanged",
+        "queryEmbeddingLookups": 1,
+        "sameCandidatePool": true,
+        "afterOrder": [
+          "revision",
+          "conditional-restore",
+          "reset-all",
+          "index",
+          "coverage",
+          "empty-screen",
+          "speed",
+          "http",
+          "local-asr",
+          "local-player",
+          "ui-style",
+          "cloud-asr"
+        ]
+      },
+      {
+        "id": "ru-offline",
+        "candidateContainsRelevant": true,
+        "beforeOrder": [
+          "local-asr",
+          "cloud-asr",
+          "local-player",
+          "speed",
+          "index",
+          "revision",
+          "coverage",
+          "http",
+          "empty-screen",
+          "conditional-restore",
+          "ui-style",
+          "reset-all"
+        ],
+        "beforePositions": [
+          1
+        ],
+        "beforeTop1": true,
+        "beforeTop3": true,
+        "afterPositions": [
+          1
+        ],
+        "afterTop1": true,
+        "afterTop3": true,
+        "change": "unchanged",
+        "queryEmbeddingLookups": 1,
+        "sameCandidatePool": true,
+        "afterOrder": [
+          "local-asr",
+          "cloud-asr",
+          "local-player",
+          "index",
+          "speed",
+          "ui-style",
+          "reset-all",
+          "coverage",
+          "http",
+          "empty-screen",
+          "conditional-restore",
+          "revision"
+        ]
+      },
+      {
+        "id": "en-rollback",
+        "candidateContainsRelevant": true,
+        "beforeOrder": [
+          "conditional-restore",
+          "reset-all",
+          "revision",
+          "ui-style",
+          "speed",
+          "coverage",
+          "empty-screen",
+          "index",
+          "local-asr",
+          "local-player",
+          "cloud-asr",
+          "http"
+        ],
+        "beforePositions": [
+          1
+        ],
+        "beforeTop1": true,
+        "beforeTop3": true,
+        "afterPositions": [
+          1
+        ],
+        "afterTop1": true,
+        "afterTop3": true,
+        "change": "unchanged",
+        "queryEmbeddingLookups": 1,
+        "sameCandidatePool": true,
+        "afterOrder": [
+          "conditional-restore",
+          "reset-all",
+          "revision",
+          "coverage",
+          "ui-style",
+          "speed",
+          "empty-screen",
+          "index",
+          "local-asr",
+          "local-player",
+          "cloud-asr",
+          "http"
+        ]
+      },
+      {
+        "id": "en-incomplete",
+        "candidateContainsRelevant": true,
+        "beforeOrder": [
+          "coverage",
+          "speed",
+          "empty-screen",
+          "local-asr",
+          "conditional-restore",
+          "index",
+          "cloud-asr",
+          "revision",
+          "local-player",
+          "ui-style",
+          "reset-all",
+          "http"
+        ],
+        "beforePositions": [
+          1
+        ],
+        "beforeTop1": true,
+        "beforeTop3": true,
+        "afterPositions": [
+          1
+        ],
+        "afterTop1": true,
+        "afterTop3": true,
+        "change": "unchanged",
+        "queryEmbeddingLookups": 1,
+        "sameCandidatePool": true,
+        "afterOrder": [
+          "coverage",
+          "speed",
+          "empty-screen",
+          "index",
+          "conditional-restore",
+          "ui-style",
+          "reset-all",
+          "local-asr",
+          "cloud-asr",
+          "revision",
+          "local-player",
+          "http"
+        ]
+      }
+    ],
+    "improved": 0,
+    "worsened": 0,
+    "unchanged": 4,
+    "missingRelevant": 0,
+    "meanRerankLatencyMs": 491.5,
+    "rerankCostUSD": 0.0000408,
+    "environment": "Production shared services in Node with real OpenRouter vectors, then installed native production Rerank on the exact saved pools; no second paid embedding request.",
+    "queryEmbeddingCount": 4,
+    "remoteEmbeddingBatchCount": 1
+  },
+  "operations": [
+    {
+      "id": "smoke-0-smoke",
+      "model": "cohere/rerank-v3.5",
+      "caseId": "smoke",
+      "requestSha256": "bd8ed83e63e5f4f4cd1664beb267d31b0d7f3794262011297f1595c84e769c17",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 1000000,
+      "startedAt": "2026-10-10T11:55:43.807Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "bd8ed83e63e5f4f4cd1664beb267d31b0d7f3794262011297f1595c84e769c17",
+        "payloadBytes": 251,
+        "documentCount": 2,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791633344-iMBSNq4A9Cr6UO5G6d5s",
+        "resolvedModel": "rerank-v3.5",
+        "provider": "Cohere",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 2
+        },
+        "usage": {
+          "search_units": 1,
+          "cost": 0.001
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 0,
+            "relevanceScore": 0.2039139
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.0110989455
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 610,
+        "native": {
+          "stage": "reranked",
+          "updates": [
+            {
+              "stage": "semantic",
+              "results": [
+                {
+                  "path": "Local-Only-0.md",
+                  "semanticScore": 1,
+                  "rerankScore": null,
+                  "source": {
+                    "startOffset": 0,
+                    "endOffset": 70,
+                    "startLine": 0,
+                    "endLine": 0
+                  }
+                },
+                {
+                  "path": "Local-Only-1.md",
+                  "semanticScore": 0.800000011920929,
+                  "rerankScore": null,
+                  "source": {
+                    "startOffset": 0,
+                    "endOffset": 35,
+                    "startLine": 0,
+                    "endLine": 0
+                  }
+                }
+              ]
+            },
+            {
+              "stage": "refining",
+              "results": [
+                {
+                  "path": "Local-Only-0.md",
+                  "semanticScore": 1,
+                  "rerankScore": null,
+                  "source": {
+                    "startOffset": 0,
+                    "endOffset": 70,
+                    "startLine": 0,
+                    "endLine": 0
+                  }
+                },
+                {
+                  "path": "Local-Only-1.md",
+                  "semanticScore": 0.800000011920929,
+                  "rerankScore": null,
+                  "source": {
+                    "startOffset": 0,
+                    "endOffset": 35,
+                    "startLine": 0,
+                    "endLine": 0
+                  }
+                }
+              ]
+            },
+            {
+              "stage": "reranked",
+              "results": [
+                {
+                  "path": "Local-Only-0.md",
+                  "semanticScore": 1,
+                  "rerankScore": 0.2039139,
+                  "source": {
+                    "startOffset": 0,
+                    "endOffset": 70,
+                    "startLine": 0,
+                    "endLine": 0
+                  }
+                },
+                {
+                  "path": "Local-Only-1.md",
+                  "semanticScore": 0.800000011920929,
+                  "rerankScore": 0.0110989455,
+                  "source": {
+                    "startOffset": 0,
+                    "endOffset": 35,
+                    "startLine": 0,
+                    "endLine": 0
+                  }
+                }
+              ]
+            }
+          ],
+          "candidates": [
+            {
+              "path": "Local-Only-0.md",
+              "semanticScore": 1,
+              "rerankScore": null,
+              "source": {
+                "startOffset": 0,
+                "endOffset": 70,
+                "startLine": 0,
+                "endLine": 0
+              }
+            },
+            {
+              "path": "Local-Only-1.md",
+              "semanticScore": 0.800000011920929,
+              "rerankScore": null,
+              "source": {
+                "startOffset": 0,
+                "endOffset": 35,
+                "startLine": 0,
+                "endLine": 0
+              }
+            }
+          ],
+          "titles": [
+            "Local-Only-0",
+            "Local-Only-1"
+          ],
+          "opened": {
+            "path": "Local-Only-0.md",
+            "line": 0
+          }
+        },
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.000488922,
+        "keyUsageAfterUSD": 0.000488922,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.001,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "backoff"
+          ],
+          "order": [
+            "backoff",
+            "database"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T11:55:45.157Z"
+    },
+    {
+      "id": "smoke-1-smoke",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "smoke",
+      "requestSha256": "7df17ab02a32a70c6f016b04eb39cdb60c26c0bbff32f8fee20d17fdd451df12",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 500,
+      "startedAt": "2026-10-10T12:24:03.518Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "7df17ab02a32a70c6f016b04eb39cdb60c26c0bbff32f8fee20d17fdd451df12",
+        "payloadBytes": 255,
+        "documentCount": 2,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635043-7fq7b84EnWOBBlKowz04",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 2
+        },
+        "usage": {
+          "total_tokens": 25,
+          "cost": 5e-7
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 0,
+            "relevanceScore": 0.69140625
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.294921875
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 614,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.001488922,
+        "keyUsageAfterUSD": 0.001488922,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 5e-7,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "backoff"
+          ],
+          "order": [
+            "backoff",
+            "database"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:24:04.666Z"
+    },
+    {
+      "id": "smoke-2-smoke",
+      "model": "qwen/qwen3-reranker-8b",
+      "caseId": "smoke",
+      "requestSha256": "01b163754033816376c9ff55fe20e6778bca69b450519a73cd80ebbdc87d5a8e",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 35400,
+      "startedAt": "2026-10-10T12:24:12.951Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "01b163754033816376c9ff55fe20e6778bca69b450519a73cd80ebbdc87d5a8e",
+        "payloadBytes": 255,
+        "documentCount": 2,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635053-48MjjtDVx1Tn6MbC8TRt",
+        "resolvedModel": "accounts/fireworks/models/qwen3-reranker-8b",
+        "provider": "Fireworks",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 2
+        },
+        "usage": {
+          "total_tokens": 177,
+          "cost": 0.0000354
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 0,
+            "relevanceScore": 0.8515625
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.00010967254638671875
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 946,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.001488922,
+        "keyUsageAfterUSD": 0.001488922,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.0000354,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "backoff"
+          ],
+          "order": [
+            "backoff",
+            "database"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:24:14.428Z"
+    },
+    {
+      "id": "fixed-0-ru-cancellation",
+      "model": "cohere/rerank-v3.5",
+      "caseId": "ru-cancellation",
+      "requestSha256": "5c1e5b1b81fce1aa8ef96ea279bde0a5a976e2b732e6c2a5e791a063c0eaca98",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 1000000,
+      "startedAt": "2026-10-10T12:24:37.827Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "5c1e5b1b81fce1aa8ef96ea279bde0a5a976e2b732e6c2a5e791a063c0eaca98",
+        "payloadBytes": 888,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635078-jt5HY3jt56ZJMwEVom13",
+        "resolvedModel": "rerank-v3.5",
+        "provider": "Cohere",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "search_units": 1,
+          "cost": 0.001
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.44463772
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.03460912
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.017864192
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 603,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.001524822,
+        "keyUsageAfterUSD": 0.001524822,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.001,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "revision"
+          ],
+          "order": [
+            "revision",
+            "http",
+            "index"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:24:38.941Z"
+    },
+    {
+      "id": "fixed-0-ru-offline",
+      "model": "cohere/rerank-v3.5",
+      "caseId": "ru-offline",
+      "requestSha256": "32e70a454399473c9dd0d325b479e48ff715221112312d44bd513fc729e1e7fd",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 1000000,
+      "startedAt": "2026-10-10T12:24:39.005Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "32e70a454399473c9dd0d325b479e48ff715221112312d44bd513fc729e1e7fd",
+        "payloadBytes": 867,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635079-tb72Gv8ekcznv8DqzRha",
+        "resolvedModel": "rerank-v3.5",
+        "provider": "Cohere",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "search_units": 1,
+          "cost": 0.001
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.12755504
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.034065127
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.020318784
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 566,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.001524822,
+        "keyUsageAfterUSD": 0.001524822,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.001,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "local-asr"
+          ],
+          "order": [
+            "local-asr",
+            "cloud-asr",
+            "local-player"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:24:39.920Z"
+    },
+    {
+      "id": "fixed-0-en-rollback",
+      "model": "cohere/rerank-v3.5",
+      "caseId": "en-rollback",
+      "requestSha256": "c5770f37a97531d2561b740051dae361234ee11ddc8ffc9c7c59559f2ee62f5c",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 1000000,
+      "startedAt": "2026-10-10T12:24:40.325Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "c5770f37a97531d2561b740051dae361234ee11ddc8ffc9c7c59559f2ee62f5c",
+        "payloadBytes": 544,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635080-h7AjewJLGfqOcNksN6wH",
+        "resolvedModel": "rerank-v3.5",
+        "provider": "Cohere",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "search_units": 1,
+          "cost": 0.001
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.46104163
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.047678076
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.024129374
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 403,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.001524822,
+        "keyUsageAfterUSD": 0.001524822,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.001,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "conditional-restore"
+          ],
+          "order": [
+            "conditional-restore",
+            "reset-all",
+            "ui-style"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:24:41.008Z"
+    },
+    {
+      "id": "fixed-0-en-incomplete",
+      "model": "cohere/rerank-v3.5",
+      "caseId": "en-incomplete",
+      "requestSha256": "cb09291e61d7272ac48e301dfcd3b886f4cbda9ba820c1e4569f194e51721d4f",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 1000000,
+      "startedAt": "2026-10-10T12:24:41.086Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "cb09291e61d7272ac48e301dfcd3b886f4cbda9ba820c1e4569f194e51721d4f",
+        "payloadBytes": 522,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635081-bUBowqxqXCkDZa7mgdUu",
+        "resolvedModel": "rerank-v3.5",
+        "provider": "Cohere",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "search_units": 1,
+          "cost": 0.001
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.18260069
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.030585974
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.015027786
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 387,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.001524822,
+        "keyUsageAfterUSD": 0.001524822,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.001,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "coverage"
+          ],
+          "order": [
+            "coverage",
+            "speed",
+            "empty-screen"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:24:41.790Z"
+    },
+    {
+      "id": "fixed-1-ru-cancellation",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "ru-cancellation",
+      "requestSha256": "54c5cefc1d32c3dd5aed3996e61c87bd21144050d7dc06ccdda3f0e77bf89a09",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 3220,
+      "startedAt": "2026-10-10T12:26:18.457Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "54c5cefc1d32c3dd5aed3996e61c87bd21144050d7dc06ccdda3f0e77bf89a09",
+        "payloadBytes": 892,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635178-15dpa1m6nUaQKHgLhEmL",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "total_tokens": 161,
+          "cost": 0.00000322
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.74609375
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.359375
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.3125
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 654,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005524822,
+        "keyUsageAfterUSD": 0.005524822,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.00000322,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "revision"
+          ],
+          "order": [
+            "revision",
+            "index",
+            "http"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:26:19.578Z"
+    },
+    {
+      "id": "fixed-1-ru-offline",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "ru-offline",
+      "requestSha256": "7d3ccab3af0adbc7448fae8bb2dc8c895c74f54413489627137a8ca2678a7a7b",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 3540,
+      "startedAt": "2026-10-10T12:26:19.645Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "7d3ccab3af0adbc7448fae8bb2dc8c895c74f54413489627137a8ca2678a7a7b",
+        "payloadBytes": 871,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635179-dYpZDvR3gUuzeJVNuXsl",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "total_tokens": 177,
+          "cost": 0.00000354
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.66015625
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.373046875
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.30078125
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 422,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005524822,
+        "keyUsageAfterUSD": 0.005524822,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.00000354,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "local-asr"
+          ],
+          "order": [
+            "local-asr",
+            "cloud-asr",
+            "local-player"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:26:20.809Z"
+    },
+    {
+      "id": "fixed-1-en-rollback",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "en-rollback",
+      "requestSha256": "03681ec73f55cbe67c2fef0e8bd868504c3eadda324cbcbd6c5cb733874c4ad9",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 1780,
+      "startedAt": "2026-10-10T12:26:20.877Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "03681ec73f55cbe67c2fef0e8bd868504c3eadda324cbcbd6c5cb733874c4ad9",
+        "payloadBytes": 548,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635181-qoDlE1q1CJkNYltAJyx6",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "total_tokens": 89,
+          "cost": 0.00000178
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.78515625
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.404296875
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.294921875
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 410,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005524822,
+        "keyUsageAfterUSD": 0.005524822,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.00000178,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "conditional-restore"
+          ],
+          "order": [
+            "conditional-restore",
+            "reset-all",
+            "ui-style"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:26:21.587Z"
+    },
+    {
+      "id": "fixed-1-en-incomplete",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "en-incomplete",
+      "requestSha256": "ba524aa71454d14f0911467b99a774d78a916b94a702ded19de7899123a1be45",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 1660,
+      "startedAt": "2026-10-10T12:26:21.798Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "ba524aa71454d14f0911467b99a774d78a916b94a702ded19de7899123a1be45",
+        "payloadBytes": 526,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635181-XeIE9IWIUbcP5OFQF5yn",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "total_tokens": 83,
+          "cost": 0.00000166
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.734375
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.38671875
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.32421875
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 596,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005524822,
+        "keyUsageAfterUSD": 0.005524822,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.00000166,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "coverage"
+          ],
+          "order": [
+            "coverage",
+            "speed",
+            "empty-screen"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:26:22.926Z"
+    },
+    {
+      "id": "fixed-2-ru-cancellation",
+      "model": "qwen/qwen3-reranker-8b",
+      "caseId": "ru-cancellation",
+      "requestSha256": "8c894615190103cb34f6e797cdb465d3fc17ad740561f6f0b378bd38d662e4f9",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 77800,
+      "startedAt": "2026-10-10T12:26:36.886Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "8c894615190103cb34f6e797cdb465d3fc17ad740561f6f0b378bd38d662e4f9",
+        "payloadBytes": 892,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635197-fKttPVL97KROYig1bK5G",
+        "resolvedModel": "accounts/fireworks/models/qwen3-reranker-8b",
+        "provider": "Fireworks",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "total_tokens": 389,
+          "cost": 0.0000778
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.99609375
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.00537109375
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.00017261505126953125
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 629,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005535022,
+        "keyUsageAfterUSD": 0.005535022,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.0000778,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "revision"
+          ],
+          "order": [
+            "revision",
+            "index",
+            "http"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:26:38.068Z"
+    },
+    {
+      "id": "fixed-2-ru-offline",
+      "model": "qwen/qwen3-reranker-8b",
+      "caseId": "ru-offline",
+      "requestSha256": "4ffcf0049d24107d46dc01e4fc51d54f7664706e07022be459c4975b2f48bf67",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 81000,
+      "startedAt": "2026-10-10T12:26:38.133Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "4ffcf0049d24107d46dc01e4fc51d54f7664706e07022be459c4975b2f48bf67",
+        "payloadBytes": 871,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635198-3jithMZDTNWG7DIWEyzK",
+        "resolvedModel": "accounts/fireworks/models/qwen3-reranker-8b",
+        "provider": "Fireworks",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "total_tokens": 405,
+          "cost": 0.000081
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.99609375
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.59375
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.0140380859375
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 921,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005535022,
+        "keyUsageAfterUSD": 0.005535022,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.000081,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "local-asr"
+          ],
+          "order": [
+            "local-asr",
+            "cloud-asr",
+            "local-player"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:26:39.353Z"
+    },
+    {
+      "id": "fixed-2-en-rollback",
+      "model": "qwen/qwen3-reranker-8b",
+      "caseId": "en-rollback",
+      "requestSha256": "c5b184976b02e43869e23f15a838260a3652231cec275649e8bf7bd1e4fafe8b",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 63400,
+      "startedAt": "2026-10-10T12:26:39.413Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "c5b184976b02e43869e23f15a838260a3652231cec275649e8bf7bd1e4fafe8b",
+        "payloadBytes": 548,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635199-JXEApGn6qbi0SLIAkbFh",
+        "resolvedModel": "accounts/fireworks/models/qwen3-reranker-8b",
+        "provider": "Fireworks",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "total_tokens": 317,
+          "cost": 0.0000634
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.99609375
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.002288818359375
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.00008678436279296875
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 663,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005535022,
+        "keyUsageAfterUSD": 0.005535022,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.0000634,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "conditional-restore"
+          ],
+          "order": [
+            "conditional-restore",
+            "reset-all",
+            "ui-style"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:26:40.384Z"
+    },
+    {
+      "id": "fixed-2-en-incomplete",
+      "model": "qwen/qwen3-reranker-8b",
+      "caseId": "en-incomplete",
+      "requestSha256": "16d0e79912fcdb320e93e26c98e2d708e84ea8e92bf3e6f1c41d5e915cd27802",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 62200,
+      "startedAt": "2026-10-10T12:26:40.452Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "16d0e79912fcdb320e93e26c98e2d708e84ea8e92bf3e6f1c41d5e915cd27802",
+        "payloadBytes": 526,
+        "documentCount": 3,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635200-pJzXARCeYEKJ23N9JKMc",
+        "resolvedModel": "accounts/fireworks/models/qwen3-reranker-8b",
+        "provider": "Fireworks",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 3
+        },
+        "usage": {
+          "total_tokens": 311,
+          "cost": 0.0000622
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 2,
+            "relevanceScore": 0.984375
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.007568359375
+          },
+          {
+            "index": 0,
+            "relevanceScore": 0.000023603439331054688
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 433,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005535022,
+        "keyUsageAfterUSD": 0.005535022,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.0000622,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "coverage"
+          ],
+          "order": [
+            "coverage",
+            "speed",
+            "empty-screen"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        }
+      },
+      "finishedAt": "2026-10-10T12:26:41.276Z"
+    },
+    {
+      "id": "embedding-real-v1",
+      "model": "openai/text-embedding-3-small",
+      "caseId": "semantic-all",
+      "requestSha256": "cbc4f27c51c5c2cb36bf4ab8700470dc5950c408fa32774a9f469cea9c79e29b",
+      "state": "reconciled",
+      "reserve": 1000000,
+      "cost": 11080,
+      "startedAt": "2026-10-10T12:27:10.383Z",
+      "outcome": {
+        "dispatched": true,
+        "httpStatus": 200,
+        "usage": {
+          "cost": 0.00001108,
+          "total_tokens": 554,
+          "prompt_tokens": 554
+        },
+        "generationId": "gen-emb-1791635230-7otq8Quvy9Xj8DXUYZye",
+        "validator": "PASS",
+        "vectorSha256": "dce10da76d74eff84ca83f09b3491e3be3b2eaf8e4e5abc9c069d736447968bf",
+        "latencyMs": 1540,
+        "costUSD": 0.00001108,
+        "costBasis": "response-cost-reconciled-cumulative-key-usage",
+        "keyUsageAfterUSD": 0.005830502
+      },
+      "finishedAt": "2026-10-10T12:27:12.351Z",
+      "reconciledAt": "2026-10-10T12:30:51.424Z"
+    },
+    {
+      "id": "semantic-1-ru-cancellation",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "ru-cancellation",
+      "requestSha256": "6132823f42f27e8843d909c94ae2d27e89efa5e47b30de19aa98c3cc7041f017",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 10560,
+      "startedAt": "2026-10-10T12:31:11.495Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "6132823f42f27e8843d909c94ae2d27e89efa5e47b30de19aa98c3cc7041f017",
+        "payloadBytes": 2295,
+        "documentCount": 12,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635471-zkZXyzJKygpM4J1aZpGB",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 12
+        },
+        "usage": {
+          "total_tokens": 528,
+          "cost": 0.00001056
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 0,
+            "relevanceScore": 0.74609375
+          },
+          {
+            "index": 3,
+            "relevanceScore": 0.44140625
+          },
+          {
+            "index": 10,
+            "relevanceScore": 0.435546875
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.359375
+          },
+          {
+            "index": 4,
+            "relevanceScore": 0.33984375
+          },
+          {
+            "index": 5,
+            "relevanceScore": 0.33984375
+          },
+          {
+            "index": 2,
+            "relevanceScore": 0.32421875
+          },
+          {
+            "index": 7,
+            "relevanceScore": 0.3125
+          },
+          {
+            "index": 6,
+            "relevanceScore": 0.3046875
+          },
+          {
+            "index": 8,
+            "relevanceScore": 0.296875
+          },
+          {
+            "index": 11,
+            "relevanceScore": 0.291015625
+          },
+          {
+            "index": 9,
+            "relevanceScore": 0.2890625
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 670,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005830502,
+        "keyUsageAfterUSD": 0.005830502,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.00001056,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "revision"
+          ],
+          "order": [
+            "revision",
+            "conditional-restore",
+            "reset-all",
+            "index",
+            "coverage",
+            "empty-screen",
+            "speed",
+            "http",
+            "local-asr",
+            "local-player",
+            "ui-style",
+            "cloud-asr"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        },
+        "semantic": {
+          "candidateContainsRelevant": true,
+          "beforeOrder": [
+            "revision",
+            "index",
+            "speed",
+            "conditional-restore",
+            "coverage",
+            "empty-screen",
+            "local-asr",
+            "http",
+            "local-player",
+            "cloud-asr",
+            "reset-all",
+            "ui-style"
+          ],
+          "beforePositions": [
+            1
+          ],
+          "beforeTop1": true,
+          "beforeTop3": true,
+          "afterPositions": [
+            1
+          ],
+          "afterTop1": true,
+          "afterTop3": true,
+          "change": "unchanged",
+          "queryEmbeddingLookups": 1,
+          "sameCandidatePool": true
+        }
+      },
+      "finishedAt": "2026-10-10T12:31:13.058Z"
+    },
+    {
+      "id": "semantic-1-ru-offline",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "ru-offline",
+      "requestSha256": "b56d4c67dfd299f378aa9e89d9baf85836da518c24150473d7e82c56597881e5",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 11520,
+      "startedAt": "2026-10-10T12:31:13.151Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "b56d4c67dfd299f378aa9e89d9baf85836da518c24150473d7e82c56597881e5",
+        "payloadBytes": 2292,
+        "documentCount": 12,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635473-QGxRQi21HKajKNSEuBCp",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 12
+        },
+        "usage": {
+          "total_tokens": 576,
+          "cost": 0.00001152
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 0,
+            "relevanceScore": 0.66015625
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.375
+          },
+          {
+            "index": 2,
+            "relevanceScore": 0.30078125
+          },
+          {
+            "index": 4,
+            "relevanceScore": 0.294921875
+          },
+          {
+            "index": 3,
+            "relevanceScore": 0.291015625
+          },
+          {
+            "index": 11,
+            "relevanceScore": 0.291015625
+          },
+          {
+            "index": 10,
+            "relevanceScore": 0.291015625
+          },
+          {
+            "index": 6,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 8,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 9,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 7,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 5,
+            "relevanceScore": 0.287109375
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 428,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005830502,
+        "keyUsageAfterUSD": 0.005830502,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.00001152,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "local-asr"
+          ],
+          "order": [
+            "local-asr",
+            "cloud-asr",
+            "local-player",
+            "index",
+            "speed",
+            "ui-style",
+            "reset-all",
+            "coverage",
+            "http",
+            "empty-screen",
+            "conditional-restore",
+            "revision"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        },
+        "semantic": {
+          "candidateContainsRelevant": true,
+          "beforeOrder": [
+            "local-asr",
+            "cloud-asr",
+            "local-player",
+            "speed",
+            "index",
+            "revision",
+            "coverage",
+            "http",
+            "empty-screen",
+            "conditional-restore",
+            "ui-style",
+            "reset-all"
+          ],
+          "beforePositions": [
+            1
+          ],
+          "beforeTop1": true,
+          "beforeTop3": true,
+          "afterPositions": [
+            1
+          ],
+          "afterTop1": true,
+          "afterTop3": true,
+          "change": "unchanged",
+          "queryEmbeddingLookups": 1,
+          "sameCandidatePool": true
+        }
+      },
+      "finishedAt": "2026-10-10T12:31:13.943Z"
+    },
+    {
+      "id": "semantic-1-en-rollback",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "en-rollback",
+      "requestSha256": "7825f556c8cdf0d2d76b93bc558ca080b6c888f0ae83e2dbea1bb3edd12c05a0",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 9360,
+      "startedAt": "2026-10-10T12:31:14.046Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "7825f556c8cdf0d2d76b93bc558ca080b6c888f0ae83e2dbea1bb3edd12c05a0",
+        "payloadBytes": 2240,
+        "documentCount": 12,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635474-1qTg4ELKGO3p4Eion02J",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 12
+        },
+        "usage": {
+          "total_tokens": 468,
+          "cost": 0.00000936
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 0,
+            "relevanceScore": 0.78515625
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.404296875
+          },
+          {
+            "index": 2,
+            "relevanceScore": 0.34375
+          },
+          {
+            "index": 5,
+            "relevanceScore": 0.306640625
+          },
+          {
+            "index": 3,
+            "relevanceScore": 0.294921875
+          },
+          {
+            "index": 4,
+            "relevanceScore": 0.29296875
+          },
+          {
+            "index": 6,
+            "relevanceScore": 0.291015625
+          },
+          {
+            "index": 11,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 10,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 7,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 9,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 8,
+            "relevanceScore": 0.2890625
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 442,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005830502,
+        "keyUsageAfterUSD": 0.005830502,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.00000936,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "conditional-restore"
+          ],
+          "order": [
+            "conditional-restore",
+            "reset-all",
+            "revision",
+            "coverage",
+            "ui-style",
+            "speed",
+            "empty-screen",
+            "index",
+            "local-asr",
+            "local-player",
+            "cloud-asr",
+            "http"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        },
+        "semantic": {
+          "candidateContainsRelevant": true,
+          "beforeOrder": [
+            "conditional-restore",
+            "reset-all",
+            "revision",
+            "ui-style",
+            "speed",
+            "coverage",
+            "empty-screen",
+            "index",
+            "local-asr",
+            "local-player",
+            "cloud-asr",
+            "http"
+          ],
+          "beforePositions": [
+            1
+          ],
+          "beforeTop1": true,
+          "beforeTop3": true,
+          "afterPositions": [
+            1
+          ],
+          "afterTop1": true,
+          "afterTop3": true,
+          "change": "unchanged",
+          "queryEmbeddingLookups": 1,
+          "sameCandidatePool": true
+        }
+      },
+      "finishedAt": "2026-10-10T12:31:14.963Z"
+    },
+    {
+      "id": "semantic-1-en-incomplete",
+      "model": "voyageai/rerank-3-lite",
+      "caseId": "en-incomplete",
+      "requestSha256": "d49a304f1ed40fd28ac2c7cd894a8ae03d66e14055a41db81c52e3f29e5ce58f",
+      "state": "settled",
+      "reserve": 2000000,
+      "cost": 9360,
+      "startedAt": "2026-10-10T12:31:15.041Z",
+      "outcome": {
+        "dispatched": true,
+        "requestSha256": "d49a304f1ed40fd28ac2c7cd894a8ae03d66e14055a41db81c52e3f29e5ce58f",
+        "payloadBytes": 2239,
+        "documentCount": 12,
+        "filenameFallbackAbsent": true,
+        "httpStatus": 200,
+        "generationId": "gen-rerank-1791635475-honbyqScpx37enqv6vrW",
+        "resolvedModel": "rerank-3-lite",
+        "provider": "VoyageAI by MongoDB",
+        "schema": {
+          "modelType": "string",
+          "resultsIsArray": true,
+          "resultsCount": 12
+        },
+        "usage": {
+          "total_tokens": 468,
+          "cost": 0.00000936
+        },
+        "apiErrorCode": null,
+        "scores": [
+          {
+            "index": 0,
+            "relevanceScore": 0.734375
+          },
+          {
+            "index": 1,
+            "relevanceScore": 0.38671875
+          },
+          {
+            "index": 2,
+            "relevanceScore": 0.32421875
+          },
+          {
+            "index": 5,
+            "relevanceScore": 0.296875
+          },
+          {
+            "index": 4,
+            "relevanceScore": 0.294921875
+          },
+          {
+            "index": 10,
+            "relevanceScore": 0.291015625
+          },
+          {
+            "index": 9,
+            "relevanceScore": 0.291015625
+          },
+          {
+            "index": 11,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 6,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 8,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 3,
+            "relevanceScore": 0.2890625
+          },
+          {
+            "index": 7,
+            "relevanceScore": 0.2890625
+          }
+        ],
+        "validator": "PASS",
+        "latencyMs": 426,
+        "generation": {
+          "httpStatus": 404,
+          "totalCostUSD": null
+        },
+        "keyUsageBeforeUSD": 0.005830502,
+        "keyUsageAfterUSD": 0.005830502,
+        "keyUsageDeltaUSD": 0,
+        "costUSD": 0.00000936,
+        "costBasis": "response-cost",
+        "quality": {
+          "relevantIds": [
+            "coverage"
+          ],
+          "order": [
+            "coverage",
+            "speed",
+            "empty-screen",
+            "index",
+            "conditional-restore",
+            "ui-style",
+            "reset-all",
+            "local-asr",
+            "cloud-asr",
+            "revision",
+            "local-player",
+            "http"
+          ],
+          "positions": [
+            1
+          ],
+          "top1": true,
+          "top3": true,
+          "reciprocalRank": 1
+        },
+        "semantic": {
+          "candidateContainsRelevant": true,
+          "beforeOrder": [
+            "coverage",
+            "speed",
+            "empty-screen",
+            "local-asr",
+            "conditional-restore",
+            "index",
+            "cloud-asr",
+            "revision",
+            "local-player",
+            "ui-style",
+            "reset-all",
+            "http"
+          ],
+          "beforePositions": [
+            1
+          ],
+          "beforeTop1": true,
+          "beforeTop3": true,
+          "afterPositions": [
+            1
+          ],
+          "afterTop1": true,
+          "afterTop3": true,
+          "change": "unchanged",
+          "queryEmbeddingLookups": 1,
+          "sameCandidatePool": true
+        }
+      },
+      "finishedAt": "2026-10-10T12:31:15.877Z"
+    }
+  ],
+  "failures": {
+    "paidHttpFailures": 0,
+    "productionValidatorFailures": 0,
+    "labelledRankingErrors": [],
+    "harness": [
+      "Initial fresh-profile Restricted mode prevented plugin startup before any paid dispatch; harness now enables community plugins only after verifying the temporary vault.",
+      "Delayed key usage initially tripped per-request reconciliation after embeddings. Free regression added; cumulative receipts matched exactly; an append-only reconciliation event cleared the reserve without another embedding call."
+    ]
+  },
+  "verification": {
+    "freeDriver": "PASS: 10 checks",
+    "npmTest": "PASS: 115 files / 2862 tests",
+    "typecheck": "PASS",
+    "lint": "PASS: existing api.ts:402 fetch warning only",
+    "build": "PASS",
+    "gitDiffCheck": "PASS",
+    "paidTestsInCI": false,
+    "productionChanges": false,
+    "releasePublished": false
+  },
+  "recommendation": {
+    "model": "voyageai/rerank-3-lite",
+    "reason": "Tied 4/4 top-1 and MRR 1.0, substantially lower measured cost, similar observed latency. No demonstrated improvement over this already-correct semantic baseline.",
+    "productionFixRequired": false
+  },
+  "limitations": [
+    "Four easy synthetic labelled queries; no statistical superiority or real-vault quality claim.",
+    "Fixed cases contain only three documents each, so top-3 is uninformative there.",
+    "Semantic corpus contains 12 short notes; all four relevant notes already rank first and all fit in the pool.",
+    "UI smoke used synthetic vectors. Real embedding/index quality was evaluated separately through shared production services, not a full native cloud-index UI run.",
+    "One response per case/model; request order was not randomized. Latencies include host/network overhead, not provider-only inference.",
+    "Required npm validation overlapped the final semantic rerank stage; its latency is not a controlled model-speed comparison.",
+    "Linux Obsidian only; no mobile, other OS, custom themes, screen-reader or long-document billing evidence.",
+    "No second semantic reranker was needed: the measured baseline already saturated the labels."
+  ]
+}
