@@ -58,6 +58,17 @@ test('interrupted and unknown paid operations cannot be paid again', () => {
   }
 });
 
+test('an uncertain accounting read reconciles once from cumulative usage without resubmission', () => {
+  const root = temp(); let j = journalAt(root);
+  j.reserve(op('prior'), 0); j.settle('prior', { validator: 'PASS', costUSD: 0.0001 });
+  j.reserve(op('receipt'), 0); j.settle('receipt', { validator: 'PASS', costUSD: null, usage: { cost: 0.0002 } }); j.close();
+  j = journalAt(root);
+  assert.throws(() => j.reconcileReceipt('receipt', 0.0001), /cumulative-billing-mismatch/);
+  j.reconcileReceipt('receipt', 0.0003); assert.equal(completed(j, op('receipt')).costUSD, 0.0002);
+  assert.equal(j.summary().spentNanodollars, 300000); assert.equal(j.summary().requests, 2);
+  assert.throws(() => j.reserve(op('receipt'), 0.0003), /already-sent/); j.close();
+});
+
 let pool;
 test('production chunk/index/vector/search pipeline preserves pools and performs one query lookup', async () => {
   const chunks = data.docs.flatMap(d => new semantic.MarkdownChunker().chunk(d));

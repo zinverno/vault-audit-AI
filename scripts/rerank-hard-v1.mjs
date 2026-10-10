@@ -262,6 +262,7 @@ export async function live(phase) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (process.argv[2] === '--live') await live(process.argv[3]).catch(() => { console.error('STOPPED: inspect sanitized journal; no automatic retry.'); process.exitCode = 1; });
+  // Finish module evaluation before the native helper imports these shared functions.
+  if (process.argv[2] === '--live') live(process.argv[3]).catch(() => { console.error('STOPPED: inspect sanitized journal; no automatic retry.'); process.exitCode = 1; });
   else { const data = dataset(); console.log(JSON.stringify({ plan: plan(data), notes: data.docs.length, queries: data.queries.length })); }
 }
