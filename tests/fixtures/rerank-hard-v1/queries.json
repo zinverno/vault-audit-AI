@@ -1,0 +1,142 @@
+[
+  {
+    "id": "A1",
+    "group": "A",
+    "query": "When a service comes back, how can we keep all its waiting callers from rushing in at the same instant?"
+  },
+  {
+    "id": "A2",
+    "group": "A",
+    "query": "I recognize a foreign expression on the page but cannot bring it to mind when speaking. What practice changes that?"
+  },
+  {
+    "id": "A3",
+    "group": "A",
+    "query": "The machine lost power halfway through an overnight conversion. How do we continue from work already safely finished?"
+  },
+  {
+    "id": "A4",
+    "group": "A",
+    "query": "I saved a useful claim from a website, but its wording may disappear next month. What should my note retain?"
+  },
+  {
+    "id": "B1",
+    "group": "B",
+    "query": "I need searchable text from scanned recipe cards on my laptop, without uploading either the images or extracted text. What workflow fits?"
+  },
+  {
+    "id": "B2",
+    "group": "B",
+    "query": "How can I query a live SQLite database without a long lock blocking writers and without making a file copy for every read?"
+  },
+  {
+    "id": "B3",
+    "group": "B",
+    "query": "I want to look up foreign words while disconnected, with no account and no sentences sent to a service. What should I prepare?"
+  },
+  {
+    "id": "B4",
+    "group": "B",
+    "query": "How can I recover a file accidentally deleted yesterday using only local disks, not a synchronized mirror or cloud storage?"
+  },
+  {
+    "id": "C1",
+    "group": "C",
+    "query": "A purchase POST may be sent again after its response is lost. How do I prevent a second purchase without treating two intentional identical purchases as duplicates?"
+  },
+  {
+    "id": "C2",
+    "group": "C",
+    "query": "How do I stop an old editor from overwriting a newer record without holding a database lock while the person edits?"
+  },
+  {
+    "id": "C3",
+    "group": "C",
+    "query": "An external job submission lost its response and may already have been billed. What should survive restart before another submission is considered?"
+  },
+  {
+    "id": "C4",
+    "group": "C",
+    "query": "I need the exact error identifier E_CONN_42, not an explanation of a similar connection error. Which search approach should I use?"
+  },
+  {
+    "id": "D1",
+    "group": "D",
+    "query": "Имя раньше не существовало. Запись DNS уже создана, но у части клиентов всё ещё ошибка. Почему постоянное пересохранение записи не помогает?"
+  },
+  {
+    "id": "D2",
+    "group": "D",
+    "query": "New posts keep appearing above the page I just read. How should the next-page marker avoid repeating entries when I continue scrolling?"
+  },
+  {
+    "id": "D3",
+    "group": "D",
+    "query": "Почему потерянный пакет может задержать чужой запрос в HTTP/2, а независимый поток QUIC способен продолжить доставку?"
+  },
+  {
+    "id": "D4",
+    "group": "D",
+    "query": "How can a learner test whether their ear distinguishes ship from sheep, rather than merely imitate a recording fluently?"
+  },
+  {
+    "id": "E1",
+    "group": "E",
+    "query": "Which checks establish that an encrypted backup can actually restore the expected files after losing the working machine?"
+  },
+  {
+    "id": "E2",
+    "group": "E",
+    "query": "What does a paginated database export need in addition to a cursor to stay complete and consistent while records change?"
+  },
+  {
+    "id": "E3",
+    "group": "E",
+    "query": "How should a research note separate exact source wording, paraphrase and my own conclusion while keeping an evidence trail?"
+  },
+  {
+    "id": "E4",
+    "group": "E",
+    "query": "How should a vocabulary review routine combine unaided recall, feedback on errors and the timing of the next practice?"
+  },
+  {
+    "id": "F1",
+    "group": "F",
+    "query": "A paused worker wakes after its lease expired and a new owner took over. What prevents the old worker from publishing its result?"
+  },
+  {
+    "id": "F2",
+    "group": "F",
+    "query": "After replacing the archive disk, a catalogue scan sees an empty mount folder. What checks should prevent it from deleting all indexed entries?"
+  },
+  {
+    "id": "F3",
+    "group": "F",
+    "query": "В плане языкового курса где описана проверка переноса различения ship и sheep на новые голоса, и как её оценивать отдельно от произношения?"
+  },
+  {
+    "id": "F4",
+    "group": "F",
+    "query": "How should the catalogue importer read a semicolon export with a price of 12,50 without corrupting commas inside quoted text?"
+  },
+  {
+    "id": "N1",
+    "group": "N",
+    "query": "What procedure should I use to collimate the primary mirror of a Newtonian telescope?"
+  },
+  {
+    "id": "N2",
+    "group": "N",
+    "query": "Как рассчитать компенсацию цветовой температуры при проявке конкретной фотоплёнки?"
+  },
+  {
+    "id": "N3",
+    "group": "N",
+    "query": "Which fingering should a beginner use for an F-sharp minor scale on a bassoon?"
+  },
+  {
+    "id": "N4",
+    "group": "N",
+    "query": "Как устроена процедура консервации мозаичного пола на археологическом раскопе?"
+  }
+]
