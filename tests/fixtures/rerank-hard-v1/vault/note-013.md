@@ -1,0 +1,3 @@
+A travel laptop can recognize photographed labels after the OCR binary and language files have been installed. The local command takes an image path and writes text to a sibling file. Disconnecting the network during a trial confirms that recognition itself has no server dependency.
+
+This note is a compact field checklist, not an installation guide. Check that the expected language pack exists, retain the photo, and correct uncertain characters manually. Downloading missing components while travelling may be impossible. A translation service is a separate step and may send the resulting text elsewhere.
